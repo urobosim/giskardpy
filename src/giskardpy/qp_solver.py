@@ -33,25 +33,36 @@ class QPSolver(object):
         qp = {}
         qp['h'] = ca.DM(H).sparsity()
         qp['a'] = ca.DM(A).sparsity()
-        opts = {'verbose': False,
-                'print_time': False,
-                'print_info':False,
-                'print_header':False,
-                'print_iter':False}
-        self.qp_problem = ca.conic('S', 'qrqp', qp, opts)
         # opts = {'verbose': False,
         #         'print_time': False,
-        #         'printLevel': 'none',
+        #         'print_info':False,
+        #         'print_header':False,
+        #         'print_iter':False
         #         }
-        # self.qp_problem = ca.conic('S', 'qpoases', qp, opts)
+        # self.qp_problem = ca.conic('S', 'qrqp', qp, opts)
+        # opts = {'osqp': { 'verbose': False,
+        #                   'time_limit': 1.
+        #                   },
+        #         'warm_start_primal': True}
+        # self.qp_problem = ca.conic('S', 'osqp', qp, opts)
+        opts = {'verbose': False,
+                'print_time': False,
+                'printLevel': 'none',
+                'CPUtime' : 1.e-6
+                }
+        self.qp_problem = ca.conic('S', 'qpoases', qp, opts)
         self.started = True
-        return self.hot_start(H, g, A, lb, ub, lbA, ubA, nWSR)
+        r = self.qp_problem(h=H, g=g, a=A, lba=lbA, uba=ubA, lbx=lb, ubx=ub)
+        self.x_opt = np.array(r['x'])
+        return self.x_opt
 
     @profile
     def hot_start(self, H, g, A, lb, ub, lbA, ubA, nWSR=None):
-        r = self.qp_problem(h=H, g=g, a=A, lba=lbA, uba=ubA, lbx=lb, ubx=ub)
-        x_opt = np.array(r['x'])
-        return x_opt.T
+        H = ca.sparsify(ca.DM(H))
+        A = ca.sparsify(ca.DM(A))
+        r = self.qp_problem(h=H, g=g, a=A, lba=lbA, uba=ubA, lbx=lb, ubx=ub, x0=self.x_opt)
+        self.x_opt = np.array(r['x'])
+        return self.x_opt
 
     def solve(self, H, g, A, lb, ub, lbA, ubA, nWSR=None):
         """
