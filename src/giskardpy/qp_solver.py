@@ -40,7 +40,6 @@ class QPSolver(object):
         #         }
         # self.qp_problem = ca.conic('S', 'qrqp', qp, opts)
         # opts = {'osqp': { 'verbose': False,
-        #                   'time_limit': 1.
         #                   },
         #         'warm_start_primal': True}
         # self.qp_problem = ca.conic('S', 'osqp', qp, opts)
