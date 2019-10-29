@@ -28,7 +28,6 @@ class QPSolver(object):
         #
         self.started = False
 
-    @profile
     def init_problem(self, H, g, A, lb, ub, lbA, ubA, nWSR=None):
         qp = {}
         qp['h'] = ca.DM(H).sparsity()
@@ -48,7 +47,6 @@ class QPSolver(object):
         opts = {'verbose': False,
                 'print_time': False,
                 'printLevel': 'none',
-                'CPUtime' : 1.e-6
                 }
         self.qp_problem = ca.conic('S', 'qpoases', qp, opts)
         self.started = True
@@ -56,7 +54,6 @@ class QPSolver(object):
         self.x_opt = np.array(r['x'])
         return self.x_opt
 
-    @profile
     def hot_start(self, H, g, A, lb, ub, lbA, ubA, nWSR=None):
         H = ca.sparsify(ca.DM(H))
         A = ca.sparsify(ca.DM(A))
