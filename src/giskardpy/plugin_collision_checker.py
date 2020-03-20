@@ -42,7 +42,7 @@ class CollisionChecker(GiskardBehavior):
         self.collision_matrix = self.get_world().collision_goals_to_collision_matrix(collision_goals,
                                                                                      self.get_god_map().safe_get_data(
                                                                                          identifier.distance_thresholds))
-
+        self.ray_tests = self.get_god_map().safe_get_data(identifier.ray_tests)
         super(CollisionChecker, self).initialise()
 
     def update(self):
@@ -53,4 +53,6 @@ class CollisionChecker(GiskardBehavior):
             collisions = self.get_world().check_collisions(self.collision_matrix)
             # closest_points = self.get_world().transform_contact_info(collisions)
             self.god_map.safe_set_data(identifier.closest_point, collisions)
+            ray_test_results = self.get_world().ray_test_batch(self.ray_tests[0], self.ray_tests[1])
+            self.get_god_map().safe_set_data(identifier.ray_test_results, ray_test_results)
         return Status.RUNNING

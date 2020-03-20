@@ -95,7 +95,7 @@ class GodMap(object):
                            to access functions: lib.str_to_ascii('muh') = ['lib', 'str_to_acii', ['muh']]
                            to access functions without params: robot.get_pybullet_id() = ['robot', 'get_pybullet_id', []]
         :type identifier: list
-        :return: object that is saved at key
+        :return: object that is saved at key, returns 0 if key doesn't exist
         """
         return get_data(identifier, self._data, self.default_value)
 

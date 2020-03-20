@@ -275,10 +275,6 @@ class TestGodMap(unittest.TestCase):
         gm_robot = gm.safe_get_data(identifier.robot)
         assert 'pr2' == gm_robot.get_name()
 
-
-if __name__ == '__main__':
-    import rosunit
-
-    rosunit.unitrun(package=PKG,
-                    test_name='TestDataBus',
-                    test=TestGodMap)
+    def test_get_key_error(self):
+        gm = GodMap()
+        assert gm.safe_get_data(u'asdf') == 0

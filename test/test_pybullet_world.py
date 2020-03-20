@@ -449,6 +449,31 @@ class TestPyBulletWorld(test_world.TestWorld):
         for i in range(160):
             assert len(w.check_collisions(cut_off_distances).all_collisions) == 60
 
+    def test_ray_cast(self, test_folder):
+        empty_world = self.world_cls()
+        name = u'muh'
+        box = self.cls.from_world_body(make_world_body_box(name))
+        box.base_pose.position.y += 0.01
+        empty_world.add_object(box)
+
+        name = u'ich'
+        box = self.cls.from_world_body(make_world_body_box(name))
+        box.base_pose.position.y += 3
+        empty_world.add_object(box)
+
+        s = []
+        e = []
+        for i in range(10000):
+            d = 10
+            asdf = 0.001*i
+            s.append([0,asdf,0])
+            e.append([0,-d+asdf,0])
+        result = empty_world.ray_test_batch(s, e)
+        # for r in result:
+        #     print(r.object_name)
+        #     print(r.hit_normal)
+        #     print(r.hit_position)
+
     # TODO test that has collision entries of robot links without collision geometry
 
     # TODO test that makes sure adding avoid specific self collisions works

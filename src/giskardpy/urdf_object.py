@@ -439,6 +439,14 @@ class URDFObject(object):
         return [x for x in self.get_link_names() if self.has_link_collision(x)]
 
     @memoize
+    def get_link_collision_geometry(self, link_name):
+        """
+        :param link_name:
+        :rtype: up.Box
+        """
+        return self.get_urdf_link(link_name).collision.geometry
+
+    @memoize
     def get_sub_tree_at_joint(self, joint_name):
         """
         :type joint_name: str

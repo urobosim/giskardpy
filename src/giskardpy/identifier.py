@@ -92,3 +92,6 @@ added_self_collisions = self_collision_avoidance + [u'add']
 
 external_collision_avoidance = collision_avoidance + [u'external_collision_avoidance']
 number_of_repeller = external_collision_avoidance + [u'number_of_repeller']
+
+ray_tests = collision_avoidance + [u'ray_tests']
+ray_test_results = collision_avoidance + [u'ray_test_results']

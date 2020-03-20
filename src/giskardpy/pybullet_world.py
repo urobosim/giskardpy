@@ -1,4 +1,5 @@
 import pybullet as p
+import giskardpy.pybullet_wrapper as pw
 from geometry_msgs.msg import Point, Pose
 from giskard_msgs.msg import CollisionEntry
 
@@ -161,3 +162,33 @@ class PyBulletWorld(World):
     def remove_robot(self):
         self.robot.suicide()
         super(PyBulletWorld, self).remove_robot()
+
+    def ray_test_batch(self, start_positions, end_positions):
+        """
+        :type start_positions: list
+        :type end_positions: list
+        :return:
+        """
+        results = pw.rayTestBatch(start_positions, end_positions)
+        for r in results:
+            if r.objectUniqueId != -1:
+                r.object_name = pw.get_object_name(r.objectUniqueId)
+            map_P_hit = r.map_P_hit
+            r.root_P_hit = self.robot.root_T_map * map_P_hit
+        return results
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -9,12 +9,12 @@ from geometry_msgs.msg import Vector3Stamped, Vector3
 from rospy_message_converter.message_converter import convert_dictionary_to_ros_message
 
 import giskardpy.identifier as identifier
+import giskardpy.tfwrapper as tf
 from giskardpy import cas_wrapper as w
 from giskardpy.data_types import SoftConstraint
 from giskardpy.exceptions import GiskardException, ConstraintException
 from giskardpy.input_system import PoseStampedInput, Point3Input, Vector3Input, Vector3StampedInput, FrameInput, \
     PointStampedInput, TranslationInput
-import giskardpy.tfwrapper as tf
 
 WEIGHTS = [0] + [6 ** x for x in range(7)]
 WEIGHT_MAX = WEIGHTS[-1]
@@ -245,6 +245,16 @@ class Constraint(object):
                                                      lb=-1e9,
                                                      ub=1e9)
 
+    def register_ray_tests(self, start_point, end_point):
+        ray_tests = self.get_god_map().safe_get_data(identifier.ray_tests)
+        if ray_tests == 0:
+            ray_tests = [[], []]
+        start_id = len(ray_tests)
+        ray_tests[0].append(start_point)
+        ray_tests[1].append(end_point)
+        self.get_god_map().safe_set_data(identifier.ray_tests, ray_tests)
+        return start_id
+
     def add_debug_constraint(self, name, expr):
         """
         Adds a constraint with weight 0 to the qp problem.
@@ -320,6 +330,48 @@ class Constraint(object):
                             upper=error[2],
                             weight=weight,
                             expression=root_V_tip_normal[2])
+
+    def add_maximize_point_distance(self, max_velocity, root, tip, tip_P_a, root_P_b, root_V_normal,
+                                    zero_weight_distance):
+        """
+        TODO might be slightly faster to get the actual distance from parameter
+        :param max_velocity:
+        :param root:
+        :param tip:
+        :param tip_P_a:
+        :param root_P_b:
+        :param root_V_normal:
+        :return:
+        """
+
+        root_T_tip = self.get_fk(root, tip)
+
+        root_P_a = w.dot(root_T_tip, tip_P_a)
+        root_V_b_a = root_P_a - root_P_b
+
+        dist = w.dot(root_V_normal.T, root_V_b_a)[0]
+
+        weight_f = self.magic_weight_function(dist,
+                                              0.0, WEIGHT_MAX,  # nothing should be stronger than ca
+                                              0.01, WEIGHTS[4],
+                                              # everything should stay below this to ensure ca is strong enough
+                                              0.05, WEIGHTS[2],  # ca active but can get overpowered
+                                              zero_weight_distance, WEIGHT_MIN)  # everything is stronger than ca
+
+        penetration_distance = zero_weight_distance - dist
+
+        # limit = w.Max(-actual_distance, self.limit_acceleration(dist,
+        #                                                         penetration_distance,
+        #                                                         max_acceleration,
+        #                                                         repel_velocity))
+
+        limit = self.limit_velocity(penetration_distance, max_velocity)
+
+        self.add_constraint('',
+                            lower=limit,
+                            upper=1e9,
+                            weight=weight_f,
+                            expression=dist)
 
 
 class JointPositionContinuous(Constraint):
@@ -980,6 +1032,59 @@ class SelfCollisionAvoidance(Constraint):
         return u'{}/{}/{}/{}'.format(s, self.link_a, self.link_b, self.idx)
 
 
+class RayCollisionAvoidanceBox(Constraint):
+    def __init__(self, god_map, object_name, length):
+        super(RayCollisionAvoidanceBox, self).__init__(god_map)
+        self.tip = object_name
+        self.length = length
+        self.root = self.get_robot().get_root()
+        params = {}
+        self.save_params_on_god_map(params)
+
+    def intersection_point(self, i):
+        return Point3Input(self.god_map.to_symbol,
+                           prefix=identifier.ray_test_results + [i, u'root_P_hit']).get_expression()
+
+
+    def make_constraints(self):
+        # TODO consider collision origin
+        link_geometry = self.get_robot().get_link_collision_geometry(self.tip)
+        x = link_geometry.size[0] / 2.
+        y = link_geometry.size[1] / 2.
+        z = link_geometry.size[2] / 2.
+
+        points = [w.point3(x, y, z),
+                  w.point3(x, y, -z),
+                  w.point3(x, -y, z),
+                  w.point3(x, -y, -z),
+                  w.point3(-x, y, z),
+                  w.point3(-x, y, -z),
+                  w.point3(-x, -y, z),
+                  w.point3(-x, -y, -z),
+                  w.point3(x, 0, 0),
+                  w.point3(-x, 0, 0),
+                  w.point3(0, y, 0),
+                  w.point3(0, -y, 0),
+                  w.point3(0, 0, z),
+                  w.point3(0, 0, -z)]
+
+        for i, start_point in enumerate(points):
+            ray = w.vector3(-start_point[0],
+                            -start_point[1],
+                            -start_point[2])
+            # TODO figure out how to update the ray cast start and end points
+            end_point = start_point + ray
+            id_offset = self.register_ray_tests(start_point,)
+            intersection_point = self.intersection_point(id_offset+i)
+            self.add_maximize_point_distance(0.1,
+                                             self.root,
+                                             self.tip,
+                                             start_point,
+                                             intersection_point,
+                                             ray,
+                                             0.06)
+
+
 class AlignPlanes(Constraint):
     root_normal_id = u'root_normal'
     tip_normal_id = u'tip_normal'
@@ -1022,7 +1127,8 @@ class AlignPlanes(Constraint):
         max_velocity = self.get_input_float(self.max_velocity_id)
         tip_normal__tip = self.get_tip_normal_vector()
         root_normal__root = self.get_root_normal_vector()
-        self.add_minimize_vector_angle_constraints(max_velocity, self.root, self.tip, tip_normal__tip, root_normal__root)
+        self.add_minimize_vector_angle_constraints(max_velocity, self.root, self.tip, tip_normal__tip,
+                                                   root_normal__root)
 
 
 class GraspBar(Constraint):
@@ -1071,7 +1177,8 @@ class GraspBar(Constraint):
         tip_V_tip_grasp_axis = self.get_tip_grasp_axis_vector()
         root_P_bar_center = self.get_bar_center_point()
 
-        self.add_minimize_vector_angle_constraints(max_velocity, self.root, self.tip, tip_V_tip_grasp_axis, root_V_bar_axis)
+        self.add_minimize_vector_angle_constraints(max_velocity, self.root, self.tip, tip_V_tip_grasp_axis,
+                                                   root_V_bar_axis)
 
         root_P_tip = w.position_of(self.get_fk(self.root, self.tip))
 

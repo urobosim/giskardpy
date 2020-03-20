@@ -2,13 +2,14 @@ import os
 import random
 import string
 from collections import namedtuple
-
+import numpy as np
 import pybullet as p
 from geometry_msgs.msg import Pose, PoseStamped, Point, Quaternion
 
 import giskardpy
 from giskardpy import DEBUG, MAP, logging
 from giskardpy.exceptions import DuplicateNameException
+from giskardpy.tfwrapper import np_point
 from giskardpy.urdf_object import URDFObject
 from giskardpy.utils import write_to_tmp, NullContextManager, suppress_stdout, resolve_ros_iris_in_urdf
 
@@ -24,6 +25,7 @@ ContactInfo = namedtuple(u'ContactInfo', [u'contact_flag', u'body_unique_id_a', 
                                           u'lateralFriction2', u'lateralFrictionDir2'])
 
 render = True
+
 
 def random_string(size=6):
     """
@@ -127,6 +129,39 @@ def clear_pybullet():
 def get_body_names():
     return [p.getBodyInfo(p.getBodyUniqueId(i))[1] for i in range(p.getNumBodies())]
 
+def get_object_name(object_unique_id):
+    return p.getBodyInfo(object_unique_id)[1]
+
 
 def print_body_names():
     logging.loginfo("".join(get_body_names()))
+
+
+class RayTestResponse(object):
+    def __init__(self, objectUniqueId, linkIndex, hit_fraction, hit_position, hit_normal):
+        self.objectUniqueId = objectUniqueId
+        self.linkIndex = linkIndex
+        self.hit_fraction = hit_fraction
+        self.map_P_hit = np_point(*hit_position)
+        self.map_V_normal = hit_normal
+        self.object_name = u''
+        self.root_P_hit = None
+
+
+
+def rayTestBatch(rayFromPositions, rayToPositions, parentObjectUniqueId=-1, parentLinkIndex=-1):
+    """
+    if a ray starts in an object, it will not detect a collision with it.
+    the returned normal is not to - from, but the normal on the surface hit.
+    :param rayFromPositions: list of start points for each ray, in world coordinates
+    :type rayFromPositions: list
+    :param rayToPositions: list of end points for each ray in world coordinates
+    :type rayToPositions: list
+    :param parentObjectUniqueId: ray from/to is in local space of a parent object
+    :type parentObjectUniqueId: int
+    :param parentLinkIndex: ray from/to is in local space of a parent object
+    :type parentLinkIndex: int
+    :return:
+    """
+    return [RayTestResponse(*x) for x in
+            p.rayTestBatch(rayFromPositions, rayToPositions, parentObjectUniqueId, parentLinkIndex)]

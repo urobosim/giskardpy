@@ -38,6 +38,9 @@ class World(object):
     def check_collisions(self, cut_off_distances):
         pass
 
+    def ray_test_batch(self, start_positions, end_positions):
+        pass
+
     # Objects ----------------------------------------------------------------------------------------------------------
 
     def add_object(self, object_):

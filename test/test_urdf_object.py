@@ -1,6 +1,6 @@
 import pytest
 from geometry_msgs.msg import Pose, Point, Quaternion
-
+import urdf_parser_py.urdf as up
 from giskardpy.exceptions import DuplicateNameException, UnknownBodyException
 from giskardpy.urdf_object import URDFObject
 from giskardpy.utils import make_world_body_box, make_world_body_sphere, make_world_body_cylinder, make_urdf_world_body
@@ -1392,3 +1392,11 @@ class TestUrdfObject(object):
     def test_get_non_base_movement_root2(self, function_setup):
         parsed_pr2 = self.cls(pr2_urdf())
         assert parsed_pr2.get_non_base_movement_root() == u'base_footprint'
+
+    def test_link_collision(self, function_setup):
+        parsed_donbot = self.cls(donbot_urdf())
+        wlan = parsed_donbot.get_link_collision_geometry(u'wlan')
+        assert isinstance(wlan, up.Box)
+        assert wlan.size[0] == 0.25
+        assert wlan.size[1] == 0.14
+        assert wlan.size[2] == 0.05
