@@ -15,6 +15,10 @@ from giskardpy.exceptions import GiskardException, ConstraintException
 from giskardpy.input_system import PoseStampedInput, Point3Input, Vector3Input, Vector3StampedInput, FrameInput, \
     PointStampedInput, TranslationInput
 
+from kineverse.model.paths                 import PathException
+from kineverse.model.frames                import Frame as KFrame
+from kineverse.operations.frame_operations import fk_a_in_b
+
 # WEIGHTS = [0] + [6 ** x for x in range(7)]
 WEIGHT_MAX = 1000
 WEIGHT_ABOVE_CA = 100
@@ -127,7 +131,24 @@ class Constraint(object):
         :type tip: str
         :return: root_T_tip
         """
-        return self.get_robot().get_fk_expression(root, tip)
+        km = self.get_world()
+        try:
+            root_frame = km.get_data(root)
+        except PathException as e:
+            raise Exception('Undefined root frame "{}"'.format(root))
+        
+        if not isinstance(root_frame, KFrame):
+            raise Exception('Path "{}" does not name a frame'.format(root))
+
+        try:
+            tip_frame = km.get_data(tip)
+        except PathException as e:
+            raise Exception('Undefined tip frame "{}"'.format(tip))
+        
+        if not isinstance(tip_frame, KFrame):
+            raise Exception('Path "{}" does not name a frame'.format(tip))
+
+        return fk_a_in_b(self.get_world(), root_frame, tip_frame)
 
     def get_fk_evaluated(self, root, tip):
         """
@@ -380,6 +401,19 @@ class Constraint(object):
                             upper=error[2],
                             weight=weight,
                             expression=root_V_tip_normal[2],
+                            goal_constraint=goal_constraint)
+
+    def add_simple_minimize_position_constraint(self, r_P_g, root, tip, goal_constraint):
+        r_P_c = w.position_of(self.get_fk(root, tip))
+
+        r_P_error = r_P_g - r_P_c
+        trans_error = w.norm(r_P_error)
+
+        self.add_constraint(u'distance',
+                            lower=-trans_error,
+                            upper=-trans_error,
+                            weight=1,
+                            expression=trans_error,
                             goal_constraint=goal_constraint)
 
 
@@ -676,6 +710,43 @@ class CartesianPosition(BasicCartesianConstraint):
         max_acceleration = self.get_input_float(self.max_acceleration)
 
         self.add_minimize_position_constraints(r_P_g, max_velocity, max_acceleration, self.root, self.tip,
+                                               self.goal_constraint)
+
+
+class SimpleCartesianPosition(BasicCartesianConstraint):
+
+    def make_constraints(self):
+        """
+        example:
+        name='CartesianPosition'
+        parameter_value_pair='{
+            "root": "base_footprint", #required
+            "tip": "r_gripper_tool_frame", #required
+            "goal_position": {"header":
+                                {"stamp":
+                                    {"secs": 0,
+                                    "nsecs": 0},
+                                "frame_id": "",
+                                "seq": 0},
+                            "pose": {"position":
+                                        {"y": 0.0,
+                                        "x": 0.0,
+                                        "z": 0.0},
+                                    "orientation": {"y": 0.0,
+                                                    "x": 0.0,
+                                                    "z": 0.0,
+                                                    "w": 0.0}
+                                    }
+                            }', #required
+            "weight": 1, #optional
+            "max_velocity": 0.3 #optional -- rad/s or m/s depending on joint; can not go higher than urdf limit
+        }'
+        :return:
+        """
+
+        r_P_g = w.position_of(self.get_goal_pose())
+
+        self.add_simple_minimize_position_constraint(r_P_g, self.root, self.tip,
                                                self.goal_constraint)
 
 

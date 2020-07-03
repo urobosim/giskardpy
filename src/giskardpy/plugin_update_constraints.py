@@ -13,14 +13,40 @@ from rospy_message_converter.message_converter import convert_ros_message_to_dic
 import giskardpy.constraints
 import giskardpy.identifier as identifier
 from giskardpy.constraints import SelfCollisionAvoidance, ExternalCollisionAvoidance
-from giskardpy.data_types import JointConstraint
+from giskardpy.data_types import JointConstraint, HardConstraint
 from giskardpy.exceptions import InsolvableException, ImplementationException
 from giskardpy.logging import loginfo
 from giskardpy.plugin_action_server import GetGoal
 
+import kineverse.gradients.common_math as cm
+from kineverse.gradients.diff_logic import IntSymbol
+
 
 def allowed_constraint_names():
     return [x[0] for x in inspect.getmembers(giskardpy.constraints) if inspect.isclass(x[1])]
+
+def generate_controlled_values(constraints, 
+                               symbols, 
+                               weights={}, 
+                               bounds={}, 
+                               default_weight=0.01, default_bounds=(-1e9, 1e9)):
+    controlled_values = {}
+    to_remove  = set()
+
+    for k, c in constraints.items():
+        if cm.is_symbol(c.expr) and c.expr in symbols and str(c.expr) not in controlled_values:
+            weight = default_weight if c.expr not in weights else weights[c.expr] 
+            controlled_values[str(c.expr)] = JointConstraint(c.lower, c.upper, weight)
+            to_remove.add(k)
+
+    new_constraints = {k: HardConstraint(c.lower, c.upper, c.expr) for k, c in constraints.items() if k not in to_remove}
+    for s in symbols:
+        if str(s) not in controlled_values:
+            lower, upper = default_bounds if s not in bounds else bounds[s]
+            weight = default_weight if s not in weights else weights[s]
+            controlled_values[str(s)] = JointConstraint(lower, upper, weight)
+
+    return controlled_values, new_constraints
 
 
 class GoalToConstraints(GetGoal):
@@ -78,7 +104,7 @@ class GoalToConstraints(GetGoal):
 
         controlled_joints = self.get_robot().controlled_joints
 
-        if (self.get_god_map().get_data(identifier.check_reachability)):
+        if self.get_god_map().get_data(identifier.check_reachability):
             from giskardpy import cas_wrapper as w
             joint_constraints = OrderedDict()
             # for k in controlled_joints:
@@ -123,10 +149,19 @@ class GoalToConstraints(GetGoal):
                         upper=velocity_limit,
                         weight=weight)
         else:
-            joint_constraints = OrderedDict(((self.robot.get_name(), k), self.robot._joint_constraints[k]) for k in
-                                            controlled_joints)
-        hard_constraints = OrderedDict(((self.robot.get_name(), k), self.robot._hard_constraints[k]) for k in
-                                       controlled_joints if k in self.robot._hard_constraints)
+            # joint_constraints = OrderedDict(((self.robot.get_name(), k), self.robot._joint_constraints[k]) for k in controlled_joints)
+            km = self.get_god_map().get_data(identifier.world)
+            constraints = km.get_constraints_by_symbols(set(controlled_joints).union({IntSymbol(s) for s in controlled_joints}))
+            joint_constraints, hard_constraints = generate_controlled_values(constraints,
+                                                                        set(controlled_joints))
+                                                                        # self.get_god_map().get_data(identifier.joint_cost))
+
+
+
+        # hard_constraints = OrderedDict(((self.robot.get_name(), k), self.robot._hard_constraints[k]) for k in
+        #                                controlled_joints if k in self.robot._hard_constraints)
+
+        hard_constraints = OrderedDict([((self.robot.get_name(), k), c) for k, c in hard_constraints.items()])
 
         self.get_god_map().safe_set_data(identifier.joint_constraint_identifier, joint_constraints)
         self.get_god_map().safe_set_data(identifier.hard_constraint_identifier, hard_constraints)

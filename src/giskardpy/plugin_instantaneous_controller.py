@@ -7,6 +7,7 @@ from giskardpy.plugin import GiskardBehavior
 from giskardpy.symengine_controller import InstantaneousController
 from collections import OrderedDict, namedtuple
 
+import kineverse.gradients.gradient_math as gm
 
 class ControllerPlugin(GiskardBehavior):
     def __init__(self, name):
@@ -55,7 +56,7 @@ class ControllerPlugin(GiskardBehavior):
 
         controlled_joints = self.get_robot().controlled_joints
         joint_to_symbols_str = OrderedDict(
-            (x, self.robot.get_joint_position_symbol(x)) for x in controlled_joints)
+            (x, gm.IntSymbol(x)) for x in controlled_joints)
 
 
         self.controller.update_constraints(joint_to_symbols_str,
@@ -73,8 +74,8 @@ class ControllerPlugin(GiskardBehavior):
         last_cmd = self.get_god_map().get_data(identifier.cmd)
         self.get_god_map().safe_set_data(identifier.last_cmd, last_cmd)
 
-        expr = self.controller.get_expr()
-        expr = self.god_map.get_values(expr)
+        state_vars = self.controller.get_expr()
+        expr = self.god_map.get_values(state_vars)
 
         next_cmd, \
         self.qp_data[identifier.H[-1]], \

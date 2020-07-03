@@ -30,7 +30,7 @@ from giskardpy.plugin_interrupts import WiggleCancel, MaxTrajLength
 from giskardpy.plugin_kinematic_sim import KinSimPlugin
 from giskardpy.plugin_log_trajectory import LogTrajPlugin
 from giskardpy.plugin_plot_trajectory import PlotTrajectory
-from giskardpy.plugin_plot_trajectory_fft import PlotTrajectoryFFT
+# from giskardpy.plugin_plot_trajectory_fft import PlotTrajectoryFFT
 from giskardpy.plugin_pybullet import WorldUpdatePlugin
 from giskardpy.plugin_send_trajectory import SendTrajectory
 from giskardpy.plugin_set_cmd import SetCmd

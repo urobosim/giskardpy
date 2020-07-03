@@ -1,7 +1,8 @@
 from collections import OrderedDict
 from time import time
 
-import numpy as np
+import numpy  as np
+import pandas as pd
 
 from giskardpy import logging, cas_wrapper as w
 from giskardpy.data_types import SoftConstraint
@@ -140,6 +141,7 @@ class QProblemBuilder(object):
 
     def set_lbA(self, lbA):
         self.big_ass_M[:self.h + self.s, self.j + self.s] = lbA
+        print(lbA)
 
     def set_ubA(self, ubA):
         self.big_ass_M[:self.h + self.s, self.j + self.s + 1] = ubA
@@ -278,7 +280,20 @@ class QProblemBuilder(object):
 
             xdot_full = self.qp_solver.solve(H, g, A, lb, ub, lbA, ubA, nWSR)
         except QPSolverException as e:
-            self.debug_print(np_H, A, lb, ub, lbA, ubA)
+            # self.debug_print(np_H, A, lb, ub, lbA, ubA)
+            col_names = [str(s) for s in self.controlled_joints] + self.soft_constraints_dict.keys()
+            row_names = self.hard_constraints_dict.keys() + self.soft_constraints_dict.keys()
+            dfH = pd.DataFrame(np.vstack((np_lb, 
+                                          np_ub, 
+                                          np_H.diagonal())), 
+                                          index=['lb', 'ub', 'weight'], columns=col_names)
+            dfA = pd.DataFrame(np.hstack((np_lbA.reshape((self.shape1, 1)), 
+                                          np_ubA.reshape((self.shape1, 1)), 
+                                          np_A[:, :-self.num_soft_constraints])), 
+                                          index=row_names, 
+                                          columns=['lbA', 'ubA'] + col_names[:self.num_joint_constraints])
+            dfH.T.to_csv('solver_crash_H.csv')
+            dfA.T.to_csv('solver_crash_A.csv')
             raise e
         if xdot_full is None:
             return None

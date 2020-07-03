@@ -5,6 +5,7 @@ from itertools import chain
 from giskardpy.qp_problem_builder import QProblemBuilder
 from giskardpy.robot import Robot
 
+import random
 
 class InstantaneousController(object):
     """
@@ -73,7 +74,8 @@ class InstantaneousController(object):
         a = ''.join(str(x) for x in sorted(chain(self.soft_constraints.keys(),
                                                  self.hard_constraints.keys(),
                                                  self.joint_constraints.keys())))
-        function_hash = hashlib.md5(a + self.robot.get_urdf_str()).hexdigest()
+        # TODO: Temporary hack to never hash anything. Needs to be changed
+        function_hash = hashlib.md5(a + str(random.random())).hexdigest() # self.robot.get_urdf_str()).hexdigest()
         path_to_functions = self.path_to_functions + function_hash
         self.qp_problem_builder = QProblemBuilder(self.joint_constraints,
                                                   self.hard_constraints,
@@ -99,4 +101,3 @@ class InstantaneousController(object):
 
     def get_expr(self):
         return self.qp_problem_builder.get_expr()
-
