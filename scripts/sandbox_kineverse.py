@@ -4,6 +4,8 @@ import py_trees
 import py_trees_ros
 import urdf_parser_py.urdf as up
 
+from collections import defaultdict
+
 from py_trees          import Sequence, \
                               Selector, \
                               BehaviourTree, \
@@ -114,9 +116,12 @@ class KineverseVisualizationPlugin(GiskardBehavior):
     robot = god_map.get_data(identifier.robot)
     self.coll_subworld = km.get_active_geometry(robot.get_joint_position_symbols())
     print('Obtained collision subworld containing {} objects.'.format(len(self.coll_subworld.names)))
+    self.coll_subworld.update_world({s: 0.0 for s in self.coll_subworld.free_symbols})
 
   def update(self):
     state = self.get_god_map().get_data(identifier.joint_states)
+    state = {KPath(identifier.joint_states + [s]).to_symbol(): v for s, v in state.items()}
+    print(state)
     self.coll_subworld.update_world(state)
 
     self.visualizer.begin_draw_cycle('world')
@@ -151,6 +156,8 @@ if __name__ == '__main__':
   god_map.safe_set_data(identifier.rosparam, {})
   god_map.safe_set_data(identifier.qp_solver, {})
   god_map.safe_set_data(identifier.nWSR, None)
+  god_map.safe_set_data(identifier.general_options, {})
+  god_map.safe_set_data(identifier.sample_period, 0.02)
 
 
   robot_urdf = urdf_filler(up.URDF.from_xml_string(god_map.get_data(identifier.robot_description)))
@@ -160,7 +167,7 @@ if __name__ == '__main__':
             KPath(identifier.robot[len(identifier.world):]), 
             robot_urdf, 
             reference_frame='world', 
-            joint_prefix=KPath(identifier.joint_states[len(identifier.world):]),
+            joint_prefix=KPath(identifier.joint_states),
             robot_class=GiskardRobot)
 
   km.clean_structure()
@@ -174,15 +181,15 @@ if __name__ == '__main__':
   # print('\n'.join(km.get_data(KPath(identifier.robot[len(identifier.world):])).links.keys()))
 
   god_map.safe_set_data(identifier.next_move_goal, create_example_goal())
+  god_map.safe_set_data(identifier.joint_states, defaultdict(float))
 
-
-  p_behavior = Sequence(u'planning')
-  p_behavior.add_child(ControllerPlugin(u'controller'))
-  p_behavior.add_child(KinSimPlugin(u'kin sim'))
-  # p_behavior.add_child(LogTrajPlugin(u'log'))
-  p_behavior.add_child(KineverseVisualizationPlugin(u'k_visualization'))
-  p_behavior.add_child(GoalReachedPlugin(u'goal reached'))
-  p_behavior.add_child(TimePlugin(u'time'))
+  p_behavior = PluginBehavior(u'planning')
+  p_behavior.add_plugin(ControllerPlugin(u'controller'))
+  p_behavior.add_plugin(KinSimPlugin(u'kin sim'))
+  # p_behavior.add_plugin(LogTrajPlugin(u'log'))
+  p_behavior.add_plugin(KineverseVisualizationPlugin(u'k_visualization'))
+  # p_behavior.add_plugin(GoalReachedPlugin(u'goal reached'))
+  p_behavior.add_plugin(TimePlugin(u'time'))
 
   root = Sequence(u'root')
   root.add_child(GoalToConstraints(u'update constraints', action_server_name))
@@ -194,6 +201,6 @@ if __name__ == '__main__':
 
   tree.setup(1)
 
-  for x in range(100): # tqdm(range(100), desc='Ticking tree a couple times'):
-    print('Tick {}'.format(x))
-    tree.tick()
+  # for x in range(100): # tqdm(range(100), desc='Ticking tree a couple times'):
+    # print('Tick {}'.format(x))
+  tree.tick()

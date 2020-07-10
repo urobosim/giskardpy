@@ -2,7 +2,7 @@ world = [u'world']
 robot = world + [u'robot']
 fk_pose = robot + [u'get_fk_pose']
 fk_np = robot + [u'get_fk_np']
-joint_states = robot + [u'joint_state']
+joint_states = [u'joint_state']
 
 constraints_identifier = [u'constraints']
 trajectory = [u'traj']
@@ -113,6 +113,3 @@ added_self_collisions = self_collision_avoidance + [u'add']
 
 external_collision_avoidance = collision_avoidance + [u'external_collision_avoidance']
 number_of_repeller = external_collision_avoidance + [u'number_of_repeller']
-
-
-

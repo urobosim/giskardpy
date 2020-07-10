@@ -6,6 +6,7 @@ from giskardpy.data_types import SingleJointState
 import giskardpy.identifier as identifier
 from giskardpy.plugin import GiskardBehavior
 
+from kineverse.gradients.diff_logic import DiffSymbol, Symbol
 
 class KinSimPlugin(GiskardBehavior):
     def __init__(self, name):
@@ -26,16 +27,21 @@ class KinSimPlugin(GiskardBehavior):
         motor_commands = self.get_god_map().get_data(identifier.cmd)
         current_js = self.get_god_map().get_data(identifier.joint_states)
         next_js = None
+        id_infix = self.get_god_map().expr_separator
+        print('Motor commands:\n  {}'.format('\n  '.join(['{}: {}'.format(type(k), v) for k, v in motor_commands.items()])))
         if motor_commands:
             next_js = OrderedDict()
             for joint_name, sjs in current_js.items():
-                if joint_name in motor_commands:
-                    cmd = motor_commands[joint_name]
+                # Full velocity name
+                full_name = DiffSymbol(Symbol(id_infix.join(identifier.joint_states + [joint_name])))
+                # print(full_name)
+                if full_name in motor_commands:
+                    cmd = motor_commands[full_name]
                 else:
                     cmd = 0.0
-                next_js[joint_name] = SingleJointState(sjs.name, sjs.position + cmd,
-                                                            velocity=cmd/self.sample_period)
-        print(next_js)
+                # next_js[joint_name] = SingleJointState(sjs.name, sjs.position + cmd,
+                #                                             velocity=cmd/self.sample_period)
+                next_js[joint_name] = sjs + cmd * self.sample_period
         if next_js is not None:
             self.get_god_map().safe_set_data(identifier.joint_states, next_js)
         else:
