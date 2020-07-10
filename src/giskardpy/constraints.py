@@ -15,7 +15,8 @@ from giskardpy.exceptions import GiskardException, ConstraintException
 from giskardpy.input_system import PoseStampedInput, Point3Input, Vector3Input, Vector3StampedInput, FrameInput, \
     PointStampedInput, TranslationInput
 
-from kineverse.model.paths                 import PathException
+from kineverse.gradients.diff_logic        import Position
+from kineverse.model.paths                 import PathException, Path as KPath
 from kineverse.model.frames                import Frame as KFrame
 from kineverse.operations.frame_operations import fk_a_in_b
 
@@ -25,6 +26,9 @@ WEIGHT_ABOVE_CA = 100
 WEIGHT_COLLISION_AVOIDANCE = 10
 WEIGHT_BELOW_CA = 1
 WEIGHT_MIN = 0
+
+def creat_pos_symbol(identifier):
+    return Position(KPath(identifier))
 
 
 class Constraint(object):
@@ -202,7 +206,7 @@ class Constraint(object):
         :param name: name of the god map entry
         :return: a homogeneous transformation matrix, with symbols that refer to a pose stamped in the god map.
         """
-        return PoseStampedInput(self.get_god_map().to_symbol,
+        return PoseStampedInput(creat_pos_symbol, #self.get_god_map().to_symbol,
                                 translation_prefix=self.get_identifier() +
                                                    [name,
                                                     u'pose',

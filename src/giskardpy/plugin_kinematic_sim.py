@@ -35,6 +35,7 @@ class KinSimPlugin(GiskardBehavior):
                     cmd = 0.0
                 next_js[joint_name] = SingleJointState(sjs.name, sjs.position + cmd,
                                                             velocity=cmd/self.sample_period)
+        print(next_js)
         if next_js is not None:
             self.get_god_map().safe_set_data(identifier.joint_states, next_js)
         else:

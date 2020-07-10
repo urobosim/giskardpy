@@ -56,7 +56,7 @@ class ControllerPlugin(GiskardBehavior):
 
         controlled_joints = self.get_robot().controlled_joints
         joint_to_symbols_str = OrderedDict(
-            (x, gm.IntSymbol(x)) for x in controlled_joints)
+            (x, gm.IntSymbol(x)) for x in controlled_joints if str(x) in self.joint_constraints)
 
 
         self.controller.update_constraints(joint_to_symbols_str,

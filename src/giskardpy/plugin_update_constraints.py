@@ -19,7 +19,7 @@ from giskardpy.logging import loginfo
 from giskardpy.plugin_action_server import GetGoal
 
 import kineverse.gradients.common_math as cm
-from kineverse.gradients.diff_logic import IntSymbol
+from kineverse.gradients.diff_logic import IntSymbol, DiffSymbol
 
 
 def allowed_constraint_names():
@@ -30,7 +30,7 @@ def generate_controlled_values(constraints,
                                weights={}, 
                                bounds={}, 
                                default_weight=0.01, default_bounds=(-1e9, 1e9)):
-    controlled_values = {}
+    controlled_values = OrderedDict()
     to_remove  = set()
 
     for k, c in constraints.items():
@@ -39,7 +39,7 @@ def generate_controlled_values(constraints,
             controlled_values[str(c.expr)] = JointConstraint(c.lower, c.upper, weight)
             to_remove.add(k)
 
-    new_constraints = {k: HardConstraint(c.lower, c.upper, c.expr) for k, c in constraints.items() if k not in to_remove}
+    new_constraints = OrderedDict([(k, HardConstraint(c.lower, c.upper, c.expr)) for k, c in constraints.items() if k not in to_remove])
     for s in symbols:
         if str(s) not in controlled_values:
             lower, upper = default_bounds if s not in bounds else bounds[s]
@@ -102,7 +102,13 @@ class GoalToConstraints(GetGoal):
         self.get_god_map().safe_set_data(identifier.soft_constraint_identifier, self.soft_constraints)
         self.get_blackboard().runtime = time()
 
-        controlled_joints = self.get_robot().controlled_joints
+        relevant_symbols = set(sum([list(cm.free_symbols(c.expression)) for c in self.soft_constraints.values()], []))
+
+        # This is not a principled way of determining relevant symbols
+        # There is the inherent assumption that the constraints are only defined on positions
+        # and also that the robot's positions are always controllable
+        controlled_joints = set(self.get_robot().get_joint_position_symbols())
+        relevant_joints   = controlled_joints.intersection(relevant_symbols)
 
         if self.get_god_map().get_data(identifier.check_reachability):
             from giskardpy import cas_wrapper as w
@@ -151,9 +157,10 @@ class GoalToConstraints(GetGoal):
         else:
             # joint_constraints = OrderedDict(((self.robot.get_name(), k), self.robot._joint_constraints[k]) for k in controlled_joints)
             km = self.get_god_map().get_data(identifier.world)
-            constraints = km.get_constraints_by_symbols(set(controlled_joints).union({IntSymbol(s) for s in controlled_joints}))
+            joint_control_space = {DiffSymbol(s) for s in relevant_joints}
+            constraints = km.get_constraints_by_symbols(set(relevant_joints).union(joint_control_space))
             joint_constraints, hard_constraints = generate_controlled_values(constraints,
-                                                                        set(controlled_joints))
+                                                                        joint_control_space)
                                                                         # self.get_god_map().get_data(identifier.joint_cost))
 
 

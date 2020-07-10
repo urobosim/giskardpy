@@ -5,6 +5,13 @@ from itertools import chain
 from giskardpy.qp_problem_builder import QProblemBuilder
 from giskardpy.robot import Robot
 
+import kineverse.gradients.common_math as cm
+from kineverse.model.paths           import Path as KPath
+from kineverse.motion.min_qp_builder import MinimalQPBuilder,                \
+                                            Constraint      as KConstraint,  \
+                                            SoftConstraint  as KSConstraint, \
+                                            ControlledValue as KControlledValue
+
 import random
 
 class InstantaneousController(object):
@@ -29,7 +36,7 @@ class InstantaneousController(object):
         self.soft_constraints = {}
         self.free_symbols = None
         self.qp_problem_builder = None
-
+        # self.state_ids = None
 
     def get_qpdata_key_map(self):
         b_keys = []
@@ -82,6 +89,10 @@ class InstantaneousController(object):
                                                   self.soft_constraints,
                                                   self.joint_to_symbols_str.values(),
                                                   path_to_functions)
+        # self.qp_problem_builder = MinimalQPBuilder({k:  KConstraint(c.lower, c.upper, c.expression)               for k, c in self.hard_constraints.items()},
+        #                                            {k: KSConstraint(c.lbA,   c.ubA,   c.weight, c.expression)     for k, c in self.soft_constraints.items()},
+        #                                            {k: KControlledValue(c.lower, c.upper, cm.Symbol(k), c.weight) for k, c in self.joint_constraints.items()})
+        # self.state_ids = [str(s) for s in self.qp_problem_builder.free_symbols]
 
     def get_cmd(self, substitutions, nWSR=None):
         """
@@ -101,3 +112,4 @@ class InstantaneousController(object):
 
     def get_expr(self):
         return self.qp_problem_builder.get_expr()
+        # return self.state_ids

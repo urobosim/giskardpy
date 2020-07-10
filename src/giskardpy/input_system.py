@@ -1,6 +1,9 @@
 from giskardpy import cas_wrapper as w
 from giskardpy.utils import KeyDefaultDict
 
+from kineverse.gradients.diff_logic import Position
+from kineverse.model.paths          import Path as KPath
+
 
 class InputArray(object):
     def __init__(self, to_expr, prefix, suffix, **kwargs):

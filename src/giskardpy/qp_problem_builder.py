@@ -192,6 +192,9 @@ class QProblemBuilder(object):
         filtered_bA_names = np.array(bA_names)[bA_mask]
         filtered_H = unfiltered_H[b_mask][:,b_mask]
 
+        df_H = pd.DataFrame(unfiltered_H.diagonal(), b_names, dtype=float).sort_index()
+        df_H.to_csv('solver_crash_H.csv')
+
         p_lb = pd.DataFrame(lb, filtered_b_names, dtype=float).sort_index()
         p_ub = pd.DataFrame(ub, filtered_b_names, dtype=float).sort_index()
         p_lbA = pd.DataFrame(lbA, filtered_bA_names, dtype=float).sort_index()
@@ -206,21 +209,22 @@ class QProblemBuilder(object):
             xHx = np.dot(np.dot(xdot_full.T, filtered_H), xdot_full)
 
         p_A = pd.DataFrame(A, filtered_bA_names, filtered_b_names, dtype=float).sort_index(1).sort_index(0)
-        # if self.lbAs is None:
-        #     self.lbAs = p_lbA
-        # else:
-        #     self.lbAs = self.lbAs.T.append(p_lbA.T, ignore_index=True).T
-        # self.lbAs.T[[c for c in self.lbAs.T.columns if 'dist' in c]].plot()
+        p_A.to_csv('solver_crash_A.csv')
+        if self.lbAs is None:
+            self.lbAs = p_lbA
+        else:
+            self.lbAs = self.lbAs.T.append(p_lbA.T, ignore_index=True).T
+        self.lbAs.T[[c for c in self.lbAs.T.columns if 'dist' in c]].plot()
 
-        # arrays = [(p_weights, u'H'),
-        #           (p_A, u'A'),
-        #           (p_lbA, u'lbA'),
-        #           (p_ubA, u'ubA'),
-        #           (p_lb, u'lb'),
-        #           (p_ub, u'ub')]
-        # for a, name in arrays:
-        #     self.check_for_nan(name, a)
-        #     self.check_for_big_numbers(name, a)
+        arrays = [(p_weights, u'H'),
+                  (p_A, u'A'),
+                  (p_lbA, u'lbA'),
+                  (p_ubA, u'ubA'),
+                  (p_lb, u'lb'),
+                  (p_ub, u'ub')]
+        for a, name in arrays:
+            self.check_for_nan(name, a)
+            self.check_for_big_numbers(name, a)
         pass
 
     def check_for_nan(self, name, p_array):
@@ -283,17 +287,18 @@ class QProblemBuilder(object):
             # self.debug_print(np_H, A, lb, ub, lbA, ubA)
             col_names = [str(s) for s in self.controlled_joints] + self.soft_constraints_dict.keys()
             row_names = self.hard_constraints_dict.keys() + self.soft_constraints_dict.keys()
-            dfH = pd.DataFrame(np.vstack((np_lb, 
-                                          np_ub, 
-                                          np_H.diagonal())), 
-                                          index=['lb', 'ub', 'weight'], columns=col_names)
-            dfA = pd.DataFrame(np.hstack((np_lbA.reshape((self.shape1, 1)), 
-                                          np_ubA.reshape((self.shape1, 1)), 
-                                          np_A[:, :-self.num_soft_constraints])), 
-                                          index=row_names, 
-                                          columns=['lbA', 'ubA'] + col_names[:self.num_joint_constraints])
-            dfH.T.to_csv('solver_crash_H.csv')
-            dfA.T.to_csv('solver_crash_A.csv')
+            # dfH = pd.DataFrame(np.vstack((np_lb, 
+            #                               np_ub, 
+            #                               np_H.diagonal())), 
+            #                               index=['lb', 'ub', 'weight'], columns=col_names)
+            # dfA = pd.DataFrame(np.hstack((np_lbA.reshape((self.shape1, 1)), 
+            #                               np_ubA.reshape((self.shape1, 1)), 
+            #                               np_A[:, :-self.num_soft_constraints])), 
+            #                               index=row_names, 
+            #                               columns=['lbA', 'ubA'] + col_names[:self.num_joint_constraints])
+            # dfH.T.to_csv('solver_crash_H.csv')
+            # dfA.T.to_csv('solver_crash_A.csv')
+            self.debug_print(np_H, np_A, np_lb, np_ub, np_lbA, np_ubA)
             raise e
         if xdot_full is None:
             return None
