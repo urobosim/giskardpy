@@ -67,32 +67,19 @@ class InstantaneousController(object):
         :type free_symbols: set
         """
         # TODO bug if soft constraints get replaced, actual amount does not change.
-        last_number_of_constraints = len(self.soft_constraints)
         self.soft_constraints.update(soft_constraints)
-        if last_number_of_constraints != len(self.soft_constraints):
-            self.qp_problem_builder = None
-
+        self.qp_problem_builder = None
         self.joint_to_symbols_str = joint_to_symbols_str
+
         self.joint_constraints = joint_constraints
         self.hard_constraints = hard_constraints
 
 
     def compile(self):
-        a = ''.join(str(x) for x in sorted(chain(self.soft_constraints.keys(),
-                                                 self.hard_constraints.keys(),
-                                                 self.joint_constraints.keys())))
-        # TODO: Temporary hack to never hash anything. Needs to be changed
-        function_hash = hashlib.md5(a + str(random.random())).hexdigest() # self.robot.get_urdf_str()).hexdigest()
-        path_to_functions = self.path_to_functions + function_hash
         self.qp_problem_builder = QProblemBuilder(self.joint_constraints,
                                                   self.hard_constraints,
                                                   self.soft_constraints,
-                                                  self.joint_to_symbols_str.values(),
-                                                  path_to_functions)
-        # self.qp_problem_builder = MinimalQPBuilder({k:  KConstraint(c.lower, c.upper, c.expression)               for k, c in self.hard_constraints.items()},
-        #                                            {k: KSConstraint(c.lbA,   c.ubA,   c.weight, c.expression)     for k, c in self.soft_constraints.items()},
-        #                                            {k: KControlledValue(c.lower, c.upper, cm.Symbol(k), c.weight) for k, c in self.joint_constraints.items()})
-        # self.state_ids = [str(s) for s in self.qp_problem_builder.free_symbols]
+                                                  self.joint_to_symbols_str.values())
 
     def get_cmd(self, substitutions, nWSR=None):
         """

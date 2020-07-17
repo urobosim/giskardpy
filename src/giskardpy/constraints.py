@@ -16,6 +16,7 @@ from giskardpy.input_system import PoseStampedInput, Point3Input, Vector3Input, 
     PointStampedInput, TranslationInput
 
 from kineverse.gradients.diff_logic        import Position
+from kineverse.model.geometry_model import GeometryModel
 from kineverse.model.paths                 import PathException, Path as KPath
 from kineverse.model.frames                import Frame as KFrame
 from kineverse.operations.frame_operations import fk_a_in_b
@@ -135,7 +136,7 @@ class Constraint(object):
         :type tip: str
         :return: root_T_tip
         """
-        km = self.get_world()
+        km = self.get_world() # type: GeometryModel
         try:
             root_frame = km.get_data(root)
         except PathException as e:

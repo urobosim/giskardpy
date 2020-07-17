@@ -16,8 +16,7 @@ class QProblemBuilder(object):
     Wraps around QPOases. Builds the required matrices from constraints.
     """
 
-    def __init__(self, joint_constraints_dict, hard_constraints_dict, soft_constraints_dict, controlled_joint_symbols,
-                 path_to_functions=''):
+    def __init__(self, joint_constraints_dict, hard_constraints_dict, soft_constraints_dict, controlled_joint_symbols):
         """
         :type joint_constraints_dict: dict
         :type hard_constraints_dict: dict
@@ -27,14 +26,14 @@ class QProblemBuilder(object):
         :param path_to_functions: location where the compiled functions can be safed.
         :type path_to_functions: str
         """
-        assert (not len(controlled_joint_symbols) > len(joint_constraints_dict))
-        assert (not len(controlled_joint_symbols) < len(joint_constraints_dict))
-        assert (len(hard_constraints_dict) <= len(controlled_joint_symbols))
-        self.path_to_functions = path_to_functions
+        # assert (not len(controlled_joint_symbols) > len(joint_constraints_dict))
+        # assert (not len(controlled_joint_symbols) < len(joint_constraints_dict))
+        # assert (len(hard_constraints_dict) <= len(controlled_joint_symbols))
+        # self.path_to_functions = path_to_functions
         self.joint_constraints_dict = joint_constraints_dict
         self.hard_constraints_dict = hard_constraints_dict
         self.soft_constraints_dict = soft_constraints_dict
-        self.controlled_joints = controlled_joint_symbols
+        self.controlled_joint_symbols = controlled_joint_symbols
         self.construct_big_ass_M()
         self.compile_big_ass_M()
 
@@ -122,7 +121,7 @@ class QProblemBuilder(object):
 
     def construct_A_hard(self, hard_expressions):
         A_hard = w.Matrix(hard_expressions)
-        A_hard = w.jacobian(A_hard, self.controlled_joints)
+        A_hard = w.jacobian(A_hard, self.controlled_joint_symbols)
         self.set_A_hard(A_hard)
 
     def set_A_hard(self, A_hard):
@@ -131,7 +130,7 @@ class QProblemBuilder(object):
     def construct_A_soft(self, soft_expressions):
         A_soft = w.zeros(self.s, self.j + self.s)
         t = time()
-        A_soft[:, :self.j] = w.jacobian(w.Matrix(soft_expressions), self.controlled_joints)
+        A_soft[:, :self.j] = w.jacobian(w.Matrix(soft_expressions), self.controlled_joint_symbols)
         logging.loginfo(u'computed Jacobian in {:.5f}s'.format(time() - t))
         A_soft[:, self.j:] = w.eye(self.s)
         self.set_A_soft(A_soft)
@@ -284,27 +283,13 @@ class QProblemBuilder(object):
 
             xdot_full = self.qp_solver.solve(H, g, A, lb, ub, lbA, ubA, nWSR)
         except QPSolverException as e:
-            # self.debug_print(np_H, A, lb, ub, lbA, ubA)
-            col_names = [str(s) for s in self.controlled_joints] + self.soft_constraints_dict.keys()
-            row_names = self.hard_constraints_dict.keys() + self.soft_constraints_dict.keys()
-            # dfH = pd.DataFrame(np.vstack((np_lb, 
-            #                               np_ub, 
-            #                               np_H.diagonal())), 
-            #                               index=['lb', 'ub', 'weight'], columns=col_names)
-            # dfA = pd.DataFrame(np.hstack((np_lbA.reshape((self.shape1, 1)), 
-            #                               np_ubA.reshape((self.shape1, 1)), 
-            #                               np_A[:, :-self.num_soft_constraints])), 
-            #                               index=row_names, 
-            #                               columns=['lbA', 'ubA'] + col_names[:self.num_joint_constraints])
-            # dfH.T.to_csv('solver_crash_H.csv')
-            # dfA.T.to_csv('solver_crash_A.csv')
-            self.debug_print(np_H, np_A, np_lb, np_ub, np_lbA, np_ubA)
+            self.debug_print(np_H, A, lb, ub, lbA, ubA)
             raise e
         if xdot_full is None:
             return None
         # TODO enable debug print in an elegant way, preferably without slowing anything down
         # self.debug_print(np_H, A, lb, ub, lbA, ubA, xdot_full)
-        return OrderedDict((observable, xdot_full[i]) for i, observable in enumerate(self.controlled_joints)), \
+        return OrderedDict((observable, xdot_full[i]) for i, observable in enumerate(self.controlled_joint_symbols)), \
                np_H, np_A, np_lb, np_ub, np_lbA, np_ubA, xdot_full
 
 # with pd.option_context('display.max_rows', None, 'display.max_columns', None):

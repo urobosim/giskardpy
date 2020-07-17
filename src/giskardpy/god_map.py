@@ -1,13 +1,8 @@
 import copy
-import giskardpy.identifier as static_identifiers
 from copy import copy
 from multiprocessing import Lock
-
-import kineverse.gradients.common_math as w
-
-from kineverse.model.paths import symbol_path_separator,          \
-                                  Path as KPath,                  \
-                                  PathException as KPathException \
+import kineverse.gradients.common_math as cm
+from giskardpy import cas_wrapper as w
 
 def get_member(identifier, member):
     """
@@ -19,7 +14,7 @@ def get_member(identifier, member):
     """
     try:
         return identifier[member]
-    except TypeError:
+    except (TypeError, AttributeError):
         if callable(identifier):
             return identifier(*member)
         try:
@@ -69,7 +64,7 @@ class GodMap(object):
     # TODO give this fucker a lock
     def __init__(self):
         self._data = {}
-        self.expr_separator = symbol_path_separator
+        self.expr_separator = u'__'
         self.key_to_expr = {}
         self.expr_to_key = {}
         self.default_value = 0
@@ -102,16 +97,7 @@ class GodMap(object):
         :type identifier: list
         :return: object that is saved at key
         """
-        # Make distinction for kineverse integration into the system
-        if len(identifier) > len(static_identifiers.world) and identifier[:len(static_identifiers.world)] == static_identifiers.world:
-            if identifier[0] in self._data:
-                try:
-                    return get_data(static_identifiers.world, self._data).get_data(
-                                        KPath(identifier[len(static_identifiers.world):]))
-                except KPathException as e:  # TODO: (Adrian) I don't like this defaulting pattern
-                    return self.default_value
-        else:
-            return get_data(identifier, self._data, self.default_value)
+        return get_data(identifier, self._data, self.default_value)
 
     def get_data(self, identifier):
         with self.lock:
@@ -147,13 +133,7 @@ class GodMap(object):
             # if exprs is None:
             #     exprs = self.expr_to_key.keys()
             # return {expr: self.get_data(self.expr_to_key[expr]) for expr in exprs}
-            out = []
-            for str_expr in symbols:
-                if str_expr in self.expr_to_key:
-                    out.append(self.unsafe_get_data(self.expr_to_key[str_expr]))
-                else:
-                    out.append(self.unsafe_get_data(str_expr.split(self.expr_separator)))
-            return out
+            return [self.unsafe_get_data(self.expr_to_key[expr]) for expr in symbols]
 
     def get_registered_symbols(self):
         """
@@ -177,9 +157,6 @@ class GodMap(object):
                 raise KeyError(u'Can not access member of unknown namespace: {}'.format(identifier))
             else:
                 self._data[namespace] = value
-        elif namespace == static_identifiers.world:
-            km = self._data[namespace]
-            km.set_data(KPath(identifier[1:]), value)
         else:
             result = self._data[namespace]
             for member in identifier[1:-1]:
@@ -198,3 +175,6 @@ class GodMap(object):
     def safe_set_data(self, identifier, value):
         with self.lock:
             self.set_data(identifier, value)
+
+    def get_kineverse_symbol(self, symbol):
+        return cm.free_symbols(symbol).pop()

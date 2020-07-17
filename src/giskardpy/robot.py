@@ -17,7 +17,6 @@ if WORLD_IMPLEMENTATION == u'pybullet':
 else:
     Backend = WorldObject
 
-
 class Robot(Backend):
     def __init__(self, urdf, base_pose=None, controlled_joints=None, path_to_data_folder=u'', *args, **kwargs):
         """
