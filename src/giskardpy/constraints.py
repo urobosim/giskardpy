@@ -85,7 +85,8 @@ class Constraint(object):
         returns a symbol that referes to the given joint
         """
         key = identifier.joint_states + [joint_name, u'position']
-        return self.god_map.to_symbol(key)
+        s = self.god_map.to_symbol(key)
+        return self.get_god_map().get_kineverse_symbol(s)
 
     def get_input_sampling_period(self):
         return self.god_map.to_symbol(identifier.sample_period)

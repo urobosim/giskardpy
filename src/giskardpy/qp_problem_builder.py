@@ -208,22 +208,22 @@ class QProblemBuilder(object):
             xHx = np.dot(np.dot(xdot_full.T, filtered_H), xdot_full)
 
         p_A = pd.DataFrame(A, filtered_bA_names, filtered_b_names, dtype=float).sort_index(1).sort_index(0)
-        p_A.to_csv('solver_crash_A.csv')
-        if self.lbAs is None:
-            self.lbAs = p_lbA
-        else:
-            self.lbAs = self.lbAs.T.append(p_lbA.T, ignore_index=True).T
-        self.lbAs.T[[c for c in self.lbAs.T.columns if 'dist' in c]].plot()
-
-        arrays = [(p_weights, u'H'),
-                  (p_A, u'A'),
-                  (p_lbA, u'lbA'),
-                  (p_ubA, u'ubA'),
-                  (p_lb, u'lb'),
-                  (p_ub, u'ub')]
-        for a, name in arrays:
-            self.check_for_nan(name, a)
-            self.check_for_big_numbers(name, a)
+        # p_A.to_csv('solver_crash_A.csv')
+        # if self.lbAs is None:
+        #     self.lbAs = p_lbA
+        # else:
+        #     self.lbAs = self.lbAs.T.append(p_lbA.T, ignore_index=True).T
+        # self.lbAs.T[[c for c in self.lbAs.T.columns if 'dist' in c]].plot()
+        #
+        # arrays = [(p_weights, u'H'),
+        #           (p_A, u'A'),
+        #           (p_lbA, u'lbA'),
+        #           (p_ubA, u'ubA'),
+        #           (p_lb, u'lb'),
+        #           (p_ub, u'ub')]
+        # for a, name in arrays:
+        #     self.check_for_nan(name, a)
+        #     self.check_for_big_numbers(name, a)
         pass
 
     def check_for_nan(self, name, p_array):
