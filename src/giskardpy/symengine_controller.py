@@ -5,14 +5,6 @@ from itertools import chain
 from giskardpy.qp_problem_builder import QProblemBuilder
 from giskardpy.robot import Robot
 
-import kineverse.gradients.common_math as cm
-from kineverse.model.paths           import Path as KPath
-from kineverse.motion.min_qp_builder import MinimalQPBuilder,                \
-                                            Constraint      as KConstraint,  \
-                                            SoftConstraint  as KSConstraint, \
-                                            ControlledValue as KControlledValue
-
-import random
 
 class InstantaneousController(object):
     """

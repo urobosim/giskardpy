@@ -72,9 +72,9 @@ def initialize_god_map():
     pbw.start_pybullet(god_map.get_data(identifier.gui))
     while not rospy.is_shutdown():
         try:
-            controlled_joints = rospy.wait_for_message(u'/whole_body_controller/state',
+            controlled_joints = sorted(rospy.wait_for_message(u'/whole_body_controller/state',
                                                        JointTrajectoryControllerState,
-                                                       timeout=5.0).joint_names
+                                                       timeout=5.0).joint_names)
         except ROSException as e:
             logging.logerr(u'state topic not available')
             logging.logerr(str(e))
@@ -122,7 +122,7 @@ def initialize_god_map():
                                          suffix=[u'velocity'])
     init_km(god_map)
 
-    joint_position_symbols = {joint_name: god_map.get_kineverse_symbol(symbol) for joint_name, symbol in joint_position_symbols.items()}
+    joint_position_symbols = {joint_name: god_map.get_kineverse_symbol(symbol) for joint_name, symbol in sorted(joint_position_symbols.items(), key=lambda (x,_): x)}
     world.robot.update_joint_symbols(joint_position_symbols, joint_vel_symbols.joint_map,
                                      joint_weight_symbols,
                                      joint_velocity_linear_limit_symbols, joint_velocity_angular_limit_symbols,

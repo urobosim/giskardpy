@@ -117,59 +117,61 @@ class Robot(Backend):
         super(Robot, self).update_self_collision_matrix(added_links, removed_links)
 
     def _create_frames_expressions(self):
-        for joint_name, urdf_joint in self._urdf_robot.joint_map.items():
-            if self.is_joint_controllable(joint_name):
-                joint_symbol = self.get_joint_position_symbol(joint_name)
-            if self.is_joint_mimic(joint_name):
-                multiplier = 1 if urdf_joint.mimic.multiplier is None else urdf_joint.mimic.multiplier
-                offset = 0 if urdf_joint.mimic.offset is None else urdf_joint.mimic.offset
-                joint_symbol = self.get_joint_position_symbol(urdf_joint.mimic.joint) * multiplier + offset
-
-            if self.is_joint_type_supported(joint_name):
-                if urdf_joint.origin is not None:
-                    xyz = urdf_joint.origin.xyz if urdf_joint.origin.xyz is not None else [0, 0, 0]
-                    rpy = urdf_joint.origin.rpy if urdf_joint.origin.rpy is not None else [0, 0, 0]
-                    joint_frame = w.dot(w.translation3(*xyz), w.rotation_matrix_from_rpy(*rpy))
-                else:
-                    joint_frame = w.eye(4)
-            else:
-                # TODO more specific exception
-                raise TypeError(u'Joint type "{}" is not supported by urdfs parser.'.format(urdf_joint.type))
-
-            if self.is_joint_rotational(joint_name):
-                joint_frame = w.dot(joint_frame,
-                                    w.rotation_matrix_from_axis_angle(w.vector3(*urdf_joint.axis), joint_symbol))
-            elif self.is_joint_prismatic(joint_name):
-                translation_axis = (w.point3(*urdf_joint.axis) * joint_symbol)
-                joint_frame = w.dot(joint_frame, w.translation3(translation_axis[0],
-                                                                translation_axis[1],
-                                                                translation_axis[2]))
-
-            self._joint_to_frame[joint_name] = joint_frame
+        pass
+        # for joint_name, urdf_joint in self._urdf_robot.joint_map.items():
+        #     if self.is_joint_controllable(joint_name):
+        #         joint_symbol = self.get_joint_position_symbol(joint_name)
+        #     if self.is_joint_mimic(joint_name):
+        #         multiplier = 1 if urdf_joint.mimic.multiplier is None else urdf_joint.mimic.multiplier
+        #         offset = 0 if urdf_joint.mimic.offset is None else urdf_joint.mimic.offset
+        #         joint_symbol = self.get_joint_position_symbol(urdf_joint.mimic.joint) * multiplier + offset
+        #
+        #     if self.is_joint_type_supported(joint_name):
+        #         if urdf_joint.origin is not None:
+        #             xyz = urdf_joint.origin.xyz if urdf_joint.origin.xyz is not None else [0, 0, 0]
+        #             rpy = urdf_joint.origin.rpy if urdf_joint.origin.rpy is not None else [0, 0, 0]
+        #             joint_frame = w.dot(w.translation3(*xyz), w.rotation_matrix_from_rpy(*rpy))
+        #         else:
+        #             joint_frame = w.eye(4)
+        #     else:
+        #         # TODO more specific exception
+        #         raise TypeError(u'Joint type "{}" is not supported by urdfs parser.'.format(urdf_joint.type))
+        #
+        #     if self.is_joint_rotational(joint_name):
+        #         joint_frame = w.dot(joint_frame,
+        #                             w.rotation_matrix_from_axis_angle(w.vector3(*urdf_joint.axis), joint_symbol))
+        #     elif self.is_joint_prismatic(joint_name):
+        #         translation_axis = (w.point3(*urdf_joint.axis) * joint_symbol)
+        #         joint_frame = w.dot(joint_frame, w.translation3(translation_axis[0],
+        #                                                         translation_axis[1],
+        #                                                         translation_axis[2]))
+        #
+        #     self._joint_to_frame[joint_name] = joint_frame
 
     def _create_constraints(self):
         """
         Creates hard and joint constraints.
         """
-        self._hard_constraints = OrderedDict()
-        self._joint_constraints = OrderedDict()
-        for i, joint_name in enumerate(self.get_joint_names_controllable()):
-            lower_limit, upper_limit = self.get_joint_limits(joint_name)
-            joint_symbol = self.get_joint_position_symbol(joint_name)
-            sample_period = w.Symbol(u'rosparam_general_options_sample_period')  # TODO this should be a parameter
-            velocity_limit = self.get_joint_velocity_limit_expr(joint_name) * sample_period
-
-            weight = self._joint_weights[joint_name]
-            weight = weight * (1. / (velocity_limit)) ** 2
-
-            if not self.is_joint_continuous(joint_name):
-                self._joint_constraints[joint_name] = JointConstraint(lower=w.Max(-velocity_limit, lower_limit - joint_symbol),
-                                                                      upper=w.Min(velocity_limit, upper_limit - joint_symbol),
-                                                                      weight=weight)
-            else:
-                self._joint_constraints[joint_name] = JointConstraint(lower=-velocity_limit,
-                                                                      upper=velocity_limit,
-                                                                      weight=weight)
+        pass
+        # self._hard_constraints = OrderedDict()
+        # self._joint_constraints = OrderedDict()
+        # for i, joint_name in enumerate(self.get_joint_names_controllable()):
+        #     lower_limit, upper_limit = self.get_joint_limits(joint_name)
+        #     joint_symbol = self.get_joint_position_symbol(joint_name)
+        #     sample_period = w.Symbol(u'rosparam_general_options_sample_period')  # TODO this should be a parameter
+        #     velocity_limit = self.get_joint_velocity_limit_expr(joint_name) * sample_period
+        #
+        #     weight = self._joint_weights[joint_name]
+        #     weight = weight * (1. / (velocity_limit)) ** 2
+        #
+        #     if not self.is_joint_continuous(joint_name):
+        #         self._joint_constraints[joint_name] = JointConstraint(lower=w.Max(-velocity_limit, lower_limit - joint_symbol),
+        #                                                               upper=w.Min(velocity_limit, upper_limit - joint_symbol),
+        #                                                               weight=weight)
+        #     else:
+        #         self._joint_constraints[joint_name] = JointConstraint(lower=-velocity_limit,
+        #                                                               upper=velocity_limit,
+        #                                                               weight=weight)
 
     def get_fk_expression(self, root_link, tip_link):
         """

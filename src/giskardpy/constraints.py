@@ -84,9 +84,7 @@ class Constraint(object):
         """
         returns a symbol that referes to the given joint
         """
-        key = identifier.joint_states + [joint_name, u'position']
-        s = self.god_map.to_symbol(key)
-        return self.get_god_map().get_kineverse_symbol(s)
+        return self.get_robot().get_joint_position_symbol(joint_name)
 
     def get_input_sampling_period(self):
         return self.god_map.to_symbol(identifier.sample_period)
@@ -137,24 +135,35 @@ class Constraint(object):
         :type tip: str
         :return: root_T_tip
         """
-        km = self.get_world() # type: GeometryModel
-        try:
-            root_frame = km.get_data(root)
-        except PathException as e:
-            raise Exception('Undefined root frame "{}"'.format(root))
-        
-        if not isinstance(root_frame, KFrame):
-            raise Exception('Path "{}" does not name a frame'.format(root))
+        km = self.get_god_map().get_data(identifier.km_world) # type: GeometryModel
+        # try:
+        #     root_frame = km.get_data(root)
+        # except PathException as e:
+        #     raise Exception('Undefined root frame "{}"'.format(root))
+        #
+        # if not isinstance(root_frame, KFrame):
+        #     raise Exception('Path "{}" does not name a frame'.format(root))
+        #
+        # try:
+        #     tip_frame = km.get_data(tip)
+        # except PathException as e:
+        #     raise Exception('Undefined tip frame "{}"'.format(tip))
+        #
+        # if not isinstance(tip_frame, KFrame):
+        #     raise Exception('Path "{}" does not name a frame'.format(tip))
 
-        try:
-            tip_frame = km.get_data(tip)
-        except PathException as e:
-            raise Exception('Undefined tip frame "{}"'.format(tip))
-        
-        if not isinstance(tip_frame, KFrame):
-            raise Exception('Path "{}" does not name a frame'.format(tip))
+        # return fk_a_in_b(self.get_world(), root_frame, tip_frame)
 
-        return fk_a_in_b(self.get_world(), root_frame, tip_frame)
+        fk = w.eye(4)
+        root_chain, _, tip_chain = self.get_robot().get_split_chain(root, tip, joints=False)
+        for link_name in root_chain:
+            child_T_parent = km.get_data('robot/links/'+link_name).to_parent
+            fk = w.dot(fk, w.inverse_frame(child_T_parent))
+        for link_name in tip_chain:
+            # FIXME kineverse can't handle unicode
+            child_T_parent = km.get_data('robot/links/'+str(link_name)).to_parent
+            fk = w.dot(fk, child_T_parent)
+        return fk
 
     def get_fk_evaluated(self, root, tip):
         """
@@ -208,7 +217,7 @@ class Constraint(object):
         :param name: name of the god map entry
         :return: a homogeneous transformation matrix, with symbols that refer to a pose stamped in the god map.
         """
-        return PoseStampedInput(creat_pos_symbol, #self.get_god_map().to_symbol,
+        return PoseStampedInput(self.get_god_map().to_symbol,
                                 translation_prefix=self.get_identifier() +
                                                    [name,
                                                     u'pose',
