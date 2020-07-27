@@ -34,7 +34,7 @@ class VisualizationBehavior(GiskardBehavior):
             marker.ns = u'planning_visualization'
             marker.header.stamp = rospy.Time()
 
-            origin = robot.get_urdf_link(link_name).visual.origin
+            origin = robot.get_link(link_name).visual.origin
             fk = get_fk(self.robot_base, link_name).pose
 
             if origin is not None:

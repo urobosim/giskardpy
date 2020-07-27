@@ -16,20 +16,20 @@ from giskardpy.urdf_object import URDFObject
 
 
 class WorldObject(URDFObject):
-    def __init__(self, urdf, base_pose=None, controlled_joints=None, path_to_data_folder=u'',
+    def __init__(self, name, base_pose=None, controlled_joints=None, path_to_data_folder=u'',
                  calc_self_collision_matrix=True, ignored_pairs=None, added_pairs=None, *args, **kwargs):
-        super(WorldObject, self).__init__(urdf, *args, **kwargs)
+        super(WorldObject, self).__init__(name)
         self.path_to_data_folder = path_to_data_folder + u'collision_matrix/'
         self.controlled_joints = controlled_joints
-        if not ignored_pairs:
-            self.ignored_pairs = set()
-        else:
-            self.ignored_pairs = {tuple(x) for x in ignored_pairs}
-        if not added_pairs:
-            self.added_pairs = set()
-        else:
-            self.added_pairs = {tuple(x) for x in added_pairs}
-        self._calc_self_collision_matrix = calc_self_collision_matrix
+        # if not ignored_pairs:
+        #     self.ignored_pairs = set()
+        # else:
+        #     self.ignored_pairs = {tuple(x) for x in ignored_pairs}
+        # if not added_pairs:
+        #     self.added_pairs = set()
+        # else:
+        #     self.added_pairs = {tuple(x) for x in added_pairs}
+        # self._calc_self_collision_matrix = calc_self_collision_matrix
         if base_pose is None:
             p = Pose()
             p.orientation.w = 1
@@ -37,7 +37,7 @@ class WorldObject(URDFObject):
         # FIXME using .joint_state creates a chicken egg problem in pybulletworldobject
         self._js = self.get_zero_joint_state()
         self._controlled_links = None
-        self._self_collision_matrix = set()
+        # self._self_collision_matrix = set()
 
     @property
     def joint_state(self):

@@ -1,19 +1,23 @@
 from geometry_msgs.msg import PoseStamped
-from giskard_msgs.msg import CollisionEntry
-
+from giskard_msgs.msg import CollisionEntry, WorldBody
+import urdf_parser_py.urdf as up
 from giskardpy import logging
 from giskardpy.exceptions import RobotExistsException, DuplicateNameException, PhysicsWorldException, \
-    UnknownBodyException, UnsupportedOptionException
+    UnknownBodyException, UnsupportedOptionException, CorruptShapeException
 from giskardpy.robot import Robot
 from giskardpy.tfwrapper import msg_to_kdl, kdl_to_pose
-from giskardpy.urdf_object import URDFObject
+from giskardpy.urdf_object import URDFObject, hacky_urdf_parser_fix
 from giskardpy.world_object import WorldObject
+from kineverse.model.geometry_model import GeometryModel
+from kineverse.operations.urdf_operations import load_urdf
+from kineverse.urdf_fix import urdf_filler
 
 
 class World(object):
     def __init__(self, path_to_data_folder=u''):
-        self._objects = {}
-        self._robot = None  # type: Robot
+        self._objects_names = []
+        self._robot_name = None  # type: Robot
+        self.km_model = GeometryModel()
         if path_to_data_folder is None:
             path_to_data_folder = u''
         self._path_to_data_folder = path_to_data_folder
@@ -25,8 +29,8 @@ class World(object):
         keeps robot and other important objects like ground plane
         """
         self.remove_all_objects()
-        if self._robot is not None:
-            self._robot.reset()
+        if self._robot_name is not None:
+            self._robot_name.reset()
 
     def hard_reset(self):
         """
@@ -40,17 +44,80 @@ class World(object):
 
     # Objects ----------------------------------------------------------------------------------------------------------
 
-    def add_object(self, object_):
+    def add_object(self, urdf, name=None):
+        name = self.add_thing(urdf, name)
+        self._objects_names.append(name)
+        logging.loginfo(u'--> added {} to world'.format(name))
+
+    def add_thing(self, urdf, name=None):
         """
         :type object_: URDFObject
         """
-        # FIXME this interface seems unintuitive, why not pass base pose as well?
-        if self.has_robot() and self.robot.get_name() == object_.get_name():
-            raise DuplicateNameException(u'object and robot have the same name')
-        if self.has_object(object_.get_name()):
-            raise DuplicateNameException(u'object with that name already exists')
-        self._objects[object_.get_name()] = object_
-        logging.loginfo(u'--> added {} to world'.format(object_.get_name()))
+        if isinstance(urdf, WorldBody):
+            name, urdf = self.world_body_to_urdf_str(urdf)
+        urdf_obj = urdf_filler(up.URDF.from_xml_string(hacky_urdf_parser_fix(urdf)))
+        if name is None:
+            name = urdf_obj.name
+
+        if self.km_model.has_data(name):
+            raise DuplicateNameException(u'object and robot have the same name') #FIXME
+
+
+        load_urdf(ks=self.km_model,
+                  prefix=name,
+                  urdf=urdf_obj,
+                  reference_frame='map', #FIXME
+                  joint_prefix=name + '/joint_state',
+                  limit_prefix=name + '/limits',
+                  robot_class=WorldObject)
+
+        self.km_model.clean_structure()
+        self.km_model.dispatch_events()
+        return name
+
+    def world_body_to_urdf_str(self, world_body):
+        links = []
+        joints = []
+        urdf_name = world_body.name
+        if world_body.type == world_body.PRIMITIVE_BODY or world_body.type == world_body.MESH_BODY:
+            if world_body.shape.type == world_body.shape.BOX:
+                geometry = up.Box(world_body.shape.dimensions)
+            elif world_body.shape.type == world_body.shape.SPHERE:
+                geometry = up.Sphere(world_body.shape.dimensions[0])
+            elif world_body.shape.type == world_body.shape.CYLINDER:
+                geometry = up.Cylinder(world_body.shape.dimensions[world_body.shape.CYLINDER_RADIUS],
+                                       world_body.shape.dimensions[world_body.shape.CYLINDER_HEIGHT])
+            elif world_body.shape.type == world_body.shape.CONE:
+                raise TypeError(u'primitive shape cone not supported')
+            elif world_body.type == world_body.MESH_BODY:
+                geometry = up.Mesh(world_body.mesh)
+            else:
+                raise CorruptShapeException(u'primitive shape \'{}\' not supported'.format(world_body.shape.type))
+            # FIXME test if this works on 16.04
+            try:
+                link = up.Link(urdf_name)
+                link.add_aggregate(u'visual', up.Visual(geometry,
+                                                        material=up.Material(u'green', color=up.Color(0, 1, 0, 1))))
+                link.add_aggregate(u'collision', up.Collision(geometry))
+            except AssertionError:
+                link = up.Link(world_body.name,
+                               visual=up.Visual(geometry, material=up.Material(u'green', color=up.Color(0, 1, 0, 1))),
+                               collision=up.Collision(geometry))
+            links.append(link)
+        elif world_body.type == world_body.URDF_BODY:
+            result_str = world_body.urdf
+            urdf_name = world_body.name
+            return urdf_name, result_str
+        else:
+            raise CorruptShapeException(u'world body type \'{}\' not supported'.format(world_body.type))
+
+        r = up.Robot(urdf_name)
+        r.version = u'1.0'
+        for link in links:
+            r.add_link(link)
+        for joint in joints:
+            r.add_joint(joint)
+        return urdf_name, r.to_xml_string()
 
     def set_object_pose(self, name, pose):
         """
@@ -64,16 +131,16 @@ class World(object):
         :type name: str
         :rtype: WorldObject
         """
-        return self._objects[name]
+        return self._objects_names[name]
 
     def get_objects(self):
-        return self._objects
+        return self._objects_names
 
     def get_object_names(self):
         """
         :rtype: list
         """
-        return list(self._objects.keys())
+        return list(self._objects_names)
 
     def has_object(self, name):
         """
@@ -93,54 +160,50 @@ class World(object):
 
     def remove_object(self, name):
         if self.has_object(name):
-            self._objects[name].suicide()
+            self._objects_names[name].suicide()
             logging.loginfo(u'<-- removed object {} from world'.format(name))
-            del (self._objects[name])
+            del (self._objects_names[name])
         else:
             raise UnknownBodyException(u'can\'t remove object \'{}\', because it doesn\' exist'.format(name))
 
     def remove_all_objects(self):
-        for object_name in self._objects.keys():
+        for object_name in self._objects_names.keys():
             # I'm not using remove object, because has object ignores hidden objects in pybullet world
-            self._objects[object_name].suicide()
+            self._objects_names[object_name].suicide()
             logging.loginfo(u'<-- removed object {} from world'.format(object_name))
-        self._objects = {}
+        self._objects_names = {}
 
     # Robot ------------------------------------------------------------------------------------------------------------
 
-    def add_robot(self, robot, base_pose, controlled_joints, ignored_pairs, added_pairs):
+    def add_robot(self, robot_urdf, base_pose, controlled_joints, ignored_pairs, added_pairs):
         """
         :type robot: giskardpy.world_object.WorldObject
         :type controlled_joints: list
         :type base_pose: PoseStamped
         """
-        if not isinstance(robot, WorldObject):
-            raise TypeError(u'only WorldObject can be added to world')
         if self.has_robot():
             raise RobotExistsException(u'A robot is already loaded')
-        if self.has_object(robot.get_name()):
-            raise DuplicateNameException(
-                u'can\'t add robot; object with name "{}" already exists'.format(robot.get_name()))
-        self._robot = Robot.from_urdf_object(urdf_object=robot,
-                                             base_pose=base_pose,
-                                             controlled_joints=controlled_joints,
-                                             path_to_data_folder=self._path_to_data_folder,
-                                             ignored_pairs=ignored_pairs,
-                                             added_pairs=added_pairs)
-        logging.loginfo(u'--> added {} to world'.format(robot.get_name()))
+        self._robot_name = self.add_thing(robot_urdf)
+        # self._robot_name = Robot.from_urdf_object(urdf_object=robot,
+        #                                           base_pose=base_pose,
+        #                                           controlled_joints=controlled_joints,
+        #                                           path_to_data_folder=self._path_to_data_folder,
+        #                                           ignored_pairs=ignored_pairs,
+        #                                           added_pairs=added_pairs)
+        logging.loginfo(u'--> added {} to world'.format(self._robot_name))
 
     @property
     def robot(self):
         """
         :rtype: Robot
         """
-        return self._robot
+        return self._robot_name
 
     def has_robot(self):
         """
         :rtype: bool
         """
-        return self._robot is not None
+        return self._robot_name is not None
 
     def set_robot_joint_state(self, joint_state):
         """
@@ -148,10 +211,10 @@ class World(object):
         :param joint_state: joint name -> SingleJointState
         :type joint_state: dict
         """
-        self._robot.joint_state = joint_state
+        self._robot_name.joint_state = joint_state
 
     def remove_robot(self):
-        self._robot = None
+        self._robot_name = None
 
     def attach_existing_obj_to_robot(self, name, link, pose):
         """
@@ -159,7 +222,7 @@ class World(object):
         :type name: name
         """
         # TODO this should know the object pose and not require it as input
-        self._robot.attach_urdf_object(self.get_object(name), link, pose)
+        self._robot_name.attach_urdf_object(self.get_object(name), link, pose)
         self.remove_object(name)
         logging.loginfo(u'--> attached object {} on link {}'.format(name, link))
 

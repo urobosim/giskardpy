@@ -1,10 +1,13 @@
 import pytest
+import urdf_parser_py.urdf as up
 from geometry_msgs.msg import Pose, Point, Quaternion
 
-from giskardpy.exceptions import DuplicateNameException, UnknownBodyException
-from giskardpy.urdf_object import URDFObject
-from giskardpy.utils import make_world_body_box, make_world_body_sphere, make_world_body_cylinder, make_urdf_world_body
-from utils_for_tests import pr2_urdf, donbot_urdf, boxy_urdf, base_bot_urdf
+from giskardpy.urdf_object import URDFObject, hacky_urdf_parser_fix
+from giskardpy.utils import make_world_body_box
+from kineverse.model.articulation_model import ArticulationModel
+from kineverse.operations.urdf_operations import load_urdf
+from kineverse.urdf_fix import urdf_filler
+from utils_for_tests import pr2_urdf as pr2_urdf_, donbot_urdf, boxy_urdf, base_bot_urdf
 
 set_of_pr2_joints = {'r_gripper_motor_accelerometer_joint',
                      'high_def_optical_frame_joint',
@@ -225,6 +228,37 @@ def function_setup(request, module_setup):
     pass
 
 
+def make_object_without_limits(urdf):
+    km = ArticulationModel()
+    urdf_obj = urdf_filler(up.URDF.from_xml_string(hacky_urdf_parser_fix(urdf)))  # FIXME make this to a function
+    name = 'egal'
+    limit_map = load_urdf(ks=km,
+                          prefix=name,
+                          urdf=urdf_obj,
+                          reference_frame='map',  # FIXME
+                          joint_prefix=name + '/joint_state',
+                          robot_class=URDFObject)
+    km.clean_structure()
+    return km.get_data(name)
+
+
+def make_object(urdf):
+    km = ArticulationModel()
+    urdf_obj = urdf_filler(up.URDF.from_xml_string(hacky_urdf_parser_fix(urdf)))  # FIXME make this to a function
+    name = 'egal'
+    limit_map = load_urdf(ks=km,
+                          prefix=name,
+                          urdf=urdf_obj,
+                          reference_frame='map',  # FIXME
+                          joint_prefix=name + '/joint_state',
+                          robot_class=URDFObject)
+    km.clean_structure()
+    return km.get_data(name), limit_map
+
+pr2 = pr2_urdf_()
+def pr2_urdf():
+    return pr2
+
 class TestUrdfObject(object):
     cls = URDFObject
 
@@ -232,7 +266,7 @@ class TestUrdfObject(object):
         """
         :type parsed_pr2: tested_class
         """
-        parsed_pr2 = self.cls(pr2_urdf())
+        parsed_pr2 = make_object_without_limits(pr2_urdf())
         assert set(parsed_pr2.get_joint_names()) == set_of_pr2_joints
 
         assert set(parsed_pr2.get_link_names()) == set_of_pr2_links
@@ -244,33 +278,10 @@ class TestUrdfObject(object):
         """
         with open(u'urdfs/tiny_ball.urdf', u'r') as f:
             urdf_string = f.read()
-        parsed_pr2 = self.cls(urdf_string)
+        parsed_pr2 = make_object_without_limits(urdf_string)
         assert len(parsed_pr2.get_joint_names()) == 0
         assert len(parsed_pr2.get_link_names()) == 1
         assert parsed_pr2.get_name() == u'ball'
-
-    def test_from_world_body_box(self, function_setup):
-        wb = make_world_body_box()
-        urdf_obj = self.cls.from_world_body(wb)
-        assert len(urdf_obj.get_link_names()) == 1
-        assert urdf_obj.get_urdf_link('box').collision
-        assert urdf_obj.get_urdf_link('box').visual
-        assert len(urdf_obj.get_joint_names()) == 0
-
-    def test_from_world_body_sphere(self, function_setup):
-        wb = make_world_body_sphere()
-        urdf_obj = self.cls.from_world_body(wb)
-        assert len(urdf_obj.get_link_names()) == 1
-        assert len(urdf_obj.get_joint_names()) == 0
-
-    def test_from_world_body_cylinder(self, function_setup):
-        wb = make_world_body_cylinder()
-        urdf_obj = self.cls.from_world_body(wb)
-        assert len(urdf_obj.get_link_names()) == 1
-        assert len(urdf_obj.get_joint_names()) == 0
-
-    def test_from_world_body_cone(self, function_setup):
-        pass
 
     def test_from_world_body_invalid_primitive_type(self, function_setup):
         pass
@@ -278,31 +289,19 @@ class TestUrdfObject(object):
     def test_form_world_body_unsupported_type(self, function_setup):
         pass
 
-    def test_from_world_body_urdf(self, function_setup):
-        wb = make_urdf_world_body(u'pr2', pr2_urdf())
-        urdf_obj = self.cls.from_world_body(wb)
-        assert set(urdf_obj.get_joint_names()) == set_of_pr2_joints
-        assert set(urdf_obj.get_link_names()) == set_of_pr2_links
-
-    def test_from_world_body_mesh(self, function_setup):
-        wb = make_world_body_cylinder()
-        urdf_obj = self.cls.from_world_body(wb)
-        assert len(urdf_obj.get_link_names()) == 1
-        assert len(urdf_obj.get_joint_names()) == 0
-
     def test_get_parent_link_name(self, function_setup):
-        parsed_pr2 = self.cls(pr2_urdf())
+        parsed_pr2 = make_object_without_limits(pr2_urdf())
         assert parsed_pr2.get_parent_link_of_link(u'l_gripper_tool_frame') == u'l_gripper_palm_link'
 
     def test_get_parent_joint_of_joint(self, function_setup):
-        parsed_pr2 = self.cls(pr2_urdf())
+        parsed_pr2 = make_object_without_limits(pr2_urdf())
         assert parsed_pr2.get_parent_joint_of_joint(u'l_gripper_tool_joint') == u'l_gripper_palm_joint'
 
     def test_get_link_names_from_chain(self, function_setup):
         pass
 
     def test_get_links_from_sub_tree1(self, function_setup):
-        parsed_pr2 = self.cls(pr2_urdf())
+        parsed_pr2 = make_object_without_limits(pr2_urdf())
         urdf_obj = parsed_pr2.get_sub_tree_at_joint(u'torso_lift_joint')
         assert set(urdf_obj.get_link_names()) == {'double_stereo_link',
                                                   'head_mount_kinect2_ir_optical_frame',
@@ -468,281 +467,8 @@ class TestUrdfObject(object):
                                                    'wide_stereo_r_stereo_camera_frame_joint',
                                                    'wide_stereo_r_stereo_camera_optical_frame_joint'}
 
-    def test_attach_urdf_object1(self, function_setup):
-        parsed_pr2 = self.cls(pr2_urdf())
-        num_of_links_before = len(parsed_pr2.get_link_names())
-        num_of_joints_before = len(parsed_pr2.get_joint_names())
-        link_chain_before = len(parsed_pr2.get_links_from_sub_tree(u'torso_lift_joint'))
-        box = self.cls.from_world_body(make_world_body_box())
-        p = Pose()
-        p.position = Point(0, 0, 0)
-        p.orientation = Quaternion(0, 0, 0, 1)
-        parsed_pr2.attach_urdf_object(box, u'l_gripper_tool_frame', p)
-        assert box.get_name() in parsed_pr2.get_link_names()
-        assert len(parsed_pr2.get_link_names()) == num_of_links_before + 1
-        assert len(parsed_pr2.get_joint_names()) == num_of_joints_before + 1
-        assert len(parsed_pr2.get_links_from_sub_tree(u'torso_lift_joint')) == link_chain_before + 1
-
-    def test_attach_urdf_object2(self, function_setup):
-        parsed_base_bot = self.cls(base_bot_urdf())
-        links_before = set(parsed_base_bot.get_link_names())
-        joints_before = set(parsed_base_bot.get_joint_names())
-        donbot = make_urdf_world_body(u'mustafa', donbot_urdf())
-        donbot_obj = self.cls.from_world_body(donbot)
-        p = Pose()
-        p.position = Point(0, 0, 0)
-        p.orientation = Quaternion(0, 0, 0, 1)
-        parsed_base_bot.attach_urdf_object(donbot_obj, u'eef', p)
-        assert donbot_obj.get_root() in parsed_base_bot.get_link_names()
-        assert set(parsed_base_bot.get_link_names()).difference(
-            links_before.union(set(donbot_obj.get_link_names()))) == set()
-        assert set(parsed_base_bot.get_joint_names()).difference(
-            joints_before.union(set(donbot_obj.get_joint_names()))) == {u'mustafa'}
-        links = [l.name for l in parsed_base_bot.get_urdf_robot().links]
-        assert len(links) == len(set(links))
-        joints = [j.name for j in parsed_base_bot.get_urdf_robot().joints]
-        assert len(joints) == len(set(joints))
-
-    # TODO test is the tree is valid
-
-    def test_attach_urdf_object3(self, function_setup):
-        parsed_donbot = self.cls(donbot_urdf())
-        pr2 = make_urdf_world_body(u'pr2', pr2_urdf())
-        pr2_obj = self.cls.from_world_body(pr2)
-        p = Pose()
-        p.position = Point(0, 0, 0)
-        p.orientation = Quaternion(0, 0, 0, 1)
-        try:
-            parsed_donbot.attach_urdf_object(pr2_obj, u'eef', p)
-            assert False, u'expected exception'
-        except Exception:
-            assert True
-
-    def test_attach_twice(self, function_setup):
-        parsed_pr2 = self.cls(pr2_urdf())
-        box = self.cls.from_world_body(make_world_body_box())
-        p = Pose()
-        p.position = Point(0, 0, 0)
-        p.orientation = Quaternion(0, 0, 0, 1)
-        parsed_pr2.attach_urdf_object(box, u'l_gripper_tool_frame', p)
-        try:
-            parsed_pr2.attach_urdf_object(box, u'l_gripper_tool_frame', p)
-            assert False, u'didnt get expected exception'
-        except DuplicateNameException as e:
-            assert True
-
-    def test_attach_to_non_existing_link(self, function_setup):
-        parsed_base_bot = self.cls(base_bot_urdf())
-        box = self.cls.from_world_body(make_world_body_box())
-        p = Pose()
-        p.position = Point(0, 0, 0)
-        p.orientation = Quaternion(0, 0, 0, 1)
-        try:
-            parsed_base_bot.attach_urdf_object(box, u'muh', p)
-            assert False, u'didnt get expected exception'
-        except UnknownBodyException:
-            assert True
-
-    def test_attach_obj_with_joint_name(self, function_setup):
-        parsed_base_bot = self.cls(base_bot_urdf())
-        box = self.cls.from_world_body(make_world_body_box(u'rot_z'))
-        p = Pose()
-        p.position = Point(0, 0, 0)
-        p.orientation = Quaternion(0, 0, 0, 1)
-        try:
-            parsed_base_bot.attach_urdf_object(box, u'eef', p)
-            assert False, u'didnt get expected exception'
-        except DuplicateNameException as e:
-            assert True
-
-    def test_attach_obj_with_link_name(self, function_setup):
-        parsed_base_bot = self.cls(base_bot_urdf())
-        box = self.cls.from_world_body(make_world_body_box(u'eef'))
-        p = Pose()
-        p.position = Point(0, 0, 0)
-        p.orientation = Quaternion(0, 0, 0, 1)
-        try:
-            parsed_base_bot.attach_urdf_object(box, u'eef', p)
-            assert False, u'didnt get expected exception'
-        except DuplicateNameException as e:
-            assert True
-
-    def test_attach5(self, function_setup):
-        # TODO test that attach an object which has the same name as on of its links or joints
-        pass
-
-    def test_detach_object(self, function_setup):
-        """
-        :type parsed_base_bot: self.cls
-        """
-        parsed_base_bot = self.cls(base_bot_urdf())
-        parsed_base_bot.detach_sub_tree(u'rot_z')
-        assert len(parsed_base_bot.get_link_names()) == 3
-        assert len(parsed_base_bot.get_joint_names()) == 2
-        assert u'rot_z' not in parsed_base_bot.get_joint_names()
-        assert u'eef' not in parsed_base_bot.get_link_names()
-
-    def test_amputate_left_arm(self, function_setup):
-        parsed_pr2 = self.cls(pr2_urdf())
-        parsed_pr2.detach_sub_tree(u'l_shoulder_pan_joint')
-        assert set(parsed_pr2.get_link_names()) == {'base_bellow_link',
-                                                    'base_footprint',
-                                                    'base_laser_link',
-                                                    'base_link',
-                                                    'bl_caster_l_wheel_link',
-                                                    'bl_caster_r_wheel_link',
-                                                    'bl_caster_rotation_link',
-                                                    'br_caster_l_wheel_link',
-                                                    'br_caster_r_wheel_link',
-                                                    'br_caster_rotation_link',
-                                                    'double_stereo_link',
-                                                    'fl_caster_l_wheel_link',
-                                                    'fl_caster_r_wheel_link',
-                                                    'fl_caster_rotation_link',
-                                                    'fr_caster_l_wheel_link',
-                                                    'fr_caster_r_wheel_link',
-                                                    'fr_caster_rotation_link',
-                                                    'head_mount_kinect2_ir_optical_frame',
-                                                    'head_mount_kinect2_rgb_optical_frame',
-                                                    'head_mount_kinect_ir_link',
-                                                    'head_mount_kinect_ir_optical_frame',
-                                                    'head_mount_kinect_rgb_link',
-                                                    'head_mount_kinect_rgb_optical_frame',
-                                                    'head_mount_link',
-                                                    'head_mount_prosilica_link',
-                                                    'head_mount_prosilica_optical_frame',
-                                                    'head_pan_link',
-                                                    'head_plate_frame',
-                                                    'head_tilt_link',
-                                                    'high_def_frame',
-                                                    'high_def_optical_frame',
-                                                    'imu_link',
-                                                    'l_torso_lift_side_plate_link',
-                                                    'laser_tilt_link',
-                                                    'laser_tilt_mount_link',
-                                                    'narrow_stereo_l_stereo_camera_frame',
-                                                    'narrow_stereo_l_stereo_camera_optical_frame',
-                                                    'narrow_stereo_link',
-                                                    'narrow_stereo_optical_frame',
-                                                    'narrow_stereo_r_stereo_camera_frame',
-                                                    'narrow_stereo_r_stereo_camera_optical_frame',
-                                                    'odom_combined',
-                                                    'odom_x_frame',
-                                                    'odom_y_frame',
-                                                    'projector_wg6802418_child_frame',
-                                                    'projector_wg6802418_frame',
-                                                    'r_elbow_flex_link',
-                                                    'r_forearm_cam_frame',
-                                                    'r_forearm_cam_optical_frame',
-                                                    'r_forearm_link',
-                                                    'r_forearm_roll_link',
-                                                    'r_gripper_l_finger_link',
-                                                    'r_gripper_l_finger_tip_frame',
-                                                    'r_gripper_l_finger_tip_link',
-                                                    'r_gripper_led_frame',
-                                                    'r_gripper_motor_accelerometer_link',
-                                                    'r_gripper_motor_screw_link',
-                                                    'r_gripper_motor_slider_link',
-                                                    'r_gripper_palm_link',
-                                                    'r_gripper_r_finger_link',
-                                                    'r_gripper_r_finger_tip_link',
-                                                    'r_gripper_tool_frame',
-                                                    'r_shoulder_lift_link',
-                                                    'r_shoulder_pan_link',
-                                                    'r_torso_lift_side_plate_link',
-                                                    'r_upper_arm_link',
-                                                    'r_upper_arm_roll_link',
-                                                    'r_wrist_flex_link',
-                                                    'r_wrist_roll_link',
-                                                    'sensor_mount_link',
-                                                    'torso_lift_link',
-                                                    'torso_lift_motor_screw_link',
-                                                    'wide_stereo_l_stereo_camera_frame',
-                                                    'wide_stereo_l_stereo_camera_optical_frame',
-                                                    'wide_stereo_link',
-                                                    'wide_stereo_optical_frame',
-                                                    'wide_stereo_r_stereo_camera_frame',
-                                                    'wide_stereo_r_stereo_camera_optical_frame'}
-        assert set(parsed_pr2.get_joint_names()) == {'base_bellow_joint',
-                                                     'base_footprint_joint',
-                                                     'base_laser_joint',
-                                                     'bl_caster_l_wheel_joint',
-                                                     'bl_caster_r_wheel_joint',
-                                                     'bl_caster_rotation_joint',
-                                                     'br_caster_l_wheel_joint',
-                                                     'br_caster_r_wheel_joint',
-                                                     'br_caster_rotation_joint',
-                                                     'double_stereo_frame_joint',
-                                                     'fl_caster_l_wheel_joint',
-                                                     'fl_caster_r_wheel_joint',
-                                                     'fl_caster_rotation_joint',
-                                                     'fr_caster_l_wheel_joint',
-                                                     'fr_caster_r_wheel_joint',
-                                                     'fr_caster_rotation_joint',
-                                                     'head_mount_joint',
-                                                     'head_mount_kinect2_ir_optical_frame_joint',
-                                                     'head_mount_kinect2_rgb_optical_frame_joint',
-                                                     'head_mount_kinect_ir_joint',
-                                                     'head_mount_kinect_ir_optical_frame_joint',
-                                                     'head_mount_kinect_rgb_joint',
-                                                     'head_mount_kinect_rgb_optical_frame_joint',
-                                                     'head_mount_prosilica_joint',
-                                                     'head_mount_prosilica_optical_frame_joint',
-                                                     'head_pan_joint',
-                                                     'head_plate_frame_joint',
-                                                     'head_tilt_joint',
-                                                     'high_def_frame_joint',
-                                                     'high_def_optical_frame_joint',
-                                                     'imu_joint',
-                                                     'l_torso_lift_side_plate_joint',
-                                                     'laser_tilt_joint',
-                                                     'laser_tilt_mount_joint',
-                                                     'narrow_stereo_frame_joint',
-                                                     'narrow_stereo_l_stereo_camera_frame_joint',
-                                                     'narrow_stereo_l_stereo_camera_optical_frame_joint',
-                                                     'narrow_stereo_optical_frame_joint',
-                                                     'narrow_stereo_r_stereo_camera_frame_joint',
-                                                     'narrow_stereo_r_stereo_camera_optical_frame_joint',
-                                                     'odom_x_joint',
-                                                     'odom_y_joint',
-                                                     'odom_z_joint',
-                                                     'projector_wg6802418_child_frame_joint',
-                                                     'projector_wg6802418_frame_joint',
-                                                     'r_elbow_flex_joint',
-                                                     'r_forearm_cam_frame_joint',
-                                                     'r_forearm_cam_optical_frame_joint',
-                                                     'r_forearm_joint',
-                                                     'r_forearm_roll_joint',
-                                                     'r_gripper_joint',
-                                                     'r_gripper_l_finger_joint',
-                                                     'r_gripper_l_finger_tip_joint',
-                                                     'r_gripper_led_joint',
-                                                     'r_gripper_motor_accelerometer_joint',
-                                                     'r_gripper_motor_screw_joint',
-                                                     'r_gripper_motor_slider_joint',
-                                                     'r_gripper_palm_joint',
-                                                     'r_gripper_r_finger_joint',
-                                                     'r_gripper_r_finger_tip_joint',
-                                                     'r_gripper_tool_joint',
-                                                     'r_shoulder_lift_joint',
-                                                     'r_shoulder_pan_joint',
-                                                     'r_torso_lift_side_plate_joint',
-                                                     'r_upper_arm_joint',
-                                                     'r_upper_arm_roll_joint',
-                                                     'r_wrist_flex_joint',
-                                                     'r_wrist_roll_joint',
-                                                     'sensor_mount_frame_joint',
-                                                     'torso_lift_joint',
-                                                     'torso_lift_motor_screw_joint',
-                                                     'wide_stereo_frame_joint',
-                                                     'wide_stereo_l_stereo_camera_frame_joint',
-                                                     'wide_stereo_l_stereo_camera_optical_frame_joint',
-                                                     'wide_stereo_optical_frame_joint',
-                                                     'wide_stereo_r_stereo_camera_frame_joint',
-                                                     'wide_stereo_r_stereo_camera_optical_frame_joint'}
-
     def test_reset1(self, function_setup):
-        parsed_pr2 = self.cls(pr2_urdf())
+        parsed_pr2 = make_object_without_limits(pr2_urdf())
         links_before = set(parsed_pr2.get_link_names())
         joints_before = set(parsed_pr2.get_joint_names())
         parsed_pr2.detach_sub_tree(u'l_shoulder_pan_joint')
@@ -751,11 +477,11 @@ class TestUrdfObject(object):
         assert set(parsed_pr2.get_joint_names()) == joints_before
 
     def test_reset2(self, function_setup):
-        parsed_pr2 = self.cls(pr2_urdf())
+        parsed_pr2 = make_object_without_limits(pr2_urdf())
         links_before = set(parsed_pr2.get_link_names())
         joints_before = set(parsed_pr2.get_joint_names())
 
-        box = self.cls.from_world_body(make_world_body_box())
+        box = make_object_without_limits.from_world_body(make_world_body_box())
         p = Pose()
         p.position = Point(0, 0, 0)
         p.orientation = Quaternion(0, 0, 0, 1)
@@ -765,108 +491,125 @@ class TestUrdfObject(object):
         assert set(parsed_pr2.get_link_names()) == links_before
         assert set(parsed_pr2.get_joint_names()) == joints_before
 
-    def test_attach_detach(self, function_setup):
-        parsed_pr2 = self.cls(pr2_urdf())
-        box = self.cls.from_world_body(make_world_body_box())
-        p = Pose()
-        p.position = Point(0.0, 0.0, 0.0)
-        p.orientation = Quaternion(0.0, 0.0, 0.0, 1.0)
-        original_links = parsed_pr2.get_link_names()
-        original_joints = parsed_pr2.get_joint_names()
-        # original_urdf = parsed_pr2.get_urdf_str()
-        parsed_pr2.attach_urdf_object(box, u'l_gripper_tool_frame', p)
-        parsed_pr2.detach_sub_tree(u'box')
-        assert set(original_links) == set(parsed_pr2.get_link_names())
-        assert set(original_joints) == set(parsed_pr2.get_joint_names())
-        # assert original_urdf == parsed_pr2.get_urdf_str()
-
-    def test_detach_non_existing_object(self, function_setup):
-        parsed_pr2 = self.cls(pr2_urdf())
-        try:
-            parsed_pr2.detach_sub_tree(u'muh')
-            assert False, u'didnt get expected exception'
-        except KeyError:
-            assert True
-
-    def test_detach_at_link(self, function_setup):
-        parsed_pr2 = self.cls(pr2_urdf())
-        try:
-            parsed_pr2.detach_sub_tree(u'torso_lift_link')
-            assert False, u'didnt get expected exception'
-        except KeyError:
-            assert True
-
     def test_get_all_joint_limits(self, function_setup):
-        parsed_pr2 = self.cls(pr2_urdf())
-        assert parsed_pr2.get_all_joint_limits() == {'bl_caster_l_wheel_joint': (None, None),
-                                                     'bl_caster_r_wheel_joint': (None, None),
-                                                     'bl_caster_rotation_joint': (None, None),
-                                                     'br_caster_l_wheel_joint': (None, None),
-                                                     'br_caster_r_wheel_joint': (None, None),
-                                                     'br_caster_rotation_joint': (None, None),
-                                                     'fl_caster_l_wheel_joint': (None, None),
-                                                     'fl_caster_r_wheel_joint': (None, None),
-                                                     'fl_caster_rotation_joint': (None, None),
-                                                     'fr_caster_l_wheel_joint': (None, None),
-                                                     'fr_caster_r_wheel_joint': (None, None),
-                                                     'fr_caster_rotation_joint': (None, None),
-                                                     'head_pan_joint': (-2.857, 2.857),
-                                                     'head_tilt_joint': (-0.3712, 1.29626),
-                                                     'l_elbow_flex_joint': (-2.1213, -0.15),
-                                                     'l_forearm_roll_joint': (None, None),
-                                                     'l_gripper_joint': (0.0, 0.088),
-                                                     'l_gripper_l_finger_joint': (0.0, 0.548),
-                                                     'l_gripper_l_finger_tip_joint': (0.0, 0.548),
-                                                     'l_gripper_motor_screw_joint': (None, None),
-                                                     'l_gripper_motor_slider_joint': (-0.1, 0.1),
-                                                     'l_gripper_r_finger_joint': (0.0, 0.548),
-                                                     'l_gripper_r_finger_tip_joint': (0.0, 0.548),
-                                                     'l_shoulder_lift_joint': (-0.3536, 1.2963),
-                                                     'l_shoulder_pan_joint': (-0.564601836603, 2.1353981634),
-                                                     'l_upper_arm_roll_joint': (-0.65, 3.75),
-                                                     'l_wrist_flex_joint': (-2.0, -0.1),
-                                                     'l_wrist_roll_joint': (None, None),
-                                                     'laser_tilt_mount_joint': (-0.7354, 1.43353),
-                                                     'odom_x_joint': (-1000.0, 1000.0),
-                                                     'odom_y_joint': (-1000.0, 1000.0),
-                                                     'odom_z_joint': (None, None),
-                                                     'r_elbow_flex_joint': (-2.1213, -0.15),
-                                                     'r_forearm_roll_joint': (None, None),
-                                                     'r_gripper_joint': (0.0, 0.088),
-                                                     'r_gripper_l_finger_joint': (0.0, 0.548),
-                                                     'r_gripper_l_finger_tip_joint': (0.0, 0.548),
-                                                     'r_gripper_motor_screw_joint': (None, None),
-                                                     'r_gripper_motor_slider_joint': (-0.1, 0.1),
-                                                     'r_gripper_r_finger_joint': (0.0, 0.548),
-                                                     'r_gripper_r_finger_tip_joint': (0.0, 0.548),
-                                                     'r_shoulder_lift_joint': (-0.3536, 1.2963),
-                                                     'r_shoulder_pan_joint': (-2.1353981634, 0.564601836603),
-                                                     'r_upper_arm_roll_joint': (-3.75, 0.65),
-                                                     'r_wrist_flex_joint': (-2.0, -0.1),
-                                                     'r_wrist_roll_joint': (None, None),
-                                                     'torso_lift_joint': (0.0115, 0.325),
-                                                     'torso_lift_motor_screw_joint': (None, None)}
+        parsed_pr2, limits = make_object(pr2_urdf())
+
+        assert limits == {'bl_caster_l_wheel_joint': {'velocity': 15.0},
+                          'bl_caster_r_wheel_joint': {'velocity': 15.0},
+                          'bl_caster_rotation_joint': {'velocity': 10.0},
+                          'br_caster_l_wheel_joint': {'velocity': 15.0},
+                          'br_caster_r_wheel_joint': {'velocity': 15.0},
+                          'br_caster_rotation_joint': {'velocity': 10.0},
+                          'fl_caster_l_wheel_joint': {'velocity': 15.0},
+                          'fl_caster_r_wheel_joint': {'velocity': 15.0},
+                          'fl_caster_rotation_joint': {'velocity': 10.0},
+                          'fr_caster_l_wheel_joint': {'velocity': 15.0},
+                          'fr_caster_r_wheel_joint': {'velocity': 15.0},
+                          'fr_caster_rotation_joint': {'velocity': 10.0},
+                          'head_pan_joint': {'position': {'lower': -3.007, 'upper': 3.007},
+                                             'velocity': 6.0},
+                          'head_tilt_joint': {
+                              'position': {'lower': -0.471238, 'upper': 1.39626},
+                              'velocity': 5.0},
+                          'l_elbow_flex_joint': {
+                              'position': {'lower': -2.3213, 'upper': 0.0},
+                              'velocity': 3.3},
+                          'l_forearm_roll_joint': {'velocity': 3.6},
+                          'l_gripper_joint': {'position': {'lower': 0.0, 'upper': 0.09},
+                                              'velocity': 0.2},
+                          'l_gripper_l_finger_joint': {
+                              'position': {'lower': 0.0, 'upper': 0.548},
+                              'velocity': 0.5},
+                          'l_gripper_l_finger_tip_joint': {
+                              'position': {'lower': 0.0, 'upper': 0.548},
+                              'velocity': 0.5},
+                          'l_gripper_motor_slider_joint': {
+                              'position': {'lower': -0.1, 'upper': 0.1},
+                              'velocity': 0.2},
+                          'l_gripper_r_finger_joint': {
+                              'position': {'lower': 0.0, 'upper': 0.548},
+                              'velocity': 0.5},
+                          'l_gripper_r_finger_tip_joint': {
+                              'position': {'lower': 0.0, 'upper': 0.548},
+                              'velocity': 0.5},
+                          'l_shoulder_lift_joint': {
+                              'position': {'lower': -0.5236, 'upper': 1.3963},
+                              'velocity': 2.082},
+                          'l_shoulder_pan_joint': {'position': {'lower': -0.714601836603,
+                                                                'upper': 2.2853981634},
+                                                   'velocity': 2.088},
+                          'l_upper_arm_roll_joint': {
+                              'position': {'lower': -0.8, 'upper': 3.9},
+                              'velocity': 3.27},
+                          'l_wrist_flex_joint': {'position': {'lower': -2.18, 'upper': 0.0},
+                                                 'velocity': 3.078},
+                          'l_wrist_roll_joint': {'velocity': 3.6},
+                          'laser_tilt_mount_joint': {
+                              'position': {'lower': -0.7854, 'upper': 1.48353},
+                              'velocity': 10.0},
+                          'odom_x_joint': {'position': {'lower': -1000.0, 'upper': 1000.0},
+                                           'velocity': 0.1},
+                          'odom_y_joint': {'position': {'lower': -1000.0, 'upper': 1000.0},
+                                           'velocity': 0.1},
+                          'odom_z_joint': {'velocity': 0.2},
+                          'r_elbow_flex_joint': {
+                              'position': {'lower': -2.3213, 'upper': 0.0},
+                              'velocity': 3.3},
+                          'r_forearm_roll_joint': {'velocity': 3.6},
+                          'r_gripper_joint': {'position': {'lower': 0.0, 'upper': 0.09},
+                                              'velocity': 0.2},
+                          'r_gripper_l_finger_joint': {
+                              'position': {'lower': 0.0, 'upper': 0.548},
+                              'velocity': 0.5},
+                          'r_gripper_l_finger_tip_joint': {
+                              'position': {'lower': 0.0, 'upper': 0.548},
+                              'velocity': 0.5},
+                          'r_gripper_motor_slider_joint': {
+                              'position': {'lower': -0.1, 'upper': 0.1},
+                              'velocity': 0.2},
+                          'r_gripper_r_finger_joint': {
+                              'position': {'lower': 0.0, 'upper': 0.548},
+                              'velocity': 0.5},
+                          'r_gripper_r_finger_tip_joint': {
+                              'position': {'lower': 0.0, 'upper': 0.548},
+                              'velocity': 0.5},
+                          'r_shoulder_lift_joint': {
+                              'position': {'lower': -0.5236, 'upper': 1.3963},
+                              'velocity': 2.082},
+                          'r_shoulder_pan_joint': {'position': {'lower': -2.2853981634,
+                                                                'upper': 0.714601836603},
+                                                   'velocity': 2.088},
+                          'r_upper_arm_roll_joint': {
+                              'position': {'lower': -3.9, 'upper': 0.8},
+                              'velocity': 3.27},
+                          'r_wrist_flex_joint': {'position': {'lower': -2.18, 'upper': 0.0},
+                                                 'velocity': 3.078},
+                          'r_wrist_roll_joint': {'velocity': 3.6},
+                          'torso_lift_joint': {'position': {'lower': 0.0, 'upper': 0.33},
+                                               'velocity': 0.013}}
 
     def test_get_joint_limits2(self, function_setup):
-        parsed_pr2 = self.cls(pr2_urdf())
-        lower_limit, upper_limit = parsed_pr2.get_joint_limits(u'l_shoulder_pan_joint')
-        assert lower_limit == -0.564601836603
-        assert upper_limit == 2.1353981634
+        parsed_pr2, limits = make_object(pr2_urdf())
+        assert limits[u'l_shoulder_pan_joint'][u'position'][u'lower'] == -0.564601836603
+        assert limits[u'l_shoulder_pan_joint'][u'position'][u'upper'] == 2.1353981634
 
     def test_get_joint_limits3(self, function_setup):
-        parsed_pr2 = self.cls(pr2_urdf())
-        lower_limit, upper_limit = parsed_pr2.get_joint_limits(u'l_wrist_roll_joint')
-        assert lower_limit == None
-        assert upper_limit == None
+        parsed_pr2, limits = make_object(pr2_urdf())
+        try:
+            assert limits[u'l_wrist_roll_joint'][u'position'][u'lower']
+            assert False
+        except KeyError:
+            assert True
+        try:
+            assert limits[u'l_wrist_roll_joint'][u'position'][u'upper']
+            assert False
+        except KeyError:
+            assert True
 
     def test_get_joint_limits4(self, function_setup):
-        parsed_base_bot = self.cls(base_bot_urdf())
-        lower_limit, upper_limit = parsed_base_bot.get_joint_limits(u'joint_x')
-        assert lower_limit == -3
-        assert upper_limit == 3
-
-    def get_movable_parent(self, function_setup):
-        parsed_pr2 = self.cls(pr2_urdf())
+        parsed_base_bot, limits = make_object(base_bot_urdf())
+        assert limits[u'joint_x'][u'position'][u'lower'] == -3
+        assert limits[u'joint_x'][u'position'][u'upper'] == 3
 
     def test_get_joint_names_from_chain(self, function_setup):
         pass
@@ -898,8 +641,12 @@ class TestUrdfObject(object):
     def test_get_sub_tree_link_names_with_collision(self, function_setup):
         pass
 
+    def test_get_root(self, function_setup):
+        parsed_pr2 = make_object_without_limits(pr2_urdf())
+        assert parsed_pr2.get_root() == u'odom_combined'
+
     def test_get_chain1(self, function_setup):
-        parsed_pr2 = self.cls(pr2_urdf())
+        parsed_pr2 = make_object_without_limits(pr2_urdf())
         root = parsed_pr2.get_root()
         tip = u'l_gripper_tool_frame'
         chain = parsed_pr2.get_joint_names_from_chain(root, tip)
@@ -923,7 +670,7 @@ class TestUrdfObject(object):
                          u'l_gripper_tool_joint']
 
     def test_get_chain2(self, function_setup):
-        parsed_pr2 = self.cls(pr2_urdf())
+        parsed_pr2 = make_object_without_limits(pr2_urdf())
         root = u'r_gripper_tool_frame'
         tip = u'l_gripper_tool_frame'
         chain = parsed_pr2.get_joint_names_from_chain(root, tip)
@@ -953,7 +700,7 @@ class TestUrdfObject(object):
                          u'l_gripper_tool_joint']
 
     def test_get_chain3(self, function_setup):
-        parsed_pr2 = self.cls(pr2_urdf())
+        parsed_pr2 = make_object_without_limits(pr2_urdf())
         tip = parsed_pr2.get_root()
         root = u'l_gripper_tool_frame'
         chain = parsed_pr2.get_joint_names_from_chain(root, tip)
@@ -977,29 +724,29 @@ class TestUrdfObject(object):
                          u'odom_x_joint', ]
 
     def test_get_chain4(self, function_setup):
-        parsed_pr2 = self.cls(pr2_urdf())
+        parsed_pr2 = make_object_without_limits(pr2_urdf())
         tip = u'l_gripper_tool_frame'
         root = u'l_gripper_tool_frame'
         chain = parsed_pr2.get_joint_names_from_chain(root, tip)
         assert chain == []
 
     def test_get_chain5(self, function_setup):
-        parsed_pr2 = self.cls(pr2_urdf())
+        parsed_pr2 = make_object_without_limits(pr2_urdf())
         tip = u'l_upper_arm_link'
         root = u'l_shoulder_lift_link'
         chain = parsed_pr2.get_joint_names_from_chain(root, tip)
         assert chain == [u'l_upper_arm_roll_joint', u'l_upper_arm_joint']
 
     def test_get_chain6(self, function_setup):
-        parsed_pr2 = self.cls(pr2_urdf())
+        parsed_pr2 = make_object_without_limits(pr2_urdf())
         tip = u'l_gripper_palm_link'
         root = u'l_gripper_tool_frame'
         chain = parsed_pr2.get_joint_names_from_chain(root, tip)
         assert chain == [u'l_gripper_tool_joint']
 
     def test_get_chain_attached(self, function_setup):
-        parsed_pr2 = self.cls(pr2_urdf())
-        box = self.cls.from_world_body(make_world_body_box())
+        parsed_pr2 = make_object_without_limits(pr2_urdf())
+        box = make_object_without_limits.from_world_body(make_world_body_box())
         p = Pose()
         p.position = Point(0, 0, 0.1)
         p.orientation = Quaternion(1, 0, 0, 0)
@@ -1010,43 +757,43 @@ class TestUrdfObject(object):
         assert chain == [box.get_name()]
 
     def test_get_chain_fixed_joints(self, function_setup):
-        parsed_donbot = self.cls(donbot_urdf())
+        parsed_donbot = make_object_without_limits(donbot_urdf())
         chain = parsed_donbot.get_chain('odom', 'odom_x_frame', joints=False, fixed=False)
         assert chain == parsed_donbot._urdf_robot.get_chain('odom', 'odom_x_frame', joints=False, fixed=False)
 
     def test_get_chain_fixed_joints2(self, function_setup):
-        parsed_donbot = self.cls(donbot_urdf())
+        parsed_donbot = make_object_without_limits(donbot_urdf())
         chain = parsed_donbot.get_chain('odom', 'gripper_gripper_right_link', joints=True, fixed=False)
         assert chain == parsed_donbot._urdf_robot.get_chain('odom', 'gripper_gripper_right_link', joints=True,
                                                             fixed=False)
 
     def test_get_chain_joints_false1(self, function_setup):
-        parsed_donbot = self.cls(donbot_urdf())
+        parsed_donbot = make_object_without_limits(donbot_urdf())
         chain = parsed_donbot.get_chain('odom', 'odom_x_frame', joints=False)
         assert chain == parsed_donbot._urdf_robot.get_chain('odom', 'odom_x_frame', joints=False)
 
     def test_get_chain_joints_false2(self, function_setup):
-        parsed_donbot = self.cls(donbot_urdf())
+        parsed_donbot = make_object_without_limits(donbot_urdf())
         chain = parsed_donbot.get_chain('base_link', 'plate', joints=False)
         assert chain == ['base_link', 'plate']
 
-    def test_get_chain_1(self, function_setup):
-        parsed_donbot = self.cls(donbot_urdf())
+    def test_get_chain_donbot1(self, function_setup):
+        parsed_donbot = make_object_without_limits(donbot_urdf())
         chain = parsed_donbot.get_chain('odom', 'gripper_tool_frame')
         assert chain == parsed_donbot._urdf_robot.get_chain('odom', 'gripper_tool_frame')
 
-    def test_get_chain_2(self, function_setup):
-        parsed_donbot = self.cls(donbot_urdf())
+    def test_get_chain_donbot2(self, function_setup):
+        parsed_donbot = make_object_without_limits(donbot_urdf())
         chain = parsed_donbot.get_chain('base_link', 'plate')
         assert chain == ['base_link', 'plate_joint', 'plate']
 
     def test_get_leaves(self, function_setup):
-        parsed_pr2 = self.cls(pr2_urdf())
+        parsed_pr2 = make_object_without_limits(pr2_urdf())
         leaves = parsed_pr2.get_leaves()
         print(leaves)
 
     def test_get_sub_tree_link_names_with_collision_boxy(self, function_setup):
-        parsed_boxy = self.cls(boxy_urdf())
+        parsed_boxy = make_object_without_limits(boxy_urdf())
         expected = {u'left_arm_2_joint': {u'left_gripper_finger_left_link', u'left_arm_6_link',
                                           u'left_gripper_gripper_left_link', u'left_arm_5_link',
                                           u'left_gripper_base_link', u'left_arm_7_link',
@@ -1154,7 +901,7 @@ class TestUrdfObject(object):
             assert set(parsed_boxy.get_sub_tree_link_names_with_collision(joint)).difference(expected[joint]) == set()
 
     def test_get_sub_tree_link_names_with_collision_pr2(self, function_setup):
-        parsed_pr2 = self.cls(pr2_urdf())
+        parsed_pr2 = make_object_without_limits(pr2_urdf())
         expected = {u'l_shoulder_pan_joint': {u'l_shoulder_pan_link', u'l_shoulder_lift_link', u'l_upper_arm_roll_link',
                                               u'l_upper_arm_link', u'l_elbow_flex_link', u'l_forearm_roll_link',
                                               u'l_forearm_link', u'l_wrist_flex_link', u'l_wrist_roll_link',
@@ -1320,7 +1067,7 @@ class TestUrdfObject(object):
             assert diff == set(), u'diff for joint {} is not empty: {}'.format(joint, diff)
 
     def test_get_sub_tree_link_names_with_collision_donbot(self, function_setup):
-        parsed_donbot = self.cls(donbot_urdf())
+        parsed_donbot = make_object_without_limits(donbot_urdf())
         expected = {u'ur5_wrist_3_joint': {u'ur5_wrist_3_link', u'ur5_ee_link', u'gripper_base_link',
                                            u'gripper_gripper_left_link', u'gripper_finger_left_link',
                                            u'gripper_gripper_right_link', u'gripper_finger_right_link',
@@ -1382,13 +1129,13 @@ class TestUrdfObject(object):
         pass
 
     def test_get_first_link_with_collision(self, function_setup):
-        parsed_pr2 = self.cls(pr2_urdf())
+        parsed_pr2 = make_object_without_limits(pr2_urdf())
         assert parsed_pr2.get_first_link_with_collision() == u'base_link'
 
     def test_get_non_base_movement_root(self, function_setup):
-        parsed_donbot = self.cls(donbot_urdf())
+        parsed_donbot = make_object_without_limits(donbot_urdf())
         assert parsed_donbot.get_non_base_movement_root() == u'base_footprint'
 
     def test_get_non_base_movement_root2(self, function_setup):
-        parsed_pr2 = self.cls(pr2_urdf())
+        parsed_pr2 = make_object_without_limits(pr2_urdf())
         assert parsed_pr2.get_non_base_movement_root() == u'base_footprint'

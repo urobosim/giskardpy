@@ -201,32 +201,30 @@ class TestWorld(object):
         assert len(empty_world.get_objects()) == 0
         assert not empty_world.has_robot()
         # extracting the urdf turns integers into floats
-        pr2 = self.cls(self.cls(pr2_urdf()).get_urdf_str())
-        empty_world.add_robot(robot=pr2,
+        pr2 = pr2_urdf()
+        empty_world.add_robot(robot_urdf=pr2,
                               base_pose=None,
-                              controlled_joints=pr2.controlled_joints,
+                              controlled_joints=['torso_lift_joint'],
                               ignored_pairs=[],
                               added_pairs=[])
         assert empty_world.has_robot()
-        assert pr2.get_urdf_str() == empty_world.robot.get_urdf_str()
         return empty_world
 
     def test_add_object(self, function_setup):
         empty_world = self.world_cls()
         name = u'muh'
-        box = self.cls.from_world_body(make_world_body_box(name))
-        empty_world.add_object(box)
+        box_msg = make_world_body_box(name)
+        empty_world.add_object(urdf=box_msg, name=name)
         assert empty_world.has_object(name)
         assert len(empty_world.get_objects()) == 1
         assert len(empty_world.get_object_names()) == 1
-        assert empty_world.get_object(box.get_name()) == box
         return empty_world
 
     def test_add_object_twice(self, function_setup):
         empty_world = self.world_cls()
         name = u'muh'
-        box = self.cls.from_world_body(make_world_body_box(name))
-        empty_world.add_object(box)
+        box = make_world_body_box(name)
+        empty_world.add_object(box, name)
         try:
             empty_world.add_object(box)
             assert False, u'expected exception'
@@ -234,7 +232,6 @@ class TestWorld(object):
             assert True
         assert empty_world.has_object(name)
         assert len(empty_world.get_objects()) == 1
-        assert empty_world.get_object(box.get_name()) == box
         return empty_world
 
     def test_add_object_with_robot_name(self, function_setup):
