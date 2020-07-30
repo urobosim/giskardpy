@@ -1,6 +1,7 @@
+import urdf_parser_py.urdf as up
 from geometry_msgs.msg import PoseStamped
 from giskard_msgs.msg import CollisionEntry, WorldBody
-import urdf_parser_py.urdf as up
+
 from giskardpy import logging
 from giskardpy.exceptions import RobotExistsException, DuplicateNameException, PhysicsWorldException, \
     UnknownBodyException, UnsupportedOptionException, CorruptShapeException
@@ -9,14 +10,16 @@ from giskardpy.tfwrapper import msg_to_kdl, kdl_to_pose
 from giskardpy.urdf_object import URDFObject, hacky_urdf_parser_fix
 from giskardpy.world_object import WorldObject
 from kineverse.model.geometry_model import GeometryModel
+from kineverse.model.paths import Path
 from kineverse.operations.urdf_operations import load_urdf
 from kineverse.urdf_fix import urdf_filler
 
 
 class World(object):
-    def __init__(self, path_to_data_folder=u''):
+    def __init__(self, prefix=tuple(), path_to_data_folder=u''):
+        self.__prefix = '/'.join(prefix)
         self._objects_names = []
-        self._robot_name = None  # type: Robot
+        self._robot_name = None
         self.km_model = GeometryModel()
         if path_to_data_folder is None:
             path_to_data_folder = u''
@@ -29,8 +32,9 @@ class World(object):
         keeps robot and other important objects like ground plane
         """
         self.remove_all_objects()
-        if self._robot_name is not None:
-            self._robot_name.reset()
+        self.km_model.dispatch_events()
+        # if self._robot_name is not None:
+        #     self.robot.reset()
 
     def hard_reset(self):
         """
@@ -49,7 +53,7 @@ class World(object):
         self._objects_names.append(name)
         logging.loginfo(u'--> added {} to world'.format(name))
 
-    def add_thing(self, urdf, name=None):
+    def add_thing(self, urdf, name=None, **kwargs):
         """
         :type object_: URDFObject
         """
@@ -60,17 +64,19 @@ class World(object):
             name = urdf_obj.name
 
         if self.km_model.has_data(name):
-            raise DuplicateNameException(u'object and robot have the same name') #FIXME
+            raise DuplicateNameException(u'Something with name \'{}\' already exists'.format(name))
 
+        limit_map = load_urdf(ks=self.km_model,
+                              prefix=Path(str(name)),
+                              urdf=urdf_obj,
+                              reference_frame='map',  # FIXME
+                              joint_prefix=Path(str(self.__prefix + '/' + name + '/joint_state')),
+                              limit_prefix=Path(str(self.__prefix + '/' + name + '/limits')),
+                              robot_class=Robot)
+        obj = self.km_model.get_data(name)
+        obj.init2(limit_map=limit_map, **kwargs)
 
-        load_urdf(ks=self.km_model,
-                  prefix=name,
-                  urdf=urdf_obj,
-                  reference_frame='map', #FIXME
-                  joint_prefix=name + '/joint_state',
-                  limit_prefix=name + '/limits',
-                  robot_class=WorldObject)
-
+        self.km_model.register_on_model_changed(name, obj.reset_cache)
         self.km_model.clean_structure()
         self.km_model.dispatch_events()
         return name
@@ -131,16 +137,16 @@ class World(object):
         :type name: str
         :rtype: WorldObject
         """
-        return self._objects_names[name]
+        return self.km_model.get_data(name)
 
     def get_objects(self):
-        return self._objects_names
+        return [self.get_object(name) for name in self._objects_names]
 
     def get_object_names(self):
         """
         :rtype: list
         """
-        return list(self._objects_names)
+        return self._objects_names
 
     def has_object(self, name):
         """
@@ -148,7 +154,7 @@ class World(object):
         :type name: str
         :rtype: bool
         """
-        return name in self.get_objects()
+        return name in self.get_object_names()
 
     def set_object_joint_state(self, name, joint_state):
         """
@@ -160,18 +166,30 @@ class World(object):
 
     def remove_object(self, name):
         if self.has_object(name):
-            self._objects_names[name].suicide()
-            logging.loginfo(u'<-- removed object {} from world'.format(name))
-            del (self._objects_names[name])
+            self.__remove_object(name)
         else:
             raise UnknownBodyException(u'can\'t remove object \'{}\', because it doesn\' exist'.format(name))
+        self.km_model.clean_structure()
+        self.km_model.dispatch_events()
+
+    def __remove_object(self, name):
+        self.__remove_thing(name)
+        logging.loginfo(u'<-- removed object {} from world'.format(name))
+        self._objects_names.remove(name)
+
+    def __remove_thing(self, name):
+        operations = self.km_model.get_history_of(Path(name))
+        for tagged_operation in reversed(operations):
+            self.km_model.remove_operation(tagged_operation.tag)
 
     def remove_all_objects(self):
-        for object_name in self._objects_names.keys():
+        for object_name in self._objects_names:
             # I'm not using remove object, because has object ignores hidden objects in pybullet world
-            self._objects_names[object_name].suicide()
+            self.__remove_object(object_name)
             logging.loginfo(u'<-- removed object {} from world'.format(object_name))
         self._objects_names = {}
+        self.km_model.clean_structure()
+        self.km_model.dispatch_events()
 
     # Robot ------------------------------------------------------------------------------------------------------------
 
@@ -183,7 +201,12 @@ class World(object):
         """
         if self.has_robot():
             raise RobotExistsException(u'A robot is already loaded')
-        self._robot_name = self.add_thing(robot_urdf)
+        self._robot_name = self.add_thing(robot_urdf,
+                                          name=u'robot',
+                                          base_pose=base_pose,
+                                          controlled_joints=controlled_joints,
+                                          ignored_pairs=ignored_pairs,
+                                          added_pairs=added_pairs)
         # self._robot_name = Robot.from_urdf_object(urdf_object=robot,
         #                                           base_pose=base_pose,
         #                                           controlled_joints=controlled_joints,
@@ -197,7 +220,7 @@ class World(object):
         """
         :rtype: Robot
         """
-        return self._robot_name
+        return self.get_object(self._robot_name)
 
     def has_robot(self):
         """
@@ -211,10 +234,14 @@ class World(object):
         :param joint_state: joint name -> SingleJointState
         :type joint_state: dict
         """
-        self._robot_name.joint_state = joint_state
+        self.set_object_joint_state(self._robot_name, joint_state)
 
     def remove_robot(self):
+        self.__remove_thing(self._robot_name)
+        logging.loginfo(u'<-- removed robot {} from world'.format(self._robot_name))
         self._robot_name = None
+        self.km_model.clean_structure()
+        self.km_model.dispatch_events()
 
     def attach_existing_obj_to_robot(self, name, link, pose):
         """

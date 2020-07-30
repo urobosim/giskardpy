@@ -1,16 +1,17 @@
-import numpy as np
-from collections import namedtuple
+from __future__ import division
 from itertools import chain
 
+import numpy as np
 import urdf_parser_py.urdf as up
 from geometry_msgs.msg import Pose, Vector3, Quaternion
 from std_msgs.msg import ColorRGBA
-from tf.transformations import euler_from_quaternion, quaternion_from_euler, rotation_from_matrix, quaternion_matrix
+from tf.transformations import euler_from_quaternion, quaternion_from_euler
 from visualization_msgs.msg import Marker
 
-from giskardpy.exceptions import DuplicateNameException, UnknownBodyException, CorruptShapeException
+from giskardpy.exceptions import DuplicateNameException, UnknownBodyException
 from giskardpy.utils import cube_volume, cube_surface, sphere_volume, cylinder_volume, cylinder_surface, \
-    suppress_stderr, msg_to_list, KeyDefaultDict, memoize
+    memoize
+import kineverse.gradients.gradient_math as gm
 from kineverse.model.geometry_model import ArticulatedObject
 from kineverse.model.paths import Path
 
@@ -46,8 +47,13 @@ LIMITED_JOINTS = [PRISMATIC_JOINT, REVOLUTE_JOINT]
 
 class URDFObject(ArticulatedObject):
 
+    def init2(self, limit_map=None, *args, **kwargs):
+        if limit_map is not None:
+            self.limits = limit_map
+        else:
+            self.limits = {}
 
-    def reset_cache(self):
+    def reset_cache(self, *args, **kwargs):
         for method_name in dir(self):
             try:
                 getattr(self, method_name).memo.clear()
@@ -173,25 +179,18 @@ class URDFObject(ArticulatedObject):
         :return: lower limit, upper limit or None if not applicable
         :rtype: float, float
         """
-        joint = self.get_joint(joint_name)
-        if self.is_joint_continuous(joint_name):
-            return None, None
+        # joint = self.get_joint(joint_name)
         try:
-            return max(joint.safety_controller.soft_lower_limit, joint.limit.lower), \
-                   min(joint.safety_controller.soft_upper_limit, joint.limit.upper)
-        except AttributeError:
-            try:
-                return joint.limit.lower, joint.limit.upper
-            except AttributeError:
-                return None, None
+            return (self.limits[joint_name][u'position'][u'lower'], self.limits[joint_name][u'position'][u'upper'])
+        except KeyError:
+            return (None, None)
+
+    def get_all_joint_limits(self):
+        return {joint_name: self.get_joint_limits(joint_name) for joint_name in self.get_controllable_joints()}
 
     @memoize
     def get_joint_velocity_limit(self, joint_name):
-        limit = self._urdf_robot.joint_map[joint_name].limit
-        if limit is None or limit.velocity is None:
-            return None
-        else:
-            return limit.velocity
+        return self.limits[joint_name][u'velocity']
 
     @memoize
     def get_joint_axis(self, joint_name):
@@ -207,7 +206,7 @@ class URDFObject(ArticulatedObject):
         :rtype: bool
         """
         joint = self.get_joint(name)
-        return joint.type in MOVABLE_JOINT_TYPES and joint.mimic is None
+        return joint.type in MOVABLE_JOINT_TYPES and not self.is_joint_mimic(name)
 
     @memoize
     def is_joint_mimic(self, name):
@@ -217,7 +216,13 @@ class URDFObject(ArticulatedObject):
         :rtype: bool
         """
         joint = self.get_joint(name)
-        return joint.type in MOVABLE_JOINT_TYPES and joint.mimic is not None
+        expression = joint.position
+        if joint.type not in MOVABLE_JOINT_TYPES:
+            return False
+        if gm.is_symbol(expression):
+            return not name in str(expression)
+        return True
+        # return joint.type in MOVABLE_JOINT_TYPES and joint.mimic is not None
 
     @memoize
     def get_mimiced_joint_name(self, joint_name):
@@ -344,8 +349,11 @@ class URDFObject(ArticulatedObject):
         tree_joints = []
         joints = [joint_name]
         for joint in joints:
-            child_link = self._urdf_robot.joint_map[joint].child
-            if child_link in self._urdf_robot.child_map:
+            child_link = self.get_child_link_of_joint(joint)
+            for j in self.get_child_joints_of_link(child_link):
+                joints.append(j)
+                tree_joints.append(self.get_joint(j))
+            if len(self.get_child_links_of_link(child_link)) > 0:
                 for j, l in self._urdf_robot.child_map[child_link]:
                     joints.append(j)
                     tree_joints.append(self.get_joint(j))
@@ -357,7 +365,7 @@ class URDFObject(ArticulatedObject):
     def get_joint(self, joint_name):
         try:
             return self.joints[joint_name]
-        except :
+        except:
             pass
 
     @memoize
@@ -383,15 +391,26 @@ class URDFObject(ArticulatedObject):
         :return: True if collision geometry is mesh or simple shape with volume/surface bigger than thresholds.
         :rtype: bool
         """
-        link = self._urdf_robot.link_map[link_name]
+        link = self.get_link(link_name)
         if link.collision is not None:
-            geo = link.collision.geometry
-            return isinstance(geo, up.Box) and (cube_volume(*geo.size) > volume_threshold or
-                                                cube_surface(*geo.size) > surface_threshold) or \
-                   isinstance(geo, up.Sphere) and sphere_volume(geo.radius) > volume_threshold or \
-                   isinstance(geo, up.Cylinder) and (cylinder_volume(geo.radius, geo.length) > volume_threshold or
-                                                     cylinder_surface(geo.radius, geo.length) > surface_threshold) or \
-                   isinstance(geo, up.Mesh)
+            geo = link.collision
+            if geo[0].type == u'box':
+                return cube_volume(geo[0].scale[0],
+                                   geo[0].scale[1],
+                                   geo[0].scale[2]) > volume_threshold or \
+                       cube_surface(geo[0].scale[0],
+                                    geo[0].scale[1],
+                                    geo[0].scale[2]) > surface_threshold
+            if geo[0].type == u'sphere':
+                return sphere_volume(geo[0].scale[0]/2) > volume_threshold or \
+                       sphere_volume(geo[0].scale[0]/2) > surface_threshold
+            if geo[0].type == u'cylinder':
+                return cylinder_volume(geo[0].scale[0]/2,
+                                       geo[0].scale[2]) > volume_threshold or \
+                       cylinder_volume(geo[0].scale[0]/2,
+                                       geo[0].scale[2]) > surface_threshold
+            if geo[0].type == u'mesh':
+                return True
         return False
 
     def get_urdf_str(self):
@@ -505,34 +524,34 @@ class URDFObject(ArticulatedObject):
         p.orientation = Quaternion(*quaternion_from_euler(*origin.rpy))
         return p
 
-    def detach_sub_tree(self, joint_name):
-        """
-        :rtype: URDFObject
-        """
-        try:
-            sub_tree = self.get_sub_tree_at_joint(joint_name)
-        except KeyError:
-            raise KeyError(u'can\'t detach at unknown joint: {}'.format(joint_name))
-        for link in sub_tree.get_link_names():
-            self._urdf_robot.remove_aggregate(self.get_link(link))
-        for joint in chain([joint_name], sub_tree.get_joint_names()):
-            self._urdf_robot.remove_aggregate(self.get_joint(joint))
-        self.reinitialize()
-        return sub_tree
+    # def detach_sub_tree(self, joint_name):
+    #     """
+    #     :rtype: URDFObject
+    #     """
+    #     try:
+    #         sub_tree = self.get_sub_tree_at_joint(joint_name)
+    #     except KeyError:
+    #         raise KeyError(u'can\'t detach at unknown joint: {}'.format(joint_name))
+    #     for link in sub_tree.get_link_names():
+    #         self._urdf_robot.remove_aggregate(self.get_link(link))
+    #     for joint in chain([joint_name], sub_tree.get_joint_names()):
+    #         self._urdf_robot.remove_aggregate(self.get_joint(joint))
+    #     self.reinitialize()
+    #     return sub_tree
 
-    def reset(self):
-        """
-        Detaches all object that have been attached to the robot.
-        """
-        self._urdf_robot = up.URDF.from_xml_string(self.original_urdf)
-        self.reinitialize()
+    # def reset(self):
+    #     """
+    #     Detaches all object that have been attached to the robot.
+    #     """
+    #     self._urdf_robot = up.URDF.from_xml_string(self.original_urdf)
+    #     self.reinitialize()
 
-    def __str__(self):
-        return self.get_urdf_str()
+    # def __str__(self):
+    #     return self.get_urdf_str()
 
-    def reinitialize(self):
-        self._urdf_robot = up.URDF.from_xml_string(self.get_urdf_str())
-        self.reset_cache()
+    # def reinitialize(self):
+    #     self._urdf_robot = up.URDF.from_xml_string(self.get_urdf_str())
+    #     self.reset_cache()
 
     def robot_name_to_root_joint(self, name):
         # TODO should this really be a class function?

@@ -19,6 +19,8 @@ from giskardpy.exceptions import InsolvableException, ImplementationException
 from giskardpy.logging import loginfo
 from giskardpy.plugin_action_server import GetGoal
 from kineverse.gradients.diff_logic import DiffSymbol
+# import kineverse.gradients.gradient_math as gm
+from giskardpy import cas_wrapper as w
 
 
 def allowed_constraint_names():
@@ -180,7 +182,7 @@ class GoalToConstraints(GetGoal):
 
     def add_robot_constraints(self):
         # joint_position_symbols = set(self.get_robot().get_joint_position_symbols())
-        km = self.get_god_map().get_data(identifier.km_world)
+        world = self.get_god_map().get_data(identifier.world)
         # FIXME the references are fucked
         # FIXME you also still have to check the soft constraints for e.g. kitchen joints
         # joint_position_symbols = set(
@@ -193,8 +195,8 @@ class GoalToConstraints(GetGoal):
 
         joint_velocity_symbols = {DiffSymbol(s) for s in joint_position_symbols}
 
-        joint_velocity_constraints = km.get_constraints_by_symbols(joint_velocity_symbols)
-        joint_position_constraints = km.get_constraints_by_symbols(joint_position_symbols)
+        joint_velocity_constraints = world.km_model.get_constraints_by_symbols(joint_velocity_symbols)
+        joint_position_constraints = world.km_model.get_constraints_by_symbols(joint_position_symbols)
 
         # FIXME this is a hack to get rid of the path
         joint_velocity_constraints = {k.split('/')[-1][:-9]: c for k, c in joint_velocity_constraints.items()}
@@ -202,9 +204,14 @@ class GoalToConstraints(GetGoal):
 
         hard_constraints = OrderedDict()
         joint_constraints = OrderedDict()
+        symbols = []
         for joint_name, velocity_constraint in sorted(joint_velocity_constraints.items(), key=lambda (k, _): k):
             lower_limit = velocity_constraint.lower
             upper_limit = velocity_constraint.upper
+
+            symbols.extend(w.free_symbols(lower_limit))
+            symbols.extend(w.free_symbols(upper_limit))
+
             sample_period = self.get_god_map().to_symbol(identifier.sample_period)
 
             # FIXME support vel limit from param server again
@@ -225,12 +232,22 @@ class GoalToConstraints(GetGoal):
                                                                 weight=weight)
 
         for joint_name, position_constraint in sorted(joint_position_constraints.items(), key=lambda (k, _): k):
+            upper_limit = position_constraint.upper
+            lower_limit = position_constraint.lower
+            expression = position_constraint.expr
+            symbols.extend(w.free_symbols(upper_limit))
+            symbols.extend(w.free_symbols(lower_limit))
+            symbols.extend(w.free_symbols(expression))
             hard_constraints[joint_name] = HardConstraint(
-                lower=position_constraint.lower,
-                upper=position_constraint.upper,
-                expression=position_constraint.expr)
+                lower=lower_limit,
+                upper=upper_limit,
+                expression=expression)
 
         hard_constraints = OrderedDict([((self.robot.get_name(), k), c) for k, c in hard_constraints.items()])
+
+        for symbol in symbols:
+            self.get_god_map().register_symbol(symbol)
+
         self.get_god_map().safe_set_data(identifier.joint_constraint_identifier, joint_constraints)
         self.get_god_map().safe_set_data(identifier.hard_constraint_identifier, hard_constraints)
 

@@ -102,15 +102,17 @@ def initialize_god_map():
                                                                             identifier.default_joint_acceleration_angular_limit,
                                                                             god_map)
 
-    world = World(blackboard.god_map.get_data(identifier.data_folder))
+    world = World(identifier.world, blackboard.god_map.get_data(identifier.data_folder))
     god_map.safe_set_data(identifier.world, world)
 
 
     robot_urdf = god_map.get_data(identifier.robot_description)
-    robot = WorldObject(robot_urdf,
-                        None,
-                        controlled_joints)
-    world.add_robot(robot, None, controlled_joints,
+    # robot = WorldObject(robot_urdf,
+    #                     None,
+    #                     controlled_joints)
+    world.add_robot(robot_urdf=robot_urdf,
+                    base_pose=None,
+                    controlled_joints=controlled_joints,
                     ignored_pairs=god_map.get_data(identifier.ignored_self_collisions),
                     added_pairs=god_map.get_data(identifier.added_self_collisions))
 
@@ -120,7 +122,7 @@ def initialize_god_map():
     joint_vel_symbols = JointStatesInput(blackboard.god_map.to_symbol, world.robot.get_controllable_joints(),
                                          identifier.joint_states,
                                          suffix=[u'velocity'])
-    init_km(god_map)
+    # init_km(god_map)
 
     joint_position_symbols = {joint_name: god_map.get_kineverse_symbol(symbol) for joint_name, symbol in sorted(joint_position_symbols.items(), key=lambda (x,_): x)}
     world.robot.update_joint_symbols(joint_position_symbols, joint_vel_symbols.joint_map,
@@ -130,22 +132,22 @@ def initialize_god_map():
     world.robot.init_self_collision_matrix()
     return god_map
 
-def init_km(god_map):
-    km = GeometryModel()
-    god_map.safe_set_data(identifier.km_world, km)
-    robot_urdf = urdf_filler(up.URDF.from_xml_string(god_map.get_data(identifier.robot).get_urdf_str()))
-
-    # FIXME prefix probably has to be the name of the object
-    load_urdf(km,
-              Path(identifier.robot[-1:]), # FIXME this is a hack because i dont use the km robot path
-              robot_urdf,
-              reference_frame='world',
-              joint_prefix=Path(identifier.joint_states), # FIXME this is fragile, breaks if internal structure changes
-              # robot_class=GiskardRobot
-              )
-
-    km.clean_structure()
-    km.dispatch_events()
+# def init_km(god_map):
+#     km = GeometryModel()
+#     god_map.safe_set_data(identifier.km_world, km)
+#     robot_urdf = urdf_filler(up.URDF.from_xml_string(god_map.get_data(identifier.robot).get_urdf_str()))
+#
+#     # FIXME prefix probably has to be the name of the object
+#     load_urdf(km,
+#               Path(identifier.robot[-1:]), # FIXME this is a hack because i dont use the km robot path
+#               robot_urdf,
+#               reference_frame='world',
+#               joint_prefix=Path(identifier.joint_states), # FIXME this is fragile, breaks if internal structure changes
+#               # robot_class=GiskardRobot
+#               )
+#
+#     km.clean_structure()
+#     km.dispatch_events()
 
 def process_joint_specific_params(identifier_, default, god_map):
     d = KeyDefaultDict(lambda key: god_map.unsafe_get_data(default))

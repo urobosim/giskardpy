@@ -16,20 +16,19 @@ from giskardpy.urdf_object import URDFObject
 
 
 class WorldObject(URDFObject):
-    def __init__(self, name, base_pose=None, controlled_joints=None, path_to_data_folder=u'',
+    def init2(self, base_pose=None, controlled_joints=None, path_to_data_folder=u'',
                  calc_self_collision_matrix=True, ignored_pairs=None, added_pairs=None, *args, **kwargs):
-        super(WorldObject, self).__init__(name)
         self.path_to_data_folder = path_to_data_folder + u'collision_matrix/'
         self.controlled_joints = controlled_joints
-        # if not ignored_pairs:
-        #     self.ignored_pairs = set()
-        # else:
-        #     self.ignored_pairs = {tuple(x) for x in ignored_pairs}
-        # if not added_pairs:
-        #     self.added_pairs = set()
-        # else:
-        #     self.added_pairs = {tuple(x) for x in added_pairs}
-        # self._calc_self_collision_matrix = calc_self_collision_matrix
+        if not ignored_pairs:
+            self.ignored_pairs = set()
+        else:
+            self.ignored_pairs = {tuple(x) for x in ignored_pairs}
+        if not added_pairs:
+            self.added_pairs = set()
+        else:
+            self.added_pairs = {tuple(x) for x in added_pairs}
+        self._calc_self_collision_matrix = calc_self_collision_matrix
         if base_pose is None:
             p = Pose()
             p.orientation.w = 1
@@ -37,7 +36,9 @@ class WorldObject(URDFObject):
         # FIXME using .joint_state creates a chicken egg problem in pybulletworldobject
         self._js = self.get_zero_joint_state()
         self._controlled_links = None
-        # self._self_collision_matrix = set()
+        self._self_collision_matrix = set()
+        super(WorldObject, self).init2(*args, **kwargs)
+
 
     @property
     def joint_state(self):
@@ -86,9 +87,9 @@ class WorldObject(URDFObject):
     def __del__(self):
         self.suicide()
 
-    def reinitialize(self):
-        self._controlled_links = None
-        super(WorldObject, self).reinitialize()
+    # def reinitialize(self):
+    #     self._controlled_links = None
+    #     super(WorldObject, self).reinitialize()
 
     def get_controlled_links(self):
         # FIXME expensive
@@ -245,29 +246,30 @@ class WorldObject(URDFObject):
         """
         :rtype: bool
         """
-        urdf_hash = hashlib.md5(self.get_urdf_str()).hexdigest()
-        path = u'{}/{}/{}'.format(path, self.get_name(), urdf_hash)
-        if os.path.isfile(path):
-            with open(path) as f:
-                self._self_collision_matrix = pickle.load(f)
-                logging.loginfo(u'loaded self collision matrix {}'.format(path))
-                return True
+        # urdf_hash = hashlib.md5(self.get_urdf_str()).hexdigest()
+        # path = u'{}/{}/{}'.format(path, self.get_name(), urdf_hash)
+        # if os.path.isfile(path):
+        #     with open(path) as f:
+        #         self._self_collision_matrix = pickle.load(f)
+        #         logging.loginfo(u'loaded self collision matrix {}'.format(path))
+        #         return True
         return False
 
     def safe_self_collision_matrix(self, path):
-        urdf_hash = hashlib.md5(self.get_urdf_str()).hexdigest()
-        path = u'{}/{}/{}'.format(path, self.get_name(), urdf_hash)
-        if not os.path.exists(os.path.dirname(path)):
-            try:
-                dir_name = os.path.dirname(path)
-                if dir_name != u'':
-                    os.makedirs(dir_name)
-            except OSError as exc:  # Guard against race condition
-                if exc.errno != errno.EEXIST:
-                    raise
-        with open(path, u'w') as file:
-            logging.loginfo(u'saved self collision matrix {}'.format(path))
-            pickle.dump(self._self_collision_matrix, file)
+        pass
+        # urdf_hash = hashlib.md5(self.get_urdf_str()).hexdigest()
+        # path = u'{}/{}/{}'.format(path, self.get_name(), urdf_hash)
+        # if not os.path.exists(os.path.dirname(path)):
+        #     try:
+        #         dir_name = os.path.dirname(path)
+        #         if dir_name != u'':
+        #             os.makedirs(dir_name)
+        #     except OSError as exc:  # Guard against race condition
+        #         if exc.errno != errno.EEXIST:
+        #             raise
+        # with open(path, u'w') as file:
+        #     logging.loginfo(u'saved self collision matrix {}'.format(path))
+        #     pickle.dump(self._self_collision_matrix, file)
 
     def as_marker_msg(self, ns=u'', id=1):
         m = super(WorldObject, self).as_marker_msg(ns, id)
@@ -285,6 +287,6 @@ class WorldObject(URDFObject):
         self.update_self_collision_matrix(removed_links=sub_tree.get_link_names())
         return sub_tree
 
-    def reset(self):
-        super(WorldObject, self).reset()
-        self.update_self_collision_matrix()
+    # def reset(self):
+    #     super(WorldObject, self).reset()
+    #     self.update_self_collision_matrix()

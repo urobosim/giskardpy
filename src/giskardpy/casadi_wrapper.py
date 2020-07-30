@@ -8,6 +8,8 @@ from numpy import pi
 
 from giskardpy import logging
 from giskardpy.utils import create_path
+from kineverse.gradients.common_math import Symbol as KineverseSymbol
+import kineverse.gradients.gradient_math as gm
 
 pathSeparator = '_'
 
@@ -22,7 +24,7 @@ def diag(*args):
 
 def Symbol(data):
     if isinstance(data, str) or isinstance(data, unicode):
-        return ca.SX.sym(data)
+        return KineverseSymbol(data)
     return ca.SX(data)
 
 
@@ -35,7 +37,7 @@ def equivalent(expression1, expression2):
 
 
 def free_symbols(expression):
-    return ca.symvar(expression)
+    return list(gm.free_symbols(expression))
 
 
 def is_matrix(expression):
@@ -91,7 +93,7 @@ def Matrix(data):
             m = ca.SX(*data.shape)
         else:
             x = len(data)
-            if isinstance(data[0], list) or isinstance(data[0], tuple):
+            if isinstance(data[0], list) or isinstance(data[0], tuple) or isinstance(data[0], set):
                 y = len(data[0])
             else:
                 y = 1
