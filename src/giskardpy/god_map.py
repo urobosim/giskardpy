@@ -179,6 +179,3 @@ class GodMap(object):
     def safe_set_data(self, identifier, value):
         with self.lock:
             self.set_data(identifier, value)
-
-    def get_kineverse_symbol(self, symbol):
-        return cm.free_symbols(symbol).pop()
