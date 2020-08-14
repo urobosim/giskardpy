@@ -28,9 +28,6 @@ WEIGHT_COLLISION_AVOIDANCE = 10
 WEIGHT_BELOW_CA = 1
 WEIGHT_MIN = 0
 
-def creat_pos_symbol(identifier):
-    return Position(KPath(identifier))
-
 
 class Constraint(object):
     def __init__(self, god_map, **kwargs):

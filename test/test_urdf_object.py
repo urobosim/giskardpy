@@ -227,7 +227,6 @@ def function_setup(request, module_setup):
     """
     pass
 
-
 pr2 = pr2_urdf_()
 def pr2_urdf():
     return pr2
@@ -709,6 +708,61 @@ class TestUrdfObject(object):
     #     root = box.get_name()
     #     chain = parsed_pr2.get_joint_names_from_chain(root, tip)
     #     assert chain == [box.get_name()]
+
+    def test_get_chain_donbot1(self, function_setup):
+        parsed_donbot = make_object_without_limits(donbot_urdf())
+        chain = parsed_donbot.get_chain('odom', 'gripper_tool_frame')
+        assert chain == [u'odom',
+                         u'odom_x_joint',
+                         u'odom_x_frame',
+                         u'odom_y_joint',
+                         u'odom_y_frame',
+                         u'odom_z_joint',
+                         u'base_footprint',
+                         u'base_footprint_joint',
+                         u'base_link',
+                         u'arm_base_mounting_joint',
+                         u'ur5_base_link',
+                         u'ur5_shoulder_pan_joint',
+                         u'ur5_shoulder_link',
+                         u'ur5_shoulder_lift_joint',
+                         u'ur5_upper_arm_link',
+                         u'ur5_elbow_joint',
+                         u'ur5_forearm_link',
+                         u'ur5_wrist_1_joint',
+                         u'ur5_wrist_1_link',
+                         u'ur5_wrist_2_joint',
+                         u'ur5_wrist_2_link',
+                         u'ur5_wrist_3_joint',
+                         u'ur5_wrist_3_link',
+                         u'ur5_ee_fixed_joint',
+                         u'ur5_ee_link',
+                         u'kms_mounting_plate_joint',
+                         u'kms_mounting_plate',
+                         u'adapter_iso50_kms40_joint',
+                         u'adapter_iso50_kms40_frame_in',
+                         u'adapter_iso50_kms40_trans_frame_out',
+                         u'adapter_iso50_kms40_frame_out',
+                         u'kms40_joint',
+                         u'kms40_frame_in',
+                         u'kms40_trans_frame_out',
+                         u'kms40_frame_out',
+                         u'adapter_kms40_fwk050_in_joint',
+                         u'adapter_kms40_fwk050_frame_in',
+                         u'adapter_kms40_fwk050_trans_frame_out',
+                         u'adapter_kms40_fwk050_frame_out',
+                         u'fwk_fwa_050_in_joint',
+                         u'fwk_fwa_050_frame_in',
+                         u'fwk_fwa_050_trans_frame_out',
+                         u'fwk_fwa_050_frame_out',
+                         u'adapter_fwa050_wsg50_in_joint',
+                         u'adapter_fwa050_wsg50_frame_in',
+                         u'adapter_fwa050_wsg50_trans_frame_out',
+                         u'adapter_fwa050_wsg50_frame_out',
+                         u'gripper_anterior_gripper_joint',
+                         u'gripper_base_link',
+                         u'gripper_tool_frame_joint',
+                         u'gripper_tool_frame']
 
     # def test_get_chain_fixed_joints(self, function_setup):
     #     parsed_donbot = self.make_object_without_limits(donbot_urdf())

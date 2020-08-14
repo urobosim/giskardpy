@@ -632,7 +632,9 @@ class URDFObject(ArticulatedObject):
         :type o: URDFObject
         :rtype: bool
         """
-        return o.get_urdf_str() == self.get_urdf_str()
+        if isinstance(o, URDFObject):
+            return o.get_urdf_str() == self.get_urdf_str()
+        return False
 
     @memoize
     def has_link_visuals(self, link_name):
