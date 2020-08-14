@@ -18,7 +18,7 @@ else:
     Backend = WorldObject
 
 class Robot(Backend):
-    def __init__(self, urdf, base_pose=None, controlled_joints=None, path_to_data_folder=u'', *args, **kwargs):
+    def init2(self, base_pose=None, controlled_joints=None, path_to_data_folder=u'', *args, **kwargs):
         """
         :param urdf:
         :type urdf: str
@@ -38,8 +38,8 @@ class Robot(Backend):
         self._joint_acc_linear_limit = defaultdict(lambda: 100)  # no acceleration limit per default
         self._joint_acc_angular_limit = defaultdict(lambda: 100)  # no acceleration limit per default
         self._joint_weights = defaultdict(lambda: 0)
-        super(Robot, self).__init__(urdf, base_pose, controlled_joints, path_to_data_folder, *args, **kwargs)
-        self.reinitialize()
+        super(Robot, self).init2(base_pose, controlled_joints, path_to_data_folder, *args, **kwargs)
+        # self.reinitialize()
 
     @property
     def hard_constraints(self):
@@ -62,6 +62,9 @@ class Robot(Backend):
         # self._evaluated_fks.clear()
         self.get_fk_np.memo.clear()
 
+    def set_limit_map(self, limit_map):
+        self.limit_map = limit_map
+
     @memoize
     def get_controlled_parent_joint(self, link_name):
         joint = self.get_parent_joint_of_link(link_name)
@@ -75,16 +78,16 @@ class Robot(Backend):
         except:
             return {str(self._joint_position_symbols[x]): 0 for x in self.get_controllable_joints()}
 
-    def reinitialize(self):
-        """
-        :param joint_position_symbols: maps urdfs joint names to symbols
-        :type joint_position_symbols: dict
-        """
-        super(Robot, self).reinitialize()
-        self._fk_expressions = {}
-        self._create_frames_expressions()
-        self._create_constraints()
-        self.init_fast_fks()
+    # def reinitialize(self):
+    #     """
+    #     :param joint_position_symbols: maps urdfs joint names to symbols
+    #     :type joint_position_symbols: dict
+    #     """
+    #     super(Robot, self).reinitialize()
+    #     self._fk_expressions = {}
+    #     self._create_frames_expressions()
+    #     self._create_constraints()
+    #     self.init_fast_fks()
 
     def set_joint_position_symbols(self, symbols):
         self._joint_position_symbols = symbols
@@ -111,10 +114,11 @@ class Robot(Backend):
         self.set_joint_weight_symbols(weights)
         self.set_joint_velocity_limit_symbols(linear_velocity_limit, angular_velocity_limit)
         self.set_joint_acceleration_limit_symbols(linear_acceleration_limit, angular_acceleration_limit)
-        self.reinitialize()
+        # self.reinitialize()
 
     def update_self_collision_matrix(self, added_links=None, removed_links=None):
-        super(Robot, self).update_self_collision_matrix(added_links, removed_links)
+        pass
+        # super(Robot, self).update_self_collision_matrix(added_links, removed_links)
 
     def _create_frames_expressions(self):
         pass
@@ -231,15 +235,15 @@ class Robot(Backend):
         :return: minimum of default velocity limit and limit specified in urdfs
         :rtype: float
         """
-        limit = self._urdf_robot.joint_map[joint_name].limit
+        limit = self.get_joint_velocity_limit(joint_name)
         if self.is_joint_prismatic(joint_name):
             limit_symbol = self._joint_velocity_linear_limit[joint_name]
         else:
             limit_symbol = self._joint_velocity_angular_limit[joint_name]
-        if limit is None or limit.velocity is None:
+        if limit is None:
             return limit_symbol
         else:
-            return w.Min(limit.velocity, limit_symbol)
+            return w.Min(limit, limit_symbol)
 
     def get_joint_frame(self, joint_name):
         """

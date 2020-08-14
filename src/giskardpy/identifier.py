@@ -1,9 +1,10 @@
 world = [u'world']
-km_world = [u'km_world']
+km_world = world + [u'km_model']
 robot = world + [u'robot']
 km_robot = km_world + [u'robot']
 fk_pose = robot + [u'get_fk_pose']
 fk_np = robot + [u'get_fk_np']
+
 joint_states = robot + [u'joint_state']
 
 constraints_identifier = [u'constraints']

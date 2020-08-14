@@ -122,6 +122,10 @@ class GodMap(object):
             self.expr_to_key[str(expr)] = identifier_parts
         return self.key_to_expr[identifier]
 
+    def register_symbol(self, symbol):
+        identifier_ = str(symbol).split(self.expr_separator)
+        self.to_symbol(identifier_)
+
     def get_values(self, symbols):
         """
         :return: a dict which maps all registered expressions to their values or 0 if there is no number entry
