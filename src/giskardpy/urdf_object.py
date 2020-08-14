@@ -12,7 +12,8 @@ from giskardpy.exceptions import DuplicateNameException, UnknownBodyException
 from giskardpy.utils import cube_volume, cube_surface, sphere_volume, cylinder_volume, cylinder_surface, \
     memoize
 import kineverse.gradients.gradient_math as gm
-from kineverse.model.geometry_model import ArticulatedObject
+from kineverse.model.geometry_model import ArticulatedObject, GEOM_TYPE_MESH, GEOM_TYPE_BOX, GEOM_TYPE_CYLINDER, \
+    GEOM_TYPE_SPHERE
 from kineverse.model.paths import Path
 
 
@@ -48,6 +49,7 @@ LIMITED_JOINTS = [PRISMATIC_JOINT, REVOLUTE_JOINT]
 class URDFObject(ArticulatedObject):
 
     def init2(self, limit_map=None, *args, **kwargs):
+        self._link_to_marker = {}
         if limit_map is not None:
             self.limits = limit_map
         else:
@@ -638,8 +640,8 @@ class URDFObject(ArticulatedObject):
 
     @memoize
     def has_link_visuals(self, link_name):
-        link = self._urdf_robot.link_map[link_name]
-        return link.visual is not None
+        visual = self.links[link_name].geometry
+        return visual is not None
 
     def get_leaves(self):
         leaves = []
@@ -685,11 +687,11 @@ class URDFObject(ArticulatedObject):
     def link_as_marker(self, link_name):
         if link_name not in self._link_to_marker:
             marker = Marker()
-            geometry = self.get_link(link_name).visual.geometry
+            geometry = self.links[link_name].geometry.values()[0]
 
-            if isinstance(geometry, up.Mesh):
+            if geometry.type == GEOM_TYPE_MESH:
                 marker.type = Marker.MESH_RESOURCE
-                marker.mesh_resource = geometry.filename
+                marker.mesh_resource = geometry.mesh
                 if geometry.scale is None:
                     marker.scale.x = 1.0
                     marker.scale.z = 1.0
@@ -699,21 +701,21 @@ class URDFObject(ArticulatedObject):
                     marker.scale.z = geometry.scale[1]
                     marker.scale.y = geometry.scale[2]
                 marker.mesh_use_embedded_materials = True
-            elif isinstance(geometry, up.Box):
+            elif geometry.type == GEOM_TYPE_BOX:
                 marker.type = Marker.CUBE
-                marker.scale.x = geometry.size[0]
-                marker.scale.y = geometry.size[1]
-                marker.scale.z = geometry.size[2]
-            elif isinstance(geometry, up.Cylinder):
+                marker.scale.x = geometry.scale[0]
+                marker.scale.y = geometry.scale[1]
+                marker.scale.z = geometry.scale[2]
+            elif geometry.type == GEOM_TYPE_CYLINDER:
                 marker.type = Marker.CYLINDER
-                marker.scale.x = geometry.radius * 2
-                marker.scale.y = geometry.radius * 2
-                marker.scale.z = geometry.length
-            elif isinstance(geometry, up.Sphere):
+                marker.scale.x = geometry.scale[0]
+                marker.scale.y = geometry.scale[0]
+                marker.scale.z = geometry.scale[2]
+            elif geometry.type == GEOM_TYPE_SPHERE:
                 marker.type = Marker.SPHERE
-                marker.scale.x = geometry.radius * 2
-                marker.scale.y = geometry.radius * 2
-                marker.scale.z = geometry.radius * 2
+                marker.scale.x = geometry.scale[0]
+                marker.scale.y = geometry.scale[0]
+                marker.scale.z = geometry.scale[0]
             else:
                 return None
 

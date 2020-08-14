@@ -1,12 +1,13 @@
 import hashlib
-
+from giskardpy import cas_wrapper as w
 import py_trees
 import rospy
 from geometry_msgs.msg import Point, Quaternion
-from tf.transformations import quaternion_from_euler
+from tf.transformations import quaternion_from_euler, quaternion_matrix, quaternion_from_matrix
 from visualization_msgs.msg import Marker, MarkerArray
 
 from giskardpy.tfwrapper import pose_to_kdl, kdl_to_pose
+from kineverse.gradients.common_math import to_numpy
 from plugin import GiskardBehavior
 
 # TODO ensure one last update after planning
@@ -34,12 +35,16 @@ class VisualizationBehavior(GiskardBehavior):
             marker.ns = u'planning_visualization'
             marker.header.stamp = rospy.Time()
 
-            origin = robot.get_link(link_name).visual.origin
+            origin = to_numpy(robot.get_link(link_name).geometry.values()[0].to_parent)
             fk = get_fk(self.robot_base, link_name).pose
 
             if origin is not None:
-                marker.pose.position = Point(*origin.xyz)
-                marker.pose.orientation = Quaternion(*quaternion_from_euler(*origin.rpy))
+                position = w.position_of(origin)
+                orientation = quaternion_from_matrix(origin)
+                marker.pose.position.x = position[0]
+                marker.pose.position.y = position[1]
+                marker.pose.position.z = position[2]
+                marker.pose.orientation = Quaternion(*orientation)
                 marker.pose = kdl_to_pose(pose_to_kdl(fk) * pose_to_kdl(marker.pose))
             else:
                 marker.pose = fk

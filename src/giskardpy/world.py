@@ -76,7 +76,7 @@ class World(object):
         obj = self.km_model.get_data(name)
         obj.init2(limit_map=limit_map, **kwargs)
 
-        self.km_model.register_on_model_changed(name, obj.reset_cache)
+        self.km_model.register_on_model_changed(Path(name), obj.reset_cache)
         self.km_model.clean_structure()
         self.km_model.dispatch_events()
         return name

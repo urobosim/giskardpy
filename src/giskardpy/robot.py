@@ -30,7 +30,7 @@ class Robot(Backend):
         self._fk_expressions = {}
         self._fks = {}
         self._evaluated_fks = {}
-        self._joint_to_frame = {}
+        # self._joint_to_frame = {}
         self._joint_position_symbols = KeyDefaultDict(lambda x: w.Symbol(x))  # don't iterate over this map!!
         self._joint_velocity_symbols = KeyDefaultDict(lambda x: 0)  # don't iterate over this map!!
         self._joint_velocity_linear_limit = KeyDefaultDict(lambda x: 10000) # don't overwrite urdf limits by default
@@ -177,6 +177,9 @@ class Robot(Backend):
         #                                                               upper=velocity_limit,
         #                                                               weight=weight)
 
+    def get_to_parent_frame(self, link_name):
+        return self.links[link_name].to_parent
+
     def get_fk_expression(self, root_link, tip_link):
         """
         :type root_link: str
@@ -185,11 +188,11 @@ class Robot(Backend):
         :rtype: spw.Matrix
         """
         fk = w.eye(4)
-        root_chain, _, tip_chain = self.get_split_chain(root_link, tip_link, links=False)
-        for joint_name in root_chain:
-            fk = w.dot(fk, w.inverse_frame(self.get_joint_frame(joint_name)))
-        for joint_name in tip_chain:
-            fk = w.dot(fk, self.get_joint_frame(joint_name))
+        root_chain, _, tip_chain = self.get_split_chain(root_link, tip_link, joints=False, links=True)
+        for link_name in root_chain:
+            fk = w.dot(fk, w.inverse_frame(self.get_to_parent_frame(link_name)))
+        for link_name in tip_chain:
+            fk = w.dot(fk, self.get_to_parent_frame(link_name))
         # FIXME there is some reference fuckup going on, but i don't know where; deepcopy is just a quick fix
         return deepcopy(fk)
 
@@ -252,6 +255,7 @@ class Robot(Backend):
         :return: matrix expression describing the transformation caused by this joint
         :rtype: spw.Matrix
         """
+        return self.joints[joint_name]
         return self._joint_to_frame[joint_name]
 
     def get_joint_position_symbol(self, joint_name):
@@ -324,3 +328,12 @@ class Robot(Backend):
         else:
             raise KeyError(u'no controlled joint in chain between {} and {}'.format(link_a, link_b))
         return new_link_a, new_link_b
+
+
+    def reset_cache(self, *args, **kwargs):
+        for method_name in dir(self):
+            try:
+                getattr(self, method_name).memo.clear()
+            except:
+                pass
+        self.init_fast_fks()

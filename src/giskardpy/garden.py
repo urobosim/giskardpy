@@ -186,8 +186,8 @@ def grow_tree():
     planning_2 = failure_is_success(Selector)(u'planning II')
     planning_2.add_child(GoalCanceled(u'goal canceled', action_server_name))
     # planning.add_child(CollisionCancel(u'in collision', collision_time_threshold))
-    # if god_map.get_data(identifier.enable_VisualizationBehavior):
-    #     planning_2.add_child(success_is_failure(VisualizationBehavior)(u'visualization'))
+    if god_map.get_data(identifier.enable_VisualizationBehavior):
+        planning_2.add_child(success_is_failure(VisualizationBehavior)(u'visualization'))
     # if god_map.get_data(identifier.enable_CPIMarker):
     #     planning_2.add_child(success_is_failure(CollisionMarker)(u'cpi marker'))
     planning_2.add_child(planning_3)
