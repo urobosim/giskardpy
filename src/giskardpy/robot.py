@@ -90,7 +90,7 @@ class Robot(Backend):
     #     self.init_fast_fks()
 
     def set_joint_position_symbols(self, symbols):
-        self._joint_position_symbols = symbols
+        self._joint_position_symbols.update(symbols)
 
     def set_joint_velocity_limit_symbols(self, linear, angular):
         self._joint_velocity_linear_limit = linear

@@ -1,6 +1,7 @@
 import pytest
 import urdf_parser_py.urdf as up
 from geometry_msgs.msg import Pose, Point, Quaternion
+from urdf_parser_py.urdf import URDF
 
 from giskardpy.urdf_object import URDFObject, hacky_urdf_parser_fix
 from giskardpy.utils import make_world_body_box
@@ -710,90 +711,39 @@ class TestUrdfObject(object):
     #     assert chain == [box.get_name()]
 
     def test_get_chain_donbot1(self, function_setup):
-        parsed_donbot = make_object_without_limits(donbot_urdf())
+        parsed_donbot = self.make_object_without_limits(donbot_urdf())
+        parsed_donbot2 = up.URDF.from_xml_string(hacky_urdf_parser_fix(donbot_urdf()))
         chain = parsed_donbot.get_chain('odom', 'gripper_tool_frame')
-        assert chain == [u'odom',
-                         u'odom_x_joint',
-                         u'odom_x_frame',
-                         u'odom_y_joint',
-                         u'odom_y_frame',
-                         u'odom_z_joint',
-                         u'base_footprint',
-                         u'base_footprint_joint',
-                         u'base_link',
-                         u'arm_base_mounting_joint',
-                         u'ur5_base_link',
-                         u'ur5_shoulder_pan_joint',
-                         u'ur5_shoulder_link',
-                         u'ur5_shoulder_lift_joint',
-                         u'ur5_upper_arm_link',
-                         u'ur5_elbow_joint',
-                         u'ur5_forearm_link',
-                         u'ur5_wrist_1_joint',
-                         u'ur5_wrist_1_link',
-                         u'ur5_wrist_2_joint',
-                         u'ur5_wrist_2_link',
-                         u'ur5_wrist_3_joint',
-                         u'ur5_wrist_3_link',
-                         u'ur5_ee_fixed_joint',
-                         u'ur5_ee_link',
-                         u'kms_mounting_plate_joint',
-                         u'kms_mounting_plate',
-                         u'adapter_iso50_kms40_joint',
-                         u'adapter_iso50_kms40_frame_in',
-                         u'adapter_iso50_kms40_trans_frame_out',
-                         u'adapter_iso50_kms40_frame_out',
-                         u'kms40_joint',
-                         u'kms40_frame_in',
-                         u'kms40_trans_frame_out',
-                         u'kms40_frame_out',
-                         u'adapter_kms40_fwk050_in_joint',
-                         u'adapter_kms40_fwk050_frame_in',
-                         u'adapter_kms40_fwk050_trans_frame_out',
-                         u'adapter_kms40_fwk050_frame_out',
-                         u'fwk_fwa_050_in_joint',
-                         u'fwk_fwa_050_frame_in',
-                         u'fwk_fwa_050_trans_frame_out',
-                         u'fwk_fwa_050_frame_out',
-                         u'adapter_fwa050_wsg50_in_joint',
-                         u'adapter_fwa050_wsg50_frame_in',
-                         u'adapter_fwa050_wsg50_trans_frame_out',
-                         u'adapter_fwa050_wsg50_frame_out',
-                         u'gripper_anterior_gripper_joint',
-                         u'gripper_base_link',
-                         u'gripper_tool_frame_joint',
-                         u'gripper_tool_frame']
+        assert chain == parsed_donbot2.get_chain('odom', 'gripper_tool_frame')
 
-    # def test_get_chain_fixed_joints(self, function_setup):
-    #     parsed_donbot = self.make_object_without_limits(donbot_urdf())
-    #     chain = parsed_donbot.get_chain('odom', 'odom_x_frame', joints=False, fixed=False)
-    #     assert chain == parsed_donbot._urdf_robot.get_chain('odom', 'odom_x_frame', joints=False, fixed=False)
+    def test_get_chain_fixed_joints(self, function_setup):
+        parsed_donbot = self.make_object_without_limits(donbot_urdf())
+        parsed_donbot2 = up.URDF.from_xml_string(hacky_urdf_parser_fix(donbot_urdf()))
+        chain = parsed_donbot.get_chain('odom', 'odom_x_frame', joints=False, fixed=False)
+        assert chain == parsed_donbot2.get_chain('odom', 'odom_x_frame', joints=False, fixed=False)
 
-    # def test_get_chain_fixed_joints2(self, function_setup):
-    #     parsed_donbot = self.make_object_without_limits(donbot_urdf())
-    #     chain = parsed_donbot.get_chain('odom', 'gripper_gripper_right_link', joints=True, fixed=False)
-    #     assert chain == parsed_donbot._urdf_robot.get_chain('odom', 'gripper_gripper_right_link', joints=True,
-    #                                                         fixed=False)
-    #
-    # def test_get_chain_joints_false1(self, function_setup):
-    #     parsed_donbot = self.make_object_without_limits(donbot_urdf())
-    #     chain = parsed_donbot.get_chain('odom', 'odom_x_frame', joints=False)
-    #     assert chain == parsed_donbot._urdf_robot.get_chain('odom', 'odom_x_frame', joints=False)
-    #
-    # def test_get_chain_joints_false2(self, function_setup):
-    #     parsed_donbot = self.make_object_without_limits(donbot_urdf())
-    #     chain = parsed_donbot.get_chain('base_link', 'plate', joints=False)
-    #     assert chain == ['base_link', 'plate']
-    #
-    # def test_get_chain_donbot1(self, function_setup):
-    #     parsed_donbot = self.make_object_without_limits(donbot_urdf())
-    #     chain = parsed_donbot.get_chain('odom', 'gripper_tool_frame')
-    #     assert chain == parsed_donbot._urdf_robot.get_chain('odom', 'gripper_tool_frame')
-    #
-    # def test_get_chain_donbot2(self, function_setup):
-    #     parsed_donbot = self.make_object_without_limits(donbot_urdf())
-    #     chain = parsed_donbot.get_chain('base_link', 'plate')
-    #     assert chain == ['base_link', 'plate_joint', 'plate']
+    def test_get_chain_fixed_joints2(self, function_setup):
+        parsed_donbot = self.make_object_without_limits(donbot_urdf())
+        parsed_donbot2 = up.URDF.from_xml_string(hacky_urdf_parser_fix(donbot_urdf()))
+        chain = parsed_donbot.get_chain('odom', 'gripper_gripper_right_link', joints=True, fixed=False)
+        assert chain == parsed_donbot2.get_chain('odom', 'gripper_gripper_right_link', joints=True,
+                                                            fixed=False)
+
+    def test_get_chain_joints_false1(self, function_setup):
+        parsed_donbot = self.make_object_without_limits(donbot_urdf())
+        parsed_donbot2 = up.URDF.from_xml_string(hacky_urdf_parser_fix(donbot_urdf()))
+        chain = parsed_donbot.get_chain('odom', 'odom_x_frame', joints=False)
+        assert chain == parsed_donbot2.get_chain('odom', 'odom_x_frame', joints=False)
+
+    def test_get_chain_joints_false2(self, function_setup):
+        parsed_donbot = self.make_object_without_limits(donbot_urdf())
+        chain = parsed_donbot.get_chain('base_link', 'plate', joints=False)
+        assert chain == ['base_link', 'plate']
+
+    def test_get_chain_donbot2(self, function_setup):
+        parsed_donbot = self.make_object_without_limits(donbot_urdf())
+        chain = parsed_donbot.get_chain('base_link', 'plate')
+        assert chain == ['base_link', 'plate_joint', 'plate']
 
     def test_get_leaves(self, function_setup):
         parsed_pr2 = self.make_object_without_limits(pr2_urdf())
@@ -1140,9 +1090,9 @@ class TestUrdfObject(object):
         parsed_pr2 = self.make_object_without_limits(pr2_urdf())
         assert parsed_pr2.get_first_link_with_collision() == u'base_link'
 
-    # def test_get_non_base_movement_root(self, function_setup):
-    #     parsed_donbot = self.make_object_without_limits(donbot_urdf())
-    #     assert parsed_donbot.get_non_base_movement_root() == u'base_footprint'
+    def test_get_non_base_movement_root(self, function_setup):
+        parsed_donbot = self.make_object_without_limits(donbot_urdf())
+        assert parsed_donbot.get_non_base_movement_root() == u'base_footprint'
 
     def test_get_non_base_movement_root2(self, function_setup):
         parsed_pr2 = self.make_object_without_limits(pr2_urdf())

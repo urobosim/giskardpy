@@ -22,7 +22,10 @@ class GoalReachedPlugin(GiskardBehavior):
         self.joint_convergence_threshold = self.get_god_map().get_data(identifier.joint_convergence_threshold)
         self.thresholds = []
         for joint_name in self.get_robot().controlled_joints:
-            velocity_limit = self.get_robot().get_joint_velocity_limit(joint_name)
+            try:
+                velocity_limit = self.get_robot().get_joint_velocity_limit(joint_name)
+            except KeyError:
+                velocity_limit = 1
             self.thresholds.append(velocity_limit * sample_period * self.joint_convergence_threshold)
         self.thresholds = np.array(self.thresholds)
         self.number_of_controlled_joints = len(self.thresholds)

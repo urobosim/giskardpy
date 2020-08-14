@@ -8,6 +8,8 @@ from time import time
 
 from giskard_msgs.msg import MoveCmd
 from py_trees import Status
+
+from kineverse.model.paths import Path
 from rospy_message_converter.message_converter import convert_ros_message_to_dictionary
 
 import giskardpy.constraints
@@ -18,7 +20,7 @@ from giskardpy.data_types import JointConstraint, HardConstraint
 from giskardpy.exceptions import InsolvableException, ImplementationException
 from giskardpy.logging import loginfo
 from giskardpy.plugin_action_server import GetGoal
-from kineverse.gradients.diff_logic import DiffSymbol
+from kineverse.gradients.diff_logic import DiffSymbol, erase_type
 # import kineverse.gradients.gradient_math as gm
 from giskardpy import cas_wrapper as w
 
@@ -195,53 +197,49 @@ class GoalToConstraints(GetGoal):
 
         joint_velocity_symbols = {DiffSymbol(s) for s in joint_position_symbols}
 
-        joint_velocity_constraints = world.km_model.get_constraints_by_symbols(joint_velocity_symbols)
-        joint_position_constraints = world.km_model.get_constraints_by_symbols(joint_position_symbols)
+        constraints = world.km_model.get_constraints_by_symbols(joint_velocity_symbols.union(joint_position_symbols))
+        # joint_position_constraints = world.km_model.get_constraints_by_symbols(joint_position_symbols)
 
         # FIXME this is a hack to get rid of the path
-        joint_velocity_constraints = {k.split('/')[-1][:-9]: c for k, c in joint_velocity_constraints.items()}
-        joint_position_constraints = {k.split('/')[-1][:-9]: c for k, c in joint_position_constraints.items()}
+        # joint_velocity_constraints = {str(erase_type(Path(k)[-1])): c for k, c in joint_velocity_constraints.items()}
+        # joint_position_constraints = {str(erase_type(Path(k)[-1])): c for k, c in joint_position_constraints.items()}
 
-        hard_constraints = OrderedDict()
         joint_constraints = OrderedDict()
+        to_remove = set()
         symbols = []
-        for joint_name, velocity_constraint in sorted(joint_velocity_constraints.items(), key=lambda (k, _): k):
-            lower_limit = velocity_constraint.lower
-            upper_limit = velocity_constraint.upper
 
-            symbols.extend(w.free_symbols(lower_limit))
-            symbols.extend(w.free_symbols(upper_limit))
+        for k, c in sorted(constraints.items()):
+            if cm.is_symbol(c.expr) and c.expr in joint_velocity_symbols and str(c.expr) not in joint_constraints:
+                joint_name = str(Path(erase_type(c.expr))[-1])
+                # weight = default_weight if c.expr not in weights else weights[c.expr]
+                # joint_constraints[str(c.expr)] = JointConstraint(c.lower, c.upper, weight)
+                to_remove.add(k)
+                lower_limit = c.lower
+                upper_limit = c.upper
 
-            sample_period = self.get_god_map().to_symbol(identifier.sample_period)
+                symbols.extend(w.free_symbols(lower_limit))
+                symbols.extend(w.free_symbols(upper_limit))
 
-            # FIXME support vel limit from param server again
-            lower_limit = lower_limit * sample_period
-            upper_limit = upper_limit * sample_period
+                sample_period = self.get_god_map().to_symbol(identifier.sample_period)
 
-            weight = self.get_robot()._joint_weights[joint_name]
-            weight = weight * (1. / (upper_limit)) ** 2
+                # FIXME support vel limit from param server again
+                lower_limit = lower_limit * sample_period
+                upper_limit = upper_limit * sample_period
 
-            if not self.get_robot().is_joint_continuous(joint_name):
-                joint_constraints[joint_name] = JointConstraint(
-                    lower=lower_limit,
-                    upper=upper_limit,
-                    weight=weight)
-            else:
+                weight = self.get_robot()._joint_weights[joint_name]
+                weight = weight * (1. / (upper_limit)) ** 2
+
                 joint_constraints[joint_name] = JointConstraint(lower=lower_limit,
                                                                 upper=upper_limit,
                                                                 weight=weight)
 
-        for joint_name, position_constraint in sorted(joint_position_constraints.items(), key=lambda (k, _): k):
-            upper_limit = position_constraint.upper
-            lower_limit = position_constraint.lower
-            expression = position_constraint.expr
-            symbols.extend(w.free_symbols(upper_limit))
-            symbols.extend(w.free_symbols(lower_limit))
-            symbols.extend(w.free_symbols(expression))
-            hard_constraints[joint_name] = HardConstraint(
-                lower=lower_limit,
-                upper=upper_limit,
-                expression=expression)
+        hard_constraints = OrderedDict()
+        for k, c in sorted(constraints.items()):
+            if k not in to_remove:
+                symbols.extend(w.free_symbols(c.lower))
+                symbols.extend(w.free_symbols(c.upper))
+                symbols.extend(w.free_symbols(c.expr))
+                hard_constraints[k] = HardConstraint(c.lower, c.upper, c.expr)
 
         hard_constraints = OrderedDict([((self.robot.get_name(), k), c) for k, c in hard_constraints.items()])
 

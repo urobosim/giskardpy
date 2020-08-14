@@ -321,7 +321,8 @@ class GiskardTestWrapper(object):
             goal = goal_js[joint_name]
             current = current_js[joint_name]
             if self.get_robot().is_joint_continuous(joint_name):
-                np.testing.assert_almost_equal(shortest_angular_distance(goal, current), 0, decimal=decimal)
+                np.testing.assert_almost_equal(shortest_angular_distance(goal, current), 0, decimal=decimal,
+                                               err_msg=u'{} at {} insteand of {}'.format(joint_name, current, goal))
             else:
                 np.testing.assert_almost_equal(current, goal, decimal,
                                                err_msg=u'{} at {} insteand of {}'.format(joint_name, current, goal))

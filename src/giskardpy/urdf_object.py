@@ -131,8 +131,8 @@ class URDFObject(ArticulatedObject):
             joint = self.get_parent_joint_of_link(link)
             parent = self.get_parent_link_of_link(link)
             if joints:
-                parent_joint = self.get_parent_joint_of_joint(joint)
-                if fixed or not self.is_joint_fixed(parent_joint):
+                # parent_joint = self.get_parent_joint_of_joint(joint)
+                if fixed or not self.is_joint_fixed(joint):
                     chain.append(joint)
             if links:
                 chain.append(parent)
