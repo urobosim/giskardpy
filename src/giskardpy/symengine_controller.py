@@ -52,7 +52,7 @@ class InstantaneousController(object):
             xdot_keys.append(key)
         return weights_keys, b_keys, bA_keys, xdot_keys
 
-    def update_constraints(self, joint_to_symbols_str, soft_constraints, joint_constraints, hard_constraints):
+    def update_constraints(self, joint_to_symbols_str, soft_constraints, joint_constraints):
         """
         Triggers a recompile if the number of soft constraints has changed.
         :type soft_constraints: dict
@@ -64,12 +64,10 @@ class InstantaneousController(object):
         self.joint_to_symbols_str = joint_to_symbols_str
 
         self.joint_constraints = joint_constraints
-        self.hard_constraints = hard_constraints
 
 
     def compile(self):
         self.qp_problem_builder = QProblemBuilder(self.joint_constraints,
-                                                  self.hard_constraints,
                                                   self.soft_constraints,
                                                   self.joint_to_symbols_str.values())
 

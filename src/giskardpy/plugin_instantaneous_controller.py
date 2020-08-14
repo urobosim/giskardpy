@@ -34,7 +34,7 @@ class ControllerPlugin(GiskardBehavior):
     def init_controller(self):
         self.soft_constraints = self.get_god_map().get_data(identifier.soft_constraint_identifier)
         self.joint_constraints = self.get_god_map().get_data(identifier.joint_constraint_identifier)
-        self.hard_constraints = self.get_god_map().get_data(identifier.hard_constraint_identifier)
+        # self.hard_constraints = self.get_god_map().get_data(identifier.hard_constraint_identifier)
 
         self.controller = InstantaneousController(self.get_robot(),
                                                   u'{}/{}/'.format(self.path_to_functions,
@@ -45,8 +45,7 @@ class ControllerPlugin(GiskardBehavior):
 
         self.controller.update_constraints(joint_to_symbols_str,
                                            self.soft_constraints,
-                                           self.joint_constraints,
-                                           self.hard_constraints)
+                                           self.joint_constraints)
         self.controller.compile()
 
         self.qp_data[identifier.weight_keys[-1]], \

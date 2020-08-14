@@ -10,7 +10,7 @@ from giskardpy import logging
 class QPSolver(object):
     RETURN_VALUE_DICT = {value: name for name, value in vars(PyReturnValue).items()}
 
-    def __init__(self, h, j, s):
+    def __init__(self):
         """
         :param dim_a: number of joint constraints + number of soft constraints
         :type int
@@ -18,9 +18,6 @@ class QPSolver(object):
         :type int
         """
         # self.init(dim_a, dim_b)
-        self.h = h
-        self.j = j
-        self.s = s
         self.started = False
         self.shape = (0,0)
         pass

@@ -16,7 +16,7 @@ import giskardpy.constraints
 import giskardpy.identifier as identifier
 import kineverse.gradients.common_math as cm
 from giskardpy.constraints import SelfCollisionAvoidance, ExternalCollisionAvoidance
-from giskardpy.data_types import JointConstraint, HardConstraint
+from giskardpy.data_types import JointConstraint, HardConstraint, SoftConstraint
 from giskardpy.exceptions import InsolvableException, ImplementationException
 from giskardpy.logging import loginfo
 from giskardpy.plugin_action_server import GetGoal
@@ -239,15 +239,34 @@ class GoalToConstraints(GetGoal):
                 symbols.extend(w.free_symbols(c.lower))
                 symbols.extend(w.free_symbols(c.upper))
                 symbols.extend(w.free_symbols(c.expr))
-                hard_constraints[k] = HardConstraint(c.lower, c.upper, c.expr)
+                hard_constraints[k] = SoftConstraint(lbA=c.lower,
+                                                     ubA=c.upper,
+                                                     weight=1,
+                                                     expression=c.expr,
+                                                     goal_constraint=False,
+                                                     lower_slack_limit=0,
+                                                     upper_slack_limit=0)
 
         hard_constraints = OrderedDict([((self.robot.get_name(), k), c) for k, c in hard_constraints.items()])
+
+        for s in joint_velocity_symbols:
+            joint_name = str(Path(erase_type(s))[-1])
+            if joint_name not in joint_constraints:
+                if self.get_robot().is_joint_prismatic(joint_name):
+                    limit = self.get_god_map().get_data(identifier.default_joint_velocity_linear_limit)
+                else:
+                    limit = self.get_god_map().get_data(identifier.default_joint_velocity_angular_limit)
+                lower, upper = -limit, limit
+                weight = self.get_robot()._joint_weights[joint_name]
+                weight = weight * (1. / (upper)) ** 2
+                joint_constraints[joint_name] = JointConstraint(lower, upper, weight)
 
         for symbol in symbols:
             self.get_god_map().register_symbol(symbol)
 
         self.get_god_map().safe_set_data(identifier.joint_constraint_identifier, joint_constraints)
-        self.get_god_map().safe_set_data(identifier.hard_constraint_identifier, hard_constraints)
+        self.soft_constraints.update(hard_constraints)
+        # self.get_god_map().safe_set_data(identifier.hard_constraint_identifier, hard_constraints)
 
     def parse_constraints(self, cmd):
         """

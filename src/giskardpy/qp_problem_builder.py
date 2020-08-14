@@ -16,7 +16,7 @@ class QProblemBuilder(object):
     Wraps around QPOases. Builds the required matrices from constraints.
     """
 
-    def __init__(self, joint_constraints_dict, hard_constraints_dict, soft_constraints_dict, controlled_joint_symbols):
+    def __init__(self, joint_constraints_dict, soft_constraints_dict, controlled_joint_symbols):
         """
         :type joint_constraints_dict: dict
         :type hard_constraints_dict: dict
@@ -31,22 +31,18 @@ class QProblemBuilder(object):
         # assert (len(hard_constraints_dict) <= len(controlled_joint_symbols))
         # self.path_to_functions = path_to_functions
         self.joint_constraints_dict = joint_constraints_dict
-        self.hard_constraints_dict = hard_constraints_dict
         self.soft_constraints_dict = soft_constraints_dict
         self.controlled_joint_symbols = controlled_joint_symbols
         self.construct_big_ass_M()
         self.compile_big_ass_M()
 
-        self.shape1 = len(self.hard_constraints_dict) + len(self.soft_constraints_dict)
+        self.shape1 = len(self.soft_constraints_dict)
         self.shape2 = len(self.joint_constraints_dict) + len(self.soft_constraints_dict)
 
-        self.num_hard_constraints = len(self.hard_constraints_dict)
         self.num_joint_constraints = len(self.joint_constraints_dict)
         self.num_soft_constraints = len(self.soft_constraints_dict)
 
-        self.qp_solver = QPSolver(self.num_hard_constraints,
-                                  self.num_joint_constraints,
-                                  self.num_soft_constraints)
+        self.qp_solver = QPSolver()
         self.lbAs = None  # for debugging purposes
 
     def get_expr(self):
@@ -60,15 +56,10 @@ class QProblemBuilder(object):
         lbA = []
         ubA = []
         soft_expressions = []
-        hard_expressions = []
         for constraint_name, constraint in self.joint_constraints_dict.items():
             weights.append(constraint.weight)
             lb.append(constraint.lower)
             ub.append(constraint.upper)
-        for constraint_name, constraint in self.hard_constraints_dict.items():
-            lbA.append(constraint.lower)
-            ubA.append(constraint.upper)
-            hard_expressions.append(constraint.expression)
         for constraint_name, constraint in self.soft_constraints_dict.items(): # type: (str, SoftConstraint)
             weights.append(constraint.weight)
             lbA.append(constraint.lbA)
@@ -81,7 +72,6 @@ class QProblemBuilder(object):
         self.np_g = np.zeros(len(weights))
 
         logging.loginfo(u'constructing new controller with {} soft constraints...'.format(len(soft_expressions)))
-        self.h = len(self.hard_constraints_dict)
         self.s = len(self.soft_constraints_dict)
         self.j = len(self.joint_constraints_dict)
 
@@ -89,7 +79,7 @@ class QProblemBuilder(object):
 
         self.set_weights(weights)
 
-        self.construct_A_hard(hard_expressions)
+        # self.construct_A_hard(hard_expressions)
         self.construct_A_soft(soft_expressions)
 
         self.set_lbA(w.Matrix(lbA))
@@ -109,23 +99,21 @@ class QProblemBuilder(object):
         """
         #        j           s       1      1
         #    |----------------------------------
-        # h  | A hard    |   0    |       |
-        #    | -------------------| lbA   | ubA
-        # s  | A soft    |identity|       |
+        # s  | A soft    |identity| lbA   | ubA
         #    |-----------------------------------
         # j+s| H                  | lb    | ub
         #    | ----------------------------------
         """
-        self.big_ass_M = w.zeros(self.h + self.s * 2 + self.j,
+        self.big_ass_M = w.zeros(self.s * 2 + self.j,
                                  self.j + self.s + 2)
 
-    def construct_A_hard(self, hard_expressions):
-        A_hard = w.Matrix(hard_expressions)
-        A_hard = w.jacobian(A_hard, self.controlled_joint_symbols)
-        self.set_A_hard(A_hard)
+    # def construct_A_hard(self, hard_expressions):
+    #     A_hard = w.Matrix(hard_expressions)
+    #     A_hard = w.jacobian(A_hard, self.controlled_joint_symbols)
+    #     self.set_A_hard(A_hard)
 
-    def set_A_hard(self, A_hard):
-        self.big_ass_M[:self.h, :self.j] = A_hard
+    # def set_A_hard(self, A_hard):
+    #     self.big_ass_M[:self.h, :self.j] = A_hard
 
     def construct_A_soft(self, soft_expressions):
         A_soft = w.zeros(self.s, self.j + self.s)
@@ -136,50 +124,32 @@ class QProblemBuilder(object):
         self.set_A_soft(A_soft)
 
     def set_A_soft(self, A_soft):
-        self.big_ass_M[self.h:self.h + self.s, :self.j + self.s] = A_soft
+        self.big_ass_M[:self.s, :self.j + self.s] = A_soft
 
     def set_lbA(self, lbA):
-        self.big_ass_M[:self.h + self.s, self.j + self.s] = lbA
+        self.big_ass_M[:self.s, self.j + self.s] = lbA
         print(lbA)
 
     def set_ubA(self, ubA):
-        self.big_ass_M[:self.h + self.s, self.j + self.s + 1] = ubA
+        self.big_ass_M[:self.s, self.j + self.s + 1] = ubA
 
     def set_lb(self, lb):
-        self.big_ass_M[self.h + self.s:, self.j + self.s] = lb
+        self.big_ass_M[self.s:, self.j + self.s] = lb
 
     def set_ub(self, ub):
-        self.big_ass_M[self.h + self.s:, self.j + self.s + 1] = ub
+        self.big_ass_M[self.s:, self.j + self.s + 1] = ub
 
     def set_weights(self, weights):
-        self.big_ass_M[self.h + self.s:, :-2] = w.diag(*weights)
+        self.big_ass_M[self.s:, :-2] = w.diag(*weights)
 
     def debug_print(self, unfiltered_H, A, lb, ub, lbA, ubA, xdot_full=None):
         import pandas as pd
-        bA_mask, b_mask = make_filter_masks(unfiltered_H, self.num_joint_constraints, self.num_hard_constraints)
+        bA_mask, b_mask = make_filter_masks(unfiltered_H, self.num_joint_constraints)
         b_names = []
         bA_names = []
         for iJ, k in enumerate(self.joint_constraints_dict.keys()):
             key = 'j -- ' + str(k)
             b_names.append(key)
-
-        for iH, k in enumerate(self.hard_constraints_dict.keys()):
-            key = 'h -- ' + str(k)
-            bA_names.append(key)
-            # upper_bound = ubA[iH]
-            # lower_bound = lbA[iH]
-            # if np.sign(upper_bound) == np.sign(lower_bound):
-            #     logging.logwarn(u'{} out of bounds'.format(k))
-            #     if upper_bound > 0:
-            #         logging.logwarn(u'{} value below lower bound by {}'.format(k, lower_bound))
-            #         vel = np_ub[iH]
-            #         if abs(vel) < abs(lower_bound):
-            #             logging.logerr(u'joint vel of {} to low to get back into bound in one iteration'.format(vel))
-            #     else:
-            #         logging.logwarn(u'{} value above upper bound by {}'.format(k, abs(upper_bound)))
-            #         vel = np_lb[iH]
-            #         if abs(vel) < abs(lower_bound):
-            #             logging.logerr(u'joint vel of {} to low to get back into bound in one iteration'.format(vel))
 
         for iS, k in enumerate(self.soft_constraints_dict.keys()):
             key = 's -- ' + str(k)
@@ -252,7 +222,7 @@ class QProblemBuilder(object):
                 print(array)
 
     def filter_zero_weight_constraints(self, H, A, lb, ub, lbA, ubA):
-        bA_mask, b_mask = make_filter_masks(H, self.num_joint_constraints, self.num_hard_constraints)
+        bA_mask, b_mask = make_filter_masks(H, self.num_joint_constraints)
         A = A[bA_mask][:, b_mask].copy()
         lbA = lbA[bA_mask]
         ubA = ubA[bA_mask]
