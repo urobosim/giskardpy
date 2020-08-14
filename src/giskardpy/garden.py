@@ -122,7 +122,9 @@ def initialize_god_map():
     joint_vel_symbols = JointStatesInput(blackboard.god_map.to_symbol, world.robot.get_controllable_joints(),
                                          identifier.joint_states,
                                          suffix=[u'velocity'])
+    # init_km(god_map)
 
+    joint_position_symbols = {joint_name: god_map.get_kineverse_symbol(symbol) for joint_name, symbol in sorted(joint_position_symbols.items(), key=lambda (x,_): x)}
     world.robot.update_joint_symbols(joint_position_symbols, joint_vel_symbols.joint_map,
                                      joint_weight_symbols,
                                      joint_velocity_linear_limit_symbols, joint_velocity_angular_limit_symbols,
