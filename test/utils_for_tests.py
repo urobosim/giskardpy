@@ -454,6 +454,7 @@ class GiskardTestWrapper(object):
             u'got: {}, expected: {} | error_massage: {}'.format(move_result_error_code(r.error_code),
                                                                 move_result_error_code(expected_error_code),
                                                                 r.error_message)
+        return r.trajectory
 
     def add_waypoint(self):
         self.wrapper.add_cmd()
@@ -476,7 +477,7 @@ class GiskardTestWrapper(object):
         return trajectory2
 
     def are_joint_limits_violated(self):
-        controllable_joints = self.get_robot().get_controllable_joints()
+        controllable_joints = self.get_robot().controlled_joints
         trajectory_pos = self.get_result_trajectory_position()
         trajectory_vel = self.get_result_trajectory_velocity()
 
@@ -719,6 +720,7 @@ class GiskardTestWrapper(object):
         p.header.frame_id = self.map
         p.pose.orientation.w = 1
         self.teleport_base(p)
+
 
 
 class PR2(GiskardTestWrapper):

@@ -230,26 +230,6 @@ def kitchen_setup(resetted_giskard):
     resetted_giskard.set_kitchen_js(js)
     return resetted_giskard
 
-
-class TestInitialization(object):
-    def test_load_config_yaml(self, zero_pose):
-        gm = zero_pose.get_god_map()
-        robot = zero_pose.get_robot()
-        assert isinstance(robot, Robot)
-        sample_period = gm.unsafe_get_data(identifier.sample_period)
-        odom_x_index = gm.unsafe_get_data(identifier.b_keys).index(u'j -- (\'pr2\', \'odom_x_joint\')')
-        odom_x_lb = gm.unsafe_get_data(identifier.lb)[odom_x_index] / sample_period
-        odom_x_ub = gm.unsafe_get_data(identifier.ub)[odom_x_index] / sample_period
-        np.testing.assert_almost_equal(odom_x_lb, -0.5)
-        np.testing.assert_almost_equal(odom_x_ub, 0.5)
-
-        odom_z_index = gm.unsafe_get_data(identifier.b_keys).index(u'j -- (\'pr2\', \'odom_z_joint\')')
-        odom_z_lb = gm.unsafe_get_data(identifier.lb)[odom_z_index] / sample_period
-        odom_z_ub = gm.unsafe_get_data(identifier.ub)[odom_z_index] / sample_period
-        np.testing.assert_almost_equal(odom_z_lb, -0.6)
-        np.testing.assert_almost_equal(odom_z_ub, 0.6)
-
-
 class TestFk(object):
     def test_fk1(self, zero_pose):
         for root, tip in itertools.product(zero_pose.get_robot().get_link_names(), repeat=2):
@@ -258,6 +238,7 @@ class TestFk(object):
             compare_poses(fk1.pose, fk2.pose)
 
     def test_fk2(self, zero_pose):
+        #fixme
         pocky = u'box'
         zero_pose.attach_box(pocky, [0.1, 0.02, 0.02], zero_pose.r_tip, [0.05, 0, 0], [1, 0, 0, 0])
         for root, tip in itertools.product(zero_pose.get_robot().get_link_names(), [pocky]):
@@ -405,10 +386,10 @@ class TestConstraints(object):
         pocky_pose_setup.wrapper.update_god_map(updates)
         pocky_pose_setup.set_and_check_cart_goal(r_goal, pocky_pose_setup.r_tip)
         assert pocky_pose_setup.get_god_map().unsafe_get_data(identifier.joint_cost + [u'odom_x_joint']) == 0.0001
-        assert pocky_pose_setup.get_god_map().unsafe_get_data(identifier.joint_cost + [u'torso_lift_joint']) == 0.5
-        pocky_pose_setup.send_and_check_goal(execute=False)
-        assert pocky_pose_setup.get_god_map().unsafe_get_data(identifier.joint_cost + [u'odom_x_joint']) == 1
-        assert pocky_pose_setup.get_god_map().unsafe_get_data(identifier.joint_cost + [u'torso_lift_joint']) == 0.5
+        assert pocky_pose_setup.get_god_map().unsafe_get_data(identifier.joint_cost + [u'torso_lift_joint']) == 0.01
+        pocky_pose_setup.send_and_check_goal(goal_type=MoveGoal.PLAN_ONLY)
+        assert pocky_pose_setup.get_god_map().unsafe_get_data(identifier.joint_cost + [u'odom_x_joint']) == 0.01
+        assert pocky_pose_setup.get_god_map().unsafe_get_data(identifier.joint_cost + [u'torso_lift_joint']) == 0.01
 
     def test_base_pointing_forward(self, zero_pose):
         """
@@ -441,8 +422,8 @@ class TestConstraints(object):
         pocky_pose_setup.wrapper.update_god_map(updates)
         pocky_pose_setup.set_cart_goal(r_goal, pocky_pose_setup.r_tip)
         pocky_pose_setup.send_and_check_goal(expected_error_code=MoveResult.INSOLVABLE)
-        assert pocky_pose_setup.get_god_map().unsafe_get_data(identifier.joint_cost + [u'odom_x_joint']) == 1
-        assert pocky_pose_setup.get_god_map().unsafe_get_data(identifier.joint_cost + [u'torso_lift_joint']) == 0.5
+        assert pocky_pose_setup.get_god_map().unsafe_get_data(identifier.joint_cost + [u'odom_x_joint']) == 0.01
+        assert pocky_pose_setup.get_god_map().unsafe_get_data(identifier.joint_cost + [u'torso_lift_joint']) == 0.01
 
     def test_UpdateGodMap3(self, pocky_pose_setup):
         """
@@ -460,8 +441,8 @@ class TestConstraints(object):
         pocky_pose_setup.wrapper.update_god_map(updates)
         pocky_pose_setup.set_cart_goal(r_goal, pocky_pose_setup.r_tip)
         pocky_pose_setup.send_and_check_goal(expected_error_code=MoveResult.INSOLVABLE)
-        assert pocky_pose_setup.get_god_map().unsafe_get_data(identifier.joint_cost + [u'odom_x_joint']) == 1
-        assert pocky_pose_setup.get_god_map().unsafe_get_data(identifier.joint_cost + [u'torso_lift_joint']) == 0.5
+        assert pocky_pose_setup.get_god_map().unsafe_get_data(identifier.joint_cost + [u'odom_x_joint']) == 0.01
+        assert pocky_pose_setup.get_god_map().unsafe_get_data(identifier.joint_cost + [u'torso_lift_joint']) == 0.01
 
     def test_pointing(self, kitchen_setup):
         base_goal = PoseStamped()
@@ -525,6 +506,7 @@ class TestConstraints(object):
         """
         :type zero_pose: PR2
         """
+        #fixme
         x_gripper = Vector3Stamped()
         x_gripper.header.frame_id = zero_pose.r_tip
         x_gripper.vector.x = 1
@@ -551,6 +533,7 @@ class TestConstraints(object):
         """
         :type zero_pose: PR2
         """
+        # fixme
         x_gripper = Vector3Stamped()
         x_gripper.header.frame_id = zero_pose.r_tip
         x_gripper.vector.y = 1
@@ -799,6 +782,7 @@ class TestCartGoals(object):
         zero_pose.check_cart_goal(zero_pose.l_tip, l_goal)
 
     def test_wiggle1(self, kitchen_setup):
+        #fixme
         tray_pose = PoseStamped()
         tray_pose.header.frame_id = u'iai_kitchen/sink_area_surface'
         tray_pose.pose.position = Point(0.1, -0.4, 0.07)
@@ -885,6 +869,7 @@ class TestCartGoals(object):
         """
         :type box_setup: PR2
         """
+        # fixme
         p = PoseStamped()
         p.header.frame_id = u'map'
         p.pose.position.x = 1.1
@@ -999,31 +984,33 @@ class TestCartGoals(object):
         zero_pose.add_waypoint()
         zero_pose.set_joint_goal(gaya_pose)
 
-        zero_pose.send_and_check_goal()
-        traj = zero_pose.get_trajectory_msg()
-        for i, joint_state in enumerate(traj):
+        traj = zero_pose.send_and_check_goal()
+        for i, p in enumerate(traj.points):
+            js = {joint_name: position for joint_name, position in zip(traj.joint_names, p.positions)}
             try:
-                zero_pose.compare_joint_state(joint_state, pocky_pose)
+                zero_pose.compare_joint_state(js, pocky_pose)
                 break
             except AssertionError:
                 pass
         else:  # if no break
             assert False, u'pocky pose not in trajectory'
 
-        traj = traj[i:]
-        for i, joint_state in enumerate(traj):
+        traj.points = traj.points[i:]
+        for i, p in enumerate(traj.points):
+            js = {joint_name: position for joint_name, position in zip(traj.joint_names, p.positions)}
             try:
-                zero_pose.compare_joint_state(joint_state, pick_up_pose)
+                zero_pose.compare_joint_state(js, pick_up_pose)
                 break
             except AssertionError:
                 pass
         else:  # if no break
             assert False, u'pick_up_pose not in trajectory'
 
-        traj = traj[i:]
-        for i, joint_state in enumerate(traj):
+        traj.points = traj.points[i:]
+        for i, p in enumerate(traj.points):
+            js = {joint_name: position for joint_name, position in zip(traj.joint_names, p.positions)}
             try:
-                zero_pose.compare_joint_state(joint_state, gaya_pose)
+                zero_pose.compare_joint_state(js, gaya_pose)
                 break
             except AssertionError:
                 pass
@@ -2620,6 +2607,7 @@ class TestCollisionAvoidanceGoals(object):
 
 
 class TestReachability():
+    # fixme
     def test_unreachable_goal_0(self, zero_pose):
         js = {}
         js['r_shoulder_lift_joint'] = 10
