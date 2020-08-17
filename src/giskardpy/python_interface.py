@@ -8,12 +8,14 @@ from giskard_msgs.msg import MoveAction, MoveGoal, WorldBody, CollisionEntry, Mo
     MoveCmd, JointConstraint, CartesianConstraint
 from giskard_msgs.srv import UpdateWorld, UpdateWorldRequest, UpdateWorldResponse, GetObjectInfo, GetObjectNames, \
     UpdateRvizMarkers, GetAttachedObjects, GetAttachedObjectsResponse, GetObjectNamesResponse
+from urdf_parser_py.urdf import URDF
+
 from rospy_message_converter.message_converter import convert_ros_message_to_dictionary
 from sensor_msgs.msg import JointState
 from shape_msgs.msg import SolidPrimitive
 from visualization_msgs.msg import MarkerArray
 
-from giskardpy.urdf_object import URDFObject
+from giskardpy.urdf_object import URDFObject, hacky_urdf_parser_fix
 from giskardpy.utils import dict_to_joint_states, make_world_body_box, make_world_body_cylinder
 from giskardpy import logging
 
@@ -31,14 +33,14 @@ class GiskardWrapper(object):
             # rospy.wait_for_service(u'{}/update_world'.format(ns))
             self.client.wait_for_server()
         self.tip_to_root = {}
-        self.robot_urdf = URDFObject(rospy.get_param(u'robot_description'))
+        self.robot_urdf = URDF.from_xml_string(hacky_urdf_parser_fix(rospy.get_param(u'robot_description')))
         self.collisions = []
         self.clear_cmds()
         self.object_js_topics = {}
         rospy.sleep(.3)
 
     def get_robot_name(self):
-        return self.robot_urdf.get_name()
+        return self.robot_urdf.name
 
     def get_root(self):
         return self.robot_urdf.get_root()
@@ -346,9 +348,6 @@ class GiskardWrapper(object):
         """
         :rtype: UpdateWorldResponse
         """
-        r = UpdateWorldResponse()
-        r.error_codes = r.SUCCESS
-        return r
         req = UpdateWorldRequest(UpdateWorldRequest.REMOVE_ALL, WorldBody(), False, PoseStamped())
         return self.update_world.call(req)
 
@@ -359,7 +358,6 @@ class GiskardWrapper(object):
         :return:
         :rtype: UpdateWorldResponse
         """
-        return
         object = WorldBody()
         object.name = str(name)
         req = UpdateWorldRequest(UpdateWorldRequest.REMOVE, object, False, PoseStamped())
@@ -376,7 +374,6 @@ class GiskardWrapper(object):
         :param pose:
         :return:
         """
-        return
         box = make_world_body_box(name, size[0], size[1], size[2])
         if pose is None:
             pose = PoseStamped()
@@ -389,7 +386,6 @@ class GiskardWrapper(object):
 
     def add_sphere(self, name=u'sphere', size=1, frame_id=u'map', position=(0, 0, 0), orientation=(0, 0, 0, 1),
                    pose=None):
-        return
         object = WorldBody()
         object.type = WorldBody.PRIMITIVE_BODY
         object.name = str(name)
@@ -406,7 +402,6 @@ class GiskardWrapper(object):
 
     def add_mesh(self, name=u'mesh', mesh=u'', frame_id=u'map', position=(0, 0, 0), orientation=(0, 0, 0, 1),
                  pose=None):
-        return
         object = WorldBody()
         object.type = WorldBody.MESH_BODY
         object.name = str(name)
@@ -422,7 +417,6 @@ class GiskardWrapper(object):
 
     def add_cylinder(self, name=u'cylinder', size=(1, 1), frame_id=u'map', position=(0, 0, 0), orientation=(0, 0, 0, 1),
                      pose=None):
-        return
         object = WorldBody()
         object.type = WorldBody.PRIMITIVE_BODY
         object.name = str(name)
@@ -448,7 +442,6 @@ class GiskardWrapper(object):
         :rtype: UpdateWorldResponse
         """
 
-        return
         box = make_world_body_box(name, size[0], size[1], size[2])
         pose = PoseStamped()
         pose.header.stamp = rospy.Time.now()
@@ -468,7 +461,6 @@ class GiskardWrapper(object):
         :type orientation: list
         :rtype: UpdateWorldResponse
         """
-        return
         cylinder = make_world_body_cylinder(name, height, radius)
         pose = PoseStamped()
         pose.header.stamp = rospy.Time.now()
@@ -485,7 +477,6 @@ class GiskardWrapper(object):
         :type link_frame_id: str
         :return: UpdateWorldResponse
         """
-        return
         req = UpdateWorldRequest()
         req.rigidly_attached = True
         req.body.name = name
@@ -494,14 +485,12 @@ class GiskardWrapper(object):
         return self.update_world.call(req)
 
     def detach_object(self, object_name):
-        return
         req = UpdateWorldRequest()
         req.body.name = object_name
         req.operation = req.DETACH
         return self.update_world.call(req)
 
     def add_urdf(self, name, urdf, pose, js_topic=u''):
-        return
         urdf_body = WorldBody()
         urdf_body.name = str(name)
         urdf_body.type = WorldBody.URDF_BODY
@@ -515,7 +504,6 @@ class GiskardWrapper(object):
         return self.update_world.call(req)
 
     def set_object_joint_state(self, object_name, joint_states):
-        return
         if isinstance(joint_states, dict):
             joint_states = dict_to_joint_states(joint_states)
         self.object_js_topics[object_name].publish(joint_states)
@@ -525,8 +513,6 @@ class GiskardWrapper(object):
         returns the name of every object in the world
         :rtype: GetObjectNamesResponse
         """
-        r = GetObjectNamesResponse()
-        return r
         return self.get_object_names()
 
     def get_object_info(self, name):
@@ -535,7 +521,6 @@ class GiskardWrapper(object):
         :type name: str
         :rtype: GetObjectInfoResponse
         """
-        return
         return self.get_object_info(name)
 
     def update_rviz_markers(self, object_names):
@@ -544,7 +529,6 @@ class GiskardWrapper(object):
         :type name: list
         :rtype: UpdateRvizMarkersResponse
         """
-        return
         return self.update_rviz_markers(object_names)
 
     def get_attached_objects(self):
@@ -552,7 +536,6 @@ class GiskardWrapper(object):
         returns a list of all objects that are attached to the robot and the respective attachement points
         :rtype: GetAttachedObjectsResponse
         """
-        return
         return self.get_attached_objects()
 
 

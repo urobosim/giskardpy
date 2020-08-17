@@ -1,26 +1,37 @@
+import traceback
+from copy import deepcopy
+from giskardpy import identifier
 import urdf_parser_py.urdf as up
 from geometry_msgs.msg import PoseStamped
 from giskard_msgs.msg import CollisionEntry, WorldBody
-
+from giskardpy import cas_wrapper as w
 from giskardpy import logging
+from giskardpy.casadi_wrapper import to_numpy
 from giskardpy.exceptions import RobotExistsException, DuplicateNameException, PhysicsWorldException, \
     UnknownBodyException, UnsupportedOptionException, CorruptShapeException
 from giskardpy.robot import Robot
 from giskardpy.tfwrapper import msg_to_kdl, kdl_to_pose
 from giskardpy.urdf_object import URDFObject, hacky_urdf_parser_fix
+from giskardpy.utils import KeyDefaultDict, memoize, homo_matrix_to_pose
 from giskardpy.world_object import WorldObject
 from kineverse.model.geometry_model import GeometryModel
 from kineverse.model.paths import Path
-from kineverse.operations.urdf_operations import load_urdf
+from kineverse.operations.basic_operations import ExecFunction
+from kineverse.operations.urdf_operations import load_urdf, FixedJoint, urdf_origin_to_transform, \
+    CreateURDFFrameConnection
 from kineverse.urdf_fix import urdf_filler
-
+import giskardpy.tfwrapper as tf
 
 class World(object):
+    world_frame = u'map'
+
     def __init__(self, prefix=tuple(), path_to_data_folder=u''):
+        self._fks = {}
         self.__prefix = '/'.join(prefix)
         self._objects_names = []
         self._robot_name = None
         self.km_model = GeometryModel()
+        self.attached_objects = {}
         if path_to_data_folder is None:
             path_to_data_folder = u''
         self._path_to_data_folder = path_to_data_folder
@@ -69,7 +80,7 @@ class World(object):
         limit_map = load_urdf(ks=self.km_model,
                               prefix=Path(str(name)),
                               urdf=urdf_obj,
-                              reference_frame='map',  # FIXME
+                              reference_frame=self.world_frame,
                               joint_prefix=Path(str(self.__prefix + '/' + name + '/joint_state')),
                               limit_prefix=Path(str(self.__prefix + '/' + name + '/limits')),
                               robot_class=Robot)
@@ -77,6 +88,7 @@ class World(object):
         obj.init2(limit_map=limit_map, **kwargs)
 
         self.km_model.register_on_model_changed(Path(name), obj.reset_cache)
+        self.km_model.register_on_model_changed(Path(name), self.init_fast_fks)
         self.km_model.clean_structure()
         self.km_model.dispatch_events()
         return name
@@ -135,7 +147,7 @@ class World(object):
     def get_object(self, name):
         """
         :type name: str
-        :rtype: WorldObject
+        :rtype: Robot
         """
         return self.km_model.get_data(name)
 
@@ -178,6 +190,7 @@ class World(object):
         self._objects_names.remove(name)
 
     def __remove_thing(self, name):
+        self.km_model.deregister_on_model_changed(self.km_model.get_data(name).reset_cache)
         operations = self.km_model.get_history_of(Path(name))
         for tagged_operation in reversed(operations):
             self.km_model.remove_operation(tagged_operation.tag)
@@ -207,12 +220,6 @@ class World(object):
                                           controlled_joints=controlled_joints,
                                           ignored_pairs=ignored_pairs,
                                           added_pairs=added_pairs)
-        # self._robot_name = Robot.from_urdf_object(urdf_object=robot,
-        #                                           base_pose=base_pose,
-        #                                           controlled_joints=controlled_joints,
-        #                                           path_to_data_folder=self._path_to_data_folder,
-        #                                           ignored_pairs=ignored_pairs,
-        #                                           added_pairs=added_pairs)
         logging.loginfo(u'--> added {} to world'.format(self._robot_name))
 
     @property
@@ -243,32 +250,217 @@ class World(object):
         self.km_model.clean_structure()
         self.km_model.dispatch_events()
 
-    def attach_existing_obj_to_robot(self, name, link, pose):
+    @memoize
+    def get_split_chain(self, root_path, tip_path, joints=True, links=True, fixed=True):
+        if root_path == tip_path:
+            return [], [], []
+        root_chain = self.get_simple_chain(self.world_frame, root_path, False, True, True)
+        tip_chain = self.get_simple_chain(self.world_frame, tip_path, False, True, True)
+        for i in range(min(len(root_chain), len(tip_chain))):
+            if root_chain[i] != tip_chain[i]:
+                break
+        else: # if not break
+            i += 1
+        connection = tip_chain[i - 1]
+        root_chain = self.get_simple_chain(connection, root_path, joints, links, fixed)
+        if links:
+            root_chain = root_chain[1:]
+        root_chain.reverse()
+        tip_chain = self.get_simple_chain(connection, tip_path, joints, links, fixed)
+        if links:
+            tip_chain = tip_chain[1:]
+        return root_chain, [connection] if links else [], tip_chain
+
+    @memoize
+    def get_chain(self, root, tip, joints=True, links=True, fixed=True):
+        """
+        :type root: str
+        :type tip: str
+        :type joints: bool
+        :type links: bool
+        :type fixed: bool
+        :rtype: list
+        """
+        root_chain, connection, tip_chain = self.get_split_chain(root, tip, joints, links, fixed)
+        return root_chain + connection + tip_chain
+
+    @memoize
+    def get_simple_chain(self, root_path, tip_path, joints=True, links=True, fixed=True):
+        """
+        :type root_path: Path
+        :type tip_path: Path
+        :type joints: bool
+        :type links: bool
+        :type fixed: bool
+        :rtype: list
+        """
+        chain = []
+        if links:
+            chain.append(tip_path)
+        link_path = tip_path
+        while link_path != root_path:
+            link = self.km_model.get_data(link_path)
+            joint = link.parent_joint
+            parent = link.parent
+
+            if joints:
+                if fixed or not self.km_model.get_data(joint).type == 'fixed': # fixme
+                    chain.append(joint)
+            if links:
+                chain.append(parent)
+            link_path = parent
+        chain.reverse()
+        return chain
+
+    def get_fk_expression(self, root_path, tip_path):
+        """
+        :type root_link: str
+        :type tip_link: str
+        :return: 4d matrix describing the transformation from root_link to tip_link
+        :rtype: spw.Matrix
+        """
+        fk = w.eye(4)
+        root_chain, _, tip_chain = self.get_split_chain(root_path, tip_path, joints=False, links=True)
+        for frame_name in root_chain:
+            fk = w.dot(fk, w.inverse_frame(self.km_model.get_data(frame_name).to_parent))
+        for frame_name in tip_chain:
+            fk = w.dot(fk, self.km_model.get_data(frame_name).to_parent)
+        # FIXME there is some reference fuckup going on, but i don't know where; deepcopy is just a quick fix
+        return deepcopy(fk)
+
+    def get_fk_pose(self, root_object_name, tip_object_name, root_object_link=None, tip_object_link=None):
+        if root_object_link is None:
+            if self._robot_name == root_object_name:
+                root_object_link = self.robot.get_root()
+            else:
+                root_object_link = self.get_object(root_object_name).get_root()
+        if tip_object_link is None:
+            if self._robot_name == tip_object_name:
+                tip_object_link = self.robot.get_root()
+            else:
+                tip_object_link = self.get_object(tip_object_name).get_root()
+        root_path = self.get_link_path(root_object_name, root_object_link)
+        tip_path = self.get_link_path(tip_object_name, tip_object_link)
+        # try:
+        homo_m = self.get_fk_np(root_path, tip_path)
+        p = PoseStamped()
+        p.header.frame_id = root_path
+        p.pose = homo_matrix_to_pose(homo_m)
+        # except Exception as e:
+        #     traceback.print_exc()
+        #     pass
+        return p
+
+    @memoize
+    def get_fk_np(self, root_path, tip_path):
+        world_joint_state = self.robot.get_joint_state_positions()
+        world_joint_state = {str(Path(identifier.joint_states + [joint_name, u'position']).to_symbol()): world_joint_state[joint_name] for joint_name in world_joint_state}
+        for object_name in self.get_object_names():
+            object_joint_state = self.get_object(object_name).get_joint_state_positions()
+            object_joint_state = {str(Path(identifier.world + [object_name, joint_name, u'position']).to_symbol()): object_joint_state[joint_name] for joint_name in object_joint_state}
+            world_joint_state.update(object_joint_state)
+        return self._fks[root_path, tip_path](**world_joint_state)
+
+    def init_fast_fks(self, *args, **kwargs):
+        def f(key):
+            root, tip = key
+            fk = self.get_fk_expression(root, tip)
+            m = w.speed_up(fk, w.free_symbols(fk))
+            return m
+
+        self._fks = KeyDefaultDict(f)
+
+    def get_robot_fk_np(self, root_link, tip_link):
+        root_path = self.get_link_path(self._robot_name, root_link)
+        if root_path in self.attached_objects:
+            root_path = self.attached_objects[root_path]
+        tip_path = self.get_link_path(self._robot_name, tip_link)
+        if tip_path in self.attached_objects:
+            tip_path = self.attached_objects[tip_path]
+        return self.get_fk_np(root_path, tip_path)
+
+    def get_link_path(self, object_name, link_name):
+        """
+        :type object_name: str
+        :type link_name: str
+        :rtype: Path
+        """
+        return Path(object_name)+('links', link_name)
+
+    def get_joint_path(self, object_name, link_name):
+        return Path(object_name)+('joints', link_name)
+
+    def attach_existing_obj_to_robot(self, name, link):
         """
         :param name: name of the existing object
         :type name: name
         """
-        # TODO this should know the object pose and not require it as input
-        self._robot_name.attach_urdf_object(self.get_object(name), link, pose)
-        self.remove_object(name)
+        object_root = self.get_object(name).get_root()
+
+
+        joint_path = self.get_joint_path(self._robot_name, name)
+        parent_path = self.get_link_path(self._robot_name, link)
+        child_path = self.get_link_path(name, object_root)
+
+        casadi_pose = w.Matrix(self.get_fk_np(parent_path, child_path))
+
+        joint_operation = ExecFunction(joint_path,
+                                       FixedJoint,
+                                       str(parent_path),
+                                       str(child_path),
+                                       casadi_pose)
+
+        self.km_model.apply_operation('create {}'.format(joint_path), joint_operation)
+
+        self.km_model.apply_operation('connect {} {}'.format(parent_path, child_path),
+                                      CreateURDFFrameConnection(joint_path, parent_path, child_path))
+        self.km_model.clean_structure()
+        self.km_model.dispatch_events()
+        self._objects_names.remove(name)
+        self.attached_objects[self.get_link_path(self._robot_name, name)] = child_path
+
         logging.loginfo(u'--> attached object {} on link {}'.format(name, link))
 
     def detach(self, joint_name, from_obj=None):
-        if joint_name not in self.robot.get_joint_names():
-            raise UnknownBodyException(u'can\'t detach: {}'.format(joint_name))
-        if from_obj is None or self.robot.get_name() == from_obj:
-            # this only works because attached simple objects have joint names equal to their name
-            p = self.robot.get_fk_pose(self.robot.get_root(), joint_name)
-            p_map = kdl_to_pose(self.robot.root_T_map.Inverse() * msg_to_kdl(p))
-
-            parent_link = self.robot.get_parent_link_of_joint(joint_name)
-            cut_off_obj = self.robot.detach_sub_tree(joint_name)
-            logging.loginfo(u'<-- detached {} from link {}'.format(joint_name, parent_link))
-        else:
+        if from_obj is None:
+            from_obj = self._robot_name
+        elif from_obj != self._robot_name:
             raise UnsupportedOptionException(u'only detach from robot supported')
-        wo = WorldObject.from_urdf_object(cut_off_obj)  # type: WorldObject
-        wo.base_pose = p_map
-        self.add_object(wo)
+        o = self.get_object(from_obj)
+        joint_path = self.get_joint_path(from_obj, joint_name)
+        parent_path = o.get_parent_path_of_joint(joint_name)
+        child_path = o.get_child_path_of_joint(joint_name)
+        try:
+        # if joint_name not in self.robot.get_joint_names():
+            self.km_model.remove_operation('connect {} {}'.format(parent_path, child_path))
+            self.km_model.remove_operation('create {}'.format(joint_path))
+        except Exception as e:
+            raise UnknownBodyException(u'can\'t detach: {}\n{}'.format(joint_name, e))
+
+        self.km_model.clean_structure()
+        self.km_model.dispatch_events()
+
+        try:
+            del self.attached_objects[self.get_link_path(from_obj, o.get_name())]
+        except KeyError:
+            pass
+
+        self._objects_names.append(str(child_path[:-2]))
+        # fixme remove pr2 arm
+
+        # if from_obj is None or self.robot.get_name() == from_obj:
+            # this only works because attached simple objects have joint names equal to their name
+            # p = self.robot.get_fk_pose(self.robot.get_root(), joint_name)
+            # p_map = kdl_to_pose(self.robot.root_T_map.Inverse() * msg_to_kdl(p))
+            #
+            # parent_link = self.robot.get_parent_link_of_joint(joint_name)
+            # cut_off_obj = self.robot.detach_sub_tree(joint_name)
+            # logging.loginfo(u'<-- detached {} from link {}'.format(joint_name, parent_link))
+        # else:
+
+        # wo = WorldObject.from_urdf_object(cut_off_obj)  # type: WorldObject
+        # wo.base_pose = p_map
+        # self.add_object(wo)
 
     def get_robot_collision_matrix(self, min_dist):
         robot_name = self.robot.get_name()

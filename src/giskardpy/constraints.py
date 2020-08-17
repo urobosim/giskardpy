@@ -132,7 +132,9 @@ class Constraint(object):
         :type tip: str
         :return: root_T_tip
         """
-        km = self.get_god_map().get_data(identifier.km_world) # type: GeometryModel
+        return self.get_world().get_fk_expression(root, tip)
+
+        # km = self.get_god_map().get_data(identifier.km_world) # type: GeometryModel
         # try:
         #     root_frame = km.get_data(root)
         # except PathException as e:
@@ -151,16 +153,16 @@ class Constraint(object):
 
         # return fk_a_in_b(self.get_world(), root_frame, tip_frame)
 
-        fk = w.eye(4)
-        root_chain, _, tip_chain = self.get_robot().get_split_chain(root, tip, joints=False)
-        for link_name in root_chain:
-            child_T_parent = km.get_data('robot/links/'+link_name).to_parent
-            fk = w.dot(fk, w.inverse_frame(child_T_parent))
-        for link_name in tip_chain:
-            # FIXME kineverse can't handle unicode
-            child_T_parent = km.get_data('robot/links/'+str(link_name)).to_parent
-            fk = w.dot(fk, child_T_parent)
-        return fk
+        # fk = w.eye(4)
+        # root_chain, _, tip_chain = self.get_robot().get_split_chain(root, tip, joints=False)
+        # for link_name in root_chain:
+        #     child_T_parent = km.get_data('robot/links/'+link_name).to_parent
+        #     fk = w.dot(fk, w.inverse_frame(child_T_parent))
+        # for link_name in tip_chain:
+        #     # FIXME kineverse can't handle unicode
+        #     child_T_parent = km.get_data('robot/links/'+str(link_name)).to_parent
+        #     fk = w.dot(fk, child_T_parent)
+        # return fk
 
     def get_fk_evaluated(self, root, tip):
         """

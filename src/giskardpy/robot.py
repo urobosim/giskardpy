@@ -27,27 +27,27 @@ class Robot(Backend):
         :param joint_vel_limit: all velocity limits which are undefined or higher than this will be set to this
         :type joint_vel_limit: Symbol
         """
-        self._fk_expressions = {}
-        self._fks = {}
-        self._evaluated_fks = {}
+        # self._fk_expressions = {}
+        # self._fks = {}
+        # self._evaluated_fks = {}
         # self._joint_to_frame = {}
-        self._joint_position_symbols = KeyDefaultDict(lambda x: w.Symbol(x))  # don't iterate over this map!!
-        self._joint_velocity_symbols = KeyDefaultDict(lambda x: 0)  # don't iterate over this map!!
-        self._joint_velocity_linear_limit = KeyDefaultDict(lambda x: 10000) # don't overwrite urdf limits by default
-        self._joint_velocity_angular_limit = KeyDefaultDict(lambda x: 100000)
-        self._joint_acc_linear_limit = defaultdict(lambda: 100)  # no acceleration limit per default
-        self._joint_acc_angular_limit = defaultdict(lambda: 100)  # no acceleration limit per default
-        self._joint_weights = defaultdict(lambda: 0)
+        # self._joint_position_symbols = KeyDefaultDict(lambda x: w.Symbol(x))  # don't iterate over this map!!
+        # self._joint_velocity_symbols = KeyDefaultDict(lambda x: 0)  # don't iterate over this map!!
+        # self._joint_velocity_linear_limit = KeyDefaultDict(lambda x: 10000) # don't overwrite urdf limits by default
+        # self._joint_velocity_angular_limit = KeyDefaultDict(lambda x: 100000)
+        # self._joint_acc_linear_limit = defaultdict(lambda: 100)  # no acceleration limit per default
+        # self._joint_acc_angular_limit = defaultdict(lambda: 100)  # no acceleration limit per default
+        # self._joint_weights = defaultdict(lambda: 0)
         super(Robot, self).init2(base_pose, controlled_joints, path_to_data_folder, *args, **kwargs)
         # self.reinitialize()
 
-    @property
-    def hard_constraints(self):
-        return self._hard_constraints
-
-    @property
-    def joint_constraints(self):
-        return self._joint_constraints
+    # @property
+    # def hard_constraints(self):
+    #     return self._hard_constraints
+    #
+    # @property
+    # def joint_constraints(self):
+    #     return self._joint_constraints
 
     @Backend.joint_state.setter
     def joint_state(self, value):
@@ -57,10 +57,9 @@ class Robot(Backend):
         :return:
         """
         Backend.joint_state.fset(self, value)
-        self.__joint_state_positions = {str(self._joint_position_symbols[k]): v.position for k, v in
-                                        self.joint_state.items()}
+        self.__joint_state_positions = {k: v.position for k, v in self.joint_state.items()}
         # self._evaluated_fks.clear()
-        self.get_fk_np.memo.clear()
+        # self.get_fk_np.memo.clear()
 
     def set_limit_map(self, limit_map):
         self.limit_map = limit_map
@@ -76,7 +75,7 @@ class Robot(Backend):
         try:
             return self.__joint_state_positions
         except:
-            return {str(self._joint_position_symbols[x]): 0 for x in self.get_controllable_joints()}
+            return {x: 0 for x in self.get_controllable_joints()}
 
     # def reinitialize(self):
     #     """
@@ -89,164 +88,69 @@ class Robot(Backend):
     #     self._create_constraints()
     #     self.init_fast_fks()
 
-    def set_joint_position_symbols(self, symbols):
-        self._joint_position_symbols.update(symbols)
-
-    def set_joint_velocity_limit_symbols(self, linear, angular):
-        self._joint_velocity_linear_limit = linear
-        self._joint_velocity_angular_limit = angular
-
-    def set_joint_velocity_symbols(self, symbols):
-        self._joint_velocity_symbols = symbols
-
-    def set_joint_acceleration_limit_symbols(self, linear, angular):
-        self._joint_acc_linear_limit = linear
-        self._joint_acc_angular_limit = angular
-
-    def set_joint_weight_symbols(self, symbols):
-        self._joint_weights = symbols
-
-    def update_joint_symbols(self, position, velocity, weights,
-                             linear_velocity_limit, angular_velocity_limit,
-                             linear_acceleration_limit, angular_acceleration_limit):
-        self.set_joint_position_symbols(position)
-        self.set_joint_velocity_symbols(velocity)
-        self.set_joint_weight_symbols(weights)
-        self.set_joint_velocity_limit_symbols(linear_velocity_limit, angular_velocity_limit)
-        self.set_joint_acceleration_limit_symbols(linear_acceleration_limit, angular_acceleration_limit)
+    # def set_joint_position_symbols(self, symbols):
+    #     self._joint_position_symbols.update(symbols)
+    #
+    # def set_joint_velocity_limit_symbols(self, linear, angular):
+    #     self._joint_velocity_linear_limit = linear
+    #     self._joint_velocity_angular_limit = angular
+    #
+    # def set_joint_velocity_symbols(self, symbols):
+    #     self._joint_velocity_symbols = symbols
+    #
+    # def set_joint_acceleration_limit_symbols(self, linear, angular):
+    #     self._joint_acc_linear_limit = linear
+    #     self._joint_acc_angular_limit = angular
+    #
+    # def set_joint_weight_symbols(self, symbols):
+    #     self._joint_weights = symbols
+    #
+    # def update_joint_symbols(self, position, velocity, weights,
+    #                          linear_velocity_limit, angular_velocity_limit,
+    #                          linear_acceleration_limit, angular_acceleration_limit):
+    #     # self.set_joint_position_symbols(position)
+    #     # self.set_joint_velocity_symbols(velocity)
+    #     self.set_joint_weight_symbols(weights)
+    #     self.set_joint_velocity_limit_symbols(linear_velocity_limit, angular_velocity_limit)
+    #     self.set_joint_acceleration_limit_symbols(linear_acceleration_limit, angular_acceleration_limit)
         # self.reinitialize()
 
     def update_self_collision_matrix(self, added_links=None, removed_links=None):
         pass
         # super(Robot, self).update_self_collision_matrix(added_links, removed_links)
 
-    def _create_frames_expressions(self):
-        pass
-        # for joint_name, urdf_joint in self._urdf_robot.joint_map.items():
-        #     if self.is_joint_controllable(joint_name):
-        #         joint_symbol = self.get_joint_position_symbol(joint_name)
-        #     if self.is_joint_mimic(joint_name):
-        #         multiplier = 1 if urdf_joint.mimic.multiplier is None else urdf_joint.mimic.multiplier
-        #         offset = 0 if urdf_joint.mimic.offset is None else urdf_joint.mimic.offset
-        #         joint_symbol = self.get_joint_position_symbol(urdf_joint.mimic.joint) * multiplier + offset
-        #
-        #     if self.is_joint_type_supported(joint_name):
-        #         if urdf_joint.origin is not None:
-        #             xyz = urdf_joint.origin.xyz if urdf_joint.origin.xyz is not None else [0, 0, 0]
-        #             rpy = urdf_joint.origin.rpy if urdf_joint.origin.rpy is not None else [0, 0, 0]
-        #             joint_frame = w.dot(w.translation3(*xyz), w.rotation_matrix_from_rpy(*rpy))
-        #         else:
-        #             joint_frame = w.eye(4)
-        #     else:
-        #         # TODO more specific exception
-        #         raise TypeError(u'Joint type "{}" is not supported by urdfs parser.'.format(urdf_joint.type))
-        #
-        #     if self.is_joint_rotational(joint_name):
-        #         joint_frame = w.dot(joint_frame,
-        #                             w.rotation_matrix_from_axis_angle(w.vector3(*urdf_joint.axis), joint_symbol))
-        #     elif self.is_joint_prismatic(joint_name):
-        #         translation_axis = (w.point3(*urdf_joint.axis) * joint_symbol)
-        #         joint_frame = w.dot(joint_frame, w.translation3(translation_axis[0],
-        #                                                         translation_axis[1],
-        #                                                         translation_axis[2]))
-        #
-        #     self._joint_to_frame[joint_name] = joint_frame
-
-    def _create_constraints(self):
-        """
-        Creates hard and joint constraints.
-        """
-        pass
-        # self._hard_constraints = OrderedDict()
-        # self._joint_constraints = OrderedDict()
-        # for i, joint_name in enumerate(self.get_joint_names_controllable()):
-        #     lower_limit, upper_limit = self.get_joint_limits(joint_name)
-        #     joint_symbol = self.get_joint_position_symbol(joint_name)
-        #     sample_period = w.Symbol(u'rosparam_general_options_sample_period')  # TODO this should be a parameter
-        #     velocity_limit = self.get_joint_velocity_limit_expr(joint_name) * sample_period
-        #
-        #     weight = self._joint_weights[joint_name]
-        #     weight = weight * (1. / (velocity_limit)) ** 2
-        #
-        #     if not self.is_joint_continuous(joint_name):
-        #         self._joint_constraints[joint_name] = JointConstraint(lower=w.Max(-velocity_limit, lower_limit - joint_symbol),
-        #                                                               upper=w.Min(velocity_limit, upper_limit - joint_symbol),
-        #                                                               weight=weight)
-        #     else:
-        #         self._joint_constraints[joint_name] = JointConstraint(lower=-velocity_limit,
-        #                                                               upper=velocity_limit,
-        #                                                               weight=weight)
 
     def get_to_parent_frame(self, link_name):
         return self.links[link_name].to_parent
 
-    def get_fk_expression(self, root_link, tip_link):
-        """
-        :type root_link: str
-        :type tip_link: str
-        :return: 4d matrix describing the transformation from root_link to tip_link
-        :rtype: spw.Matrix
-        """
-        fk = w.eye(4)
-        root_chain, _, tip_chain = self.get_split_chain(root_link, tip_link, joints=False, links=True)
-        for link_name in root_chain:
-            fk = w.dot(fk, w.inverse_frame(self.get_to_parent_frame(link_name)))
-        for link_name in tip_chain:
-            fk = w.dot(fk, self.get_to_parent_frame(link_name))
-        # FIXME there is some reference fuckup going on, but i don't know where; deepcopy is just a quick fix
-        return deepcopy(fk)
-
-    def get_fk_pose(self, root, tip):
-        try:
-            homo_m = self.get_fk_np(root, tip)
-            p = PoseStamped()
-            p.header.frame_id = root
-            p.pose = homo_matrix_to_pose(homo_m)
-        except Exception as e:
-            traceback.print_exc()
-            pass
-        return p
-
-    @memoize
-    def get_fk_np(self, root, tip):
-        return self._fks[root, tip](**self.get_joint_state_positions())
-
-    def init_fast_fks(self):
-        def f(key):
-            root, tip = key
-            fk = self.get_fk_expression(root, tip)
-            m = w.speed_up(fk, w.free_symbols(fk))
-            return m
-
-        self._fks = KeyDefaultDict(f)
 
     # JOINT FUNCTIONS
 
-    @memoize
-    def get_joint_symbols(self):
-        """
-        :return: dict mapping urdfs joint name to symbol
-        :rtype: dict
-        """
-        return {joint_name: self.get_joint_position_symbol(joint_name) for joint_name in
-                self.get_joint_names_controllable()}
+    # @memoize
+    # def get_joint_symbols(self):
+    #     """
+    #     :return: dict mapping urdfs joint name to symbol
+    #     :rtype: dict
+    #     """
+    #     return {joint_name: self.get_joint_position_symbol(joint_name) for joint_name in
+    #             self.get_joint_names_controllable()}
 
-    def get_joint_velocity_limit_expr(self, joint_name):
-        """
-        :param joint_name: name of the joint in the urdfs
-        :type joint_name: str
-        :return: minimum of default velocity limit and limit specified in urdfs
-        :rtype: float
-        """
-        limit = self.get_joint_velocity_limit(joint_name)
-        if self.is_joint_prismatic(joint_name):
-            limit_symbol = self._joint_velocity_linear_limit[joint_name]
-        else:
-            limit_symbol = self._joint_velocity_angular_limit[joint_name]
-        if limit is None:
-            return limit_symbol
-        else:
-            return w.Min(limit, limit_symbol)
+    # def get_joint_velocity_limit_expr(self, joint_name):
+    #     """
+    #     :param joint_name: name of the joint in the urdfs
+    #     :type joint_name: str
+    #     :return: minimum of default velocity limit and limit specified in urdfs
+    #     :rtype: float
+    #     """
+    #     limit = self.get_joint_velocity_limit(joint_name)
+    #     if self.is_joint_prismatic(joint_name):
+    #         limit_symbol = self._joint_velocity_linear_limit[joint_name]
+    #     else:
+    #         limit_symbol = self._joint_velocity_angular_limit[joint_name]
+    #     if limit is None:
+    #         return limit_symbol
+    #     else:
+    #         return w.Min(limit, limit_symbol)
 
     def get_joint_frame(self, joint_name):
         """
@@ -256,29 +160,28 @@ class Robot(Backend):
         :rtype: spw.Matrix
         """
         return self.joints[joint_name]
-        return self._joint_to_frame[joint_name]
 
-    def get_joint_position_symbol(self, joint_name):
-        """
-        :param joint_name: name of the joint in the urdfs
-        :type joint_name: str
-        :rtype: spw.Symbol
-        """
-        return self._joint_position_symbols[joint_name]
+    # def get_joint_position_symbol(self, joint_name):
+    #     """
+    #     :param joint_name: name of the joint in the urdfs
+    #     :type joint_name: str
+    #     :rtype: spw.Symbol
+    #     """
+    #     return self._joint_position_symbols[joint_name]
+    #
+    # def get_joint_position_symbols(self):
+    #     return [self.get_joint_position_symbol(joint_name) for joint_name in self.controlled_joints]
 
-    def get_joint_position_symbols(self):
-        return [self.get_joint_position_symbol(joint_name) for joint_name in self.controlled_joints]
+    # def get_joint_velocity_symbol(self, joint_name):
+    #     """
+    #     :param joint_name: name of the joint in the urdfs
+    #     :type joint_name: str
+    #     :rtype: spw.Symbol
+    #     """
+    #     return self._joint_velocity_symbols[joint_name]
 
-    def get_joint_velocity_symbol(self, joint_name):
-        """
-        :param joint_name: name of the joint in the urdfs
-        :type joint_name: str
-        :rtype: spw.Symbol
-        """
-        return self._joint_velocity_symbols[joint_name]
-
-    def get_joint_velocity_symbols(self):
-        return [self.get_joint_velocity_symbol(joint_name) for joint_name in self.controlled_joints]
+    # def get_joint_velocity_symbols(self):
+    #     return [self.get_joint_velocity_symbol(joint_name) for joint_name in self.controlled_joints]
 
     def generate_joint_state(self, f):
         """
@@ -336,4 +239,3 @@ class Robot(Backend):
                 getattr(self, method_name).memo.clear()
             except:
                 pass
-        self.init_fast_fks()

@@ -466,55 +466,55 @@ class URDFObject(ArticulatedObject):
                         return None
                 return child_result
 
-    def attach_urdf_object(self, urdf_object, parent_link, pose, round_to=3):
-        """
-        Rigidly attach another object to the robot.
-        :param urdf_object: Object that shall be attached to the robot.
-        :type urdf_object: URDFObject
-        :param parent_link_name: Name of the link to which the object shall be attached.
-        :type parent_link_name: str
-        :param pose: Hom. transform between the reference frames of the parent link and the object.
-        :type pose: Pose
-        """
-        if urdf_object.get_name() in self.get_link_names():
-            raise DuplicateNameException(
-                u'\'{}\' already has link with name \'{}\'.'.format(self.get_name(), urdf_object.get_name()))
-        if urdf_object.get_name() in self.get_joint_names():
-            raise DuplicateNameException(
-                u'\'{}\' already has joint with name \'{}\'.'.format(self.get_name(), urdf_object.get_name()))
-        if parent_link not in self.get_link_names():
-            raise UnknownBodyException(
-                u'can not attach \'{}\' to non existent parent link \'{}\' of \'{}\''.format(urdf_object.get_name(),
-                                                                                             parent_link,
-                                                                                             self.get_name()))
-        if len(set(urdf_object.get_link_names()).intersection(set(self.get_link_names()))) != 0:
-            raise DuplicateNameException(u'can not merge urdfs that share link names')
-        if len(set(urdf_object.get_joint_names()).intersection(set(self.get_joint_names()))) != 0:
-            raise DuplicateNameException(u'can not merge urdfs that share joint names')
-
-        origin = up.Pose([np.round(pose.position.x, round_to),
-                          np.round(pose.position.y, round_to),
-                          np.round(pose.position.z, round_to)],
-                         euler_from_quaternion([np.round(pose.orientation.x, round_to),
-                                                np.round(pose.orientation.y, round_to),
-                                                np.round(pose.orientation.z, round_to),
-                                                np.round(pose.orientation.w, round_to)]))
-
-        joint = up.Joint(self.robot_name_to_root_joint(urdf_object.get_name()),
-                         parent=parent_link,
-                         child=urdf_object.get_root(),
-                         joint_type=FIXED_JOINT,
-                         origin=origin)
-        self._urdf_robot.add_joint(joint)
-        for j in urdf_object._urdf_robot.joints:
-            self._urdf_robot.add_joint(j)
-        for l in urdf_object._urdf_robot.links:
-            self._urdf_robot.add_link(l)
-        try:
-            del self._link_to_marker[urdf_object.get_name()]
-        except:
-            pass
-        self.reinitialize()
+    # def attach_urdf_object(self, urdf_object, parent_link, pose, round_to=3):
+    #     """
+    #     Rigidly attach another object to the robot.
+    #     :param urdf_object: Object that shall be attached to the robot.
+    #     :type urdf_object: URDFObject
+    #     :param parent_link_name: Name of the link to which the object shall be attached.
+    #     :type parent_link_name: str
+    #     :param pose: Hom. transform between the reference frames of the parent link and the object.
+    #     :type pose: Pose
+    #     """
+    #     if urdf_object.get_name() in self.get_link_names():
+    #         raise DuplicateNameException(
+    #             u'\'{}\' already has link with name \'{}\'.'.format(self.get_name(), urdf_object.get_name()))
+    #     if urdf_object.get_name() in self.get_joint_names():
+    #         raise DuplicateNameException(
+    #             u'\'{}\' already has joint with name \'{}\'.'.format(self.get_name(), urdf_object.get_name()))
+    #     if parent_link not in self.get_link_names():
+    #         raise UnknownBodyException(
+    #             u'can not attach \'{}\' to non existent parent link \'{}\' of \'{}\''.format(urdf_object.get_name(),
+    #                                                                                          parent_link,
+    #                                                                                          self.get_name()))
+    #     if len(set(urdf_object.get_link_names()).intersection(set(self.get_link_names()))) != 0:
+    #         raise DuplicateNameException(u'can not merge urdfs that share link names')
+    #     if len(set(urdf_object.get_joint_names()).intersection(set(self.get_joint_names()))) != 0:
+    #         raise DuplicateNameException(u'can not merge urdfs that share joint names')
+    #
+    #     origin = up.Pose([np.round(pose.position.x, round_to),
+    #                       np.round(pose.position.y, round_to),
+    #                       np.round(pose.position.z, round_to)],
+    #                      euler_from_quaternion([np.round(pose.orientation.x, round_to),
+    #                                             np.round(pose.orientation.y, round_to),
+    #                                             np.round(pose.orientation.z, round_to),
+    #                                             np.round(pose.orientation.w, round_to)]))
+    #
+    #     joint = up.Joint(self.robot_name_to_root_joint(urdf_object.get_name()),
+    #                      parent=parent_link,
+    #                      child=urdf_object.get_root(),
+    #                      joint_type=FIXED_JOINT,
+    #                      origin=origin)
+    #     self._urdf_robot.add_joint(joint)
+    #     for j in urdf_object._urdf_robot.joints:
+    #         self._urdf_robot.add_joint(j)
+    #     for l in urdf_object._urdf_robot.links:
+    #         self._urdf_robot.add_link(l)
+    #     try:
+    #         del self._link_to_marker[urdf_object.get_name()]
+    #     except:
+    #         pass
+    #     self.reinitialize()
 
     @memoize
     def get_joint_origin(self, joint_name):
@@ -586,10 +586,7 @@ class URDFObject(ArticulatedObject):
 
     @memoize
     def get_parent_joint_of_link(self, link_name):
-        for joint_name in self.get_joint_names():
-            child_link = self.get_child_link_of_joint(joint_name)
-            if child_link == link_name:
-                return joint_name
+        return Path(self.get_link(link_name).parent_joint)[-1]
 
     @memoize
     def get_parent_joint_of_joint(self, joint_name):
@@ -606,19 +603,22 @@ class URDFObject(ArticulatedObject):
 
     @memoize
     def get_parent_link_of_joint(self, joint_name):
+        return self.get_parent_path_of_joint(joint_name)[-1]
+
+    def get_parent_path_of_joint(self, joint_name):
         if joint_name in self.get_joint_names():
             joint = self.get_joint(joint_name)
-            parent = Path(joint.parent)[-1]
-            if parent in self.get_link_names():
-                return parent
+            return Path(joint.parent)
 
     @memoize
     def get_child_link_of_joint(self, joint_name):
+        return self.get_child_path_of_joint(joint_name)[-1]
+
+    @memoize
+    def get_child_path_of_joint(self, joint_name):
         if joint_name in self.get_joint_names():
             joint = self.get_joint(joint_name)
-            child = Path(joint.child)[-1]
-            if child in self.get_link_names():
-                return child
+            return Path(joint.child)
 
     @memoize
     def are_linked(self, link_a, link_b):

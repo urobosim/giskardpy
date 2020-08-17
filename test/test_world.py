@@ -5,6 +5,7 @@ import giskardpy
 
 giskardpy.WORLD_IMPLEMENTATION = None
 
+from giskardpy import identifier
 from giskardpy.robot import Robot
 import pytest
 from geometry_msgs.msg import Pose, Point, Quaternion
@@ -180,20 +181,8 @@ class TestWorld(object):
     world_cls = World
 
     def make_world_with_robot(self, urdf, path_to_data_folder):
-        # km = ArticulationModel()
-        # urdf_obj = urdf_filler(up.URDF.from_xml_string(hacky_urdf_parser_fix(urdf)))  # FIXME make this to a function
-        # name = 'egal'
-        # limit_map = load_urdf(ks=km,
-        #                       prefix=name,
-        #                       urdf=urdf_obj,
-        #                       reference_frame='map',  # FIXME
-        #                       joint_prefix=name + '/joint_state',
-        #                       robot_class=cls)
-        # km.clean_structure()
-        # km.get_data(name).init2(**kwargs)
-        # return km.get_data(name)
 
-        w = self.world_cls(path_to_data_folder=path_to_data_folder)
+        w = self.world_cls(prefix=identifier.world, path_to_data_folder=path_to_data_folder)
         # r = self.cls(urdf)
         w.add_robot(robot_urdf=urdf,
                     base_pose=None,
@@ -244,6 +233,10 @@ class TestWorld(object):
         assert empty_world.has_object(name)
         assert len(empty_world.get_objects()) == 1
         assert len(empty_world.get_object_names()) == 1
+        p = Pose()
+        p.orientation.w = 1
+        compare_poses(empty_world.get_object(name).base_pose, p)
+
         return empty_world
 
     def test_add_object_twice(self, function_setup):
@@ -262,7 +255,7 @@ class TestWorld(object):
 
     def test_add_object_with_robot_name(self, function_setup):
         world_with_pr2 = self.make_world_with_pr2()
-        name = u'pr2'
+        name = u'robot'
         box = make_world_body_box(name)
         try:
             world_with_pr2.add_object(box)
@@ -273,28 +266,12 @@ class TestWorld(object):
         assert len(world_with_pr2.get_objects()) == 0
         return world_with_pr2
 
-    def test_attach_existing_obj_to_robot1(self, function_setup):
-        world_with_pr2 = self.make_world_with_pr2()
-        box = self.cls.from_world_body(make_world_body_box())
-        world_with_pr2.add_object(box)
-        links_before = set(world_with_pr2.robot.get_link_names())
-        joints_before = set(world_with_pr2.robot.get_joint_names())
-        p = Pose()
-        p.orientation.w = 1
-        world_with_pr2.attach_existing_obj_to_robot(u'box', u'l_gripper_tool_frame', p)
-        assert u'box' not in world_with_pr2.get_object_names()
-        assert set(world_with_pr2.robot.get_link_names()).difference(links_before) == {u'box'}
-        assert set(world_with_pr2.robot.get_joint_names()).difference(joints_before) == {u'box'}
-        return world_with_pr2
-
     def test_attach_existing_obj_to_robot2(self, function_setup):
+        obj_name = u'box'
         world_with_pr2 = self.make_world_with_pr2()
-        box = self.cls.from_world_body(make_world_body_box())
-        world_with_pr2.add_object(box)
-        p = Pose()
-        p.orientation.w = 1
+        world_with_pr2.add_object(make_world_body_box(name=obj_name))
         try:
-            world_with_pr2.attach_existing_obj_to_robot(u'box2', u'l_gripper_tool_frame', p)
+            world_with_pr2.attach_existing_obj_to_robot(u'box2', u'l_gripper_tool_frame')
             assert False
         except KeyError:
             assert True
@@ -303,23 +280,18 @@ class TestWorld(object):
     def test_attach_detach_existing_obj_to_robot1(self, function_setup):
         obj_name = u'box'
         world_with_pr2 = self.make_world_with_pr2()
-        box = self.cls.from_world_body(make_world_body_box(name=obj_name))
-        world_with_pr2.add_object(box)
-        links_before = set(world_with_pr2.robot.get_link_names())
-        joints_before = set(world_with_pr2.robot.get_joint_names())
+        world_with_pr2.add_object(make_world_body_box(name=obj_name))
+
         p = Pose()
         p.orientation.w = 1
-        world_with_pr2.attach_existing_obj_to_robot(obj_name, u'l_gripper_tool_frame', p)
+        pre_pose = world_with_pr2.get_fk_pose(u'robot', obj_name, u'l_gripper_tool_frame').pose
+        world_with_pr2.attach_existing_obj_to_robot(obj_name, u'l_gripper_tool_frame')
         assert obj_name not in world_with_pr2.get_object_names()
-        assert set(world_with_pr2.robot.get_link_names()).difference(links_before) == {obj_name}
-        assert set(world_with_pr2.robot.get_joint_names()).difference(joints_before) == {obj_name}
+        compare_poses(world_with_pr2.get_fk_pose(u'robot', obj_name, u'l_gripper_tool_frame').pose, pre_pose)
 
         world_with_pr2.detach(obj_name)
-        assert set(world_with_pr2.robot.get_link_names()).symmetric_difference(links_before) == set()
-        assert set(world_with_pr2.robot.get_joint_names()).symmetric_difference(joints_before) == set()
         assert obj_name in world_with_pr2.get_object_names()
-        compare_poses(world_with_pr2.robot.get_fk_pose(world_with_pr2.robot.get_root(), u'l_gripper_tool_frame').pose,
-                      world_with_pr2.get_object(obj_name).base_pose)
+        compare_poses(world_with_pr2.get_fk_pose(u'robot', obj_name, u'l_gripper_tool_frame').pose, pre_pose)
         return world_with_pr2
 
     def test_hard_reset1(self, function_setup):

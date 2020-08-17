@@ -506,7 +506,6 @@ class TestConstraints(object):
         """
         :type zero_pose: PR2
         """
-        #fixme
         x_gripper = Vector3Stamped()
         x_gripper.header.frame_id = zero_pose.r_tip
         x_gripper.vector.x = 1
@@ -533,7 +532,6 @@ class TestConstraints(object):
         """
         :type zero_pose: PR2
         """
-        # fixme
         x_gripper = Vector3Stamped()
         x_gripper.header.frame_id = zero_pose.r_tip
         x_gripper.vector.y = 1

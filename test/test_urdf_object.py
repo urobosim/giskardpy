@@ -302,6 +302,10 @@ class TestUrdfObject(object):
         parsed_pr2 = self.make_object_without_limits(pr2_urdf())
         assert parsed_pr2.get_parent_joint_of_joint(u'l_gripper_tool_joint') == u'l_gripper_palm_joint'
 
+    def test_get_parent_joint_of_link(self, function_setup):
+        parsed_pr2 = self.make_object_without_limits(pr2_urdf())
+        assert parsed_pr2.get_parent_joint_of_link(u'odom_x_frame') == u'odom_x_joint'
+
     def test_get_link_names_from_chain(self, function_setup):
         pass
 

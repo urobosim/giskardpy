@@ -162,7 +162,7 @@ def grow_tree():
     wait_for_goal = Sequence(u'wait for goal')
     # wait_for_goal.add_child(TFPlugin(u'tf'))
     wait_for_goal.add_child(ConfigurationPlugin(u'js'))
-    # wait_for_goal.add_child(WorldUpdatePlugin(u'pybullet updater'))
+    wait_for_goal.add_child(WorldUpdatePlugin(u'pybullet updater'))
     wait_for_goal.add_child(GoalReceived(u'has goal', action_server_name, MoveAction))
     wait_for_goal.add_child(ConfigurationPlugin(u'js'))
     # ----------------------------------------------
