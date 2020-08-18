@@ -381,6 +381,15 @@ class World(object):
             tip_path = self.attached_objects[tip_path]
         return self.get_fk_pose(root_path, tip_path)
 
+    def get_robot_fk_np(self, root_link, tip_link):
+        root_path = self.get_link_path(self._robot_name, root_link)
+        if root_path in self.attached_objects:
+            root_path = self.attached_objects[root_path]
+        tip_path = self.get_link_path(self._robot_name, tip_link)
+        if tip_path in self.attached_objects:
+            tip_path = self.attached_objects[tip_path]
+        return self.get_fk_np(root_path, tip_path)
+
     def get_link_path(self, object_name, link_name):
         """
         :type object_name: str
