@@ -1035,8 +1035,8 @@ class TestCollisionAvoidanceGoals(object):
         p.pose.position = Point(1.2, 0, 1.6)
         p.pose.orientation = Quaternion(0.0, 0.0, 0.47942554, 0.87758256)
         zero_pose.add_box(object_name, pose=p)
-        m = zero_pose.get_world().get_object(object_name).as_marker_msg()
-        compare_poses(m.pose, p.pose)
+        base_pose = zero_pose.get_world().get_object(object_name).base_pose
+        compare_poses(base_pose, p.pose)
 
     def test_add_box_twice(self, zero_pose):
         """
@@ -1048,8 +1048,8 @@ class TestCollisionAvoidanceGoals(object):
         p.pose.position = Point(1.2, 0, 1.6)
         p.pose.orientation = Quaternion(0.0, 0.0, 0.47942554, 0.87758256)
         zero_pose.add_box(object_name, pose=p)
-        m = zero_pose.get_world().get_object(object_name).as_marker_msg()
-        compare_poses(m.pose, p.pose)
+        base_pose = zero_pose.get_world().get_object(object_name).base_pose
+        compare_poses(base_pose, p.pose)
         zero_pose.add_box(object_name, pose=p, expected_response=UpdateWorldResponse.DUPLICATE_BODY_ERROR)
 
     def test_add_remove_sphere(self, zero_pose):
@@ -1135,14 +1135,14 @@ class TestCollisionAvoidanceGoals(object):
         """
         :type zero_pose: PR2
         """
-        pocky = u'http://muh#pocky'
+        pocky = u'box'
         p = PoseStamped()
         p.header.frame_id = zero_pose.r_tip
         p.pose.position = Point(0.05, 0, 0)
         p.pose.orientation = Quaternion(0., 0., 0.47942554, 0.87758256)
         zero_pose.add_box(pocky, [0.1, 0.02, 0.02], pose=p)
         zero_pose.attach_existing(pocky, frame_id=zero_pose.r_tip)
-        relative_pose = zero_pose.get_robot().get_fk_pose(zero_pose.r_tip, pocky).pose
+        relative_pose = zero_pose.get_world().get_robot_fk_pose(zero_pose.r_tip, pocky).pose
         compare_poses(p.pose, relative_pose)
 
     def test_attach_existing_box2(self, zero_pose):

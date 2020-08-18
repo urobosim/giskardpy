@@ -276,16 +276,16 @@ class WorldObject(URDFObject):
         m.pose = self.base_pose
         return m
 
-    def attach_urdf_object(self, urdf_object, parent_link, pose):
-        super(WorldObject, self).attach_urdf_object(urdf_object, parent_link, pose)
-        self.update_self_collision_matrix(added_links=set(product(self.get_links_with_collision(),
-                                                                  urdf_object.get_links_with_collision())))
-        # TODO set joint state for controllable joints of added urdf?
-
-    def detach_sub_tree(self, joint_name):
-        sub_tree = super(WorldObject, self).detach_sub_tree(joint_name)
-        self.update_self_collision_matrix(removed_links=sub_tree.get_link_names())
-        return sub_tree
+    # def attach_urdf_object(self, urdf_object, parent_link, pose):
+    #     super(WorldObject, self).attach_urdf_object(urdf_object, parent_link, pose)
+    #     self.update_self_collision_matrix(added_links=set(product(self.get_links_with_collision(),
+    #                                                               urdf_object.get_links_with_collision())))
+    #     # TODO set joint state for controllable joints of added urdf?
+    #
+    # def detach_sub_tree(self, joint_name):
+    #     sub_tree = super(WorldObject, self).detach_sub_tree(joint_name)
+    #     self.update_self_collision_matrix(removed_links=sub_tree.get_link_names())
+    #     return sub_tree
 
     # def reset(self):
     #     super(WorldObject, self).reset()

@@ -279,20 +279,22 @@ class TestWorld(object):
 
     def test_attach_detach_existing_obj_to_robot1(self, function_setup):
         obj_name = u'box'
-        world_with_pr2 = self.make_world_with_pr2()
-        world_with_pr2.add_object(make_world_body_box(name=obj_name))
+        tip = u'base_link'
+        world = self.make_world_with_pr2()
+        world.add_object(make_world_body_box(name=obj_name))
 
         p = Pose()
         p.orientation.w = 1
-        pre_pose = world_with_pr2.get_fk_pose(u'robot', obj_name, u'l_gripper_tool_frame').pose
-        world_with_pr2.attach_existing_obj_to_robot(obj_name, u'l_gripper_tool_frame')
-        assert obj_name not in world_with_pr2.get_object_names()
-        compare_poses(world_with_pr2.get_fk_pose(u'robot', obj_name, u'l_gripper_tool_frame').pose, pre_pose)
+        pre_pose = world.get_fk_pose(world.get_link_path(world._robot_name, tip),
+                                     world.get_link_path(obj_name, obj_name)).pose
+        world.attach_existing_obj_to_robot(obj_name, tip)
+        assert obj_name not in world.get_object_names()
+        compare_poses(world.get_robot_fk_pose(tip, obj_name).pose, pre_pose)
 
-        world_with_pr2.detach(obj_name)
-        assert obj_name in world_with_pr2.get_object_names()
-        compare_poses(world_with_pr2.get_fk_pose(u'robot', obj_name, u'l_gripper_tool_frame').pose, pre_pose)
-        return world_with_pr2
+        world.detach(obj_name)
+        assert obj_name in world.get_object_names()
+        compare_poses(world.get_robot_fk_pose(tip, obj_name).pose, pre_pose)
+        return world
 
     def test_hard_reset1(self, function_setup):
         world_with_pr2 = self.make_world_with_pr2()

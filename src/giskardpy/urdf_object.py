@@ -658,31 +658,41 @@ class URDFObject(ArticulatedObject):
         """
         if len(self.get_link_names()) > 1:
             raise TypeError(u'only urdfs objects with a single link can be turned into marker')
-        link = self.get_link(self.get_link_names()[0])
-        m = Marker()
-        m.ns = u'{}/{}'.format(ns, self.get_name())
-        m.id = id
-        if link.visual:
-            geometry = link.visual.geometry
-        else:
-            geometry = link.visuals[0].geometry
-        if isinstance(geometry, up.Box):
-            m.type = Marker.CUBE
-            m.scale = Vector3(*geometry.size)
-        elif isinstance(geometry, up.Sphere):
-            m.type = Marker.SPHERE
-            m.scale = Vector3(geometry.radius * 2,
-                              geometry.radius * 2,
-                              geometry.radius * 2)
-        elif isinstance(geometry, up.Cylinder):
-            m.type = Marker.CYLINDER
-            m.scale = Vector3(geometry.radius * 2,
-                              geometry.radius * 2,
-                              geometry.length)
+        marker = Marker()
+        marker.ns = u'{}/{}'.format(ns, self.get_name())
+        marker.id = id
+        geometry = self.links[self.get_link_names()[0]].geometry.values()[0]
+        if geometry.type == GEOM_TYPE_MESH:
+            marker.type = Marker.MESH_RESOURCE
+            marker.mesh_resource = geometry.mesh
+            if geometry.scale is None:
+                marker.scale.x = 1.0
+                marker.scale.z = 1.0
+                marker.scale.y = 1.0
+            else:
+                marker.scale.x = geometry.scale[0]
+                marker.scale.z = geometry.scale[1]
+                marker.scale.y = geometry.scale[2]
+            marker.mesh_use_embedded_materials = True
+        elif geometry.type == GEOM_TYPE_BOX:
+            marker.type = Marker.CUBE
+            marker.scale.x = geometry.scale[0]
+            marker.scale.y = geometry.scale[1]
+            marker.scale.z = geometry.scale[2]
+        elif geometry.type == GEOM_TYPE_CYLINDER:
+            marker.type = Marker.CYLINDER
+            marker.scale.x = geometry.scale[0]
+            marker.scale.y = geometry.scale[0]
+            marker.scale.z = geometry.scale[2]
+        elif geometry.type == GEOM_TYPE_SPHERE:
+            marker.type = Marker.SPHERE
+            marker.scale.x = geometry.scale[0]
+            marker.scale.y = geometry.scale[0]
+            marker.scale.z = geometry.scale[0]
         else:
             raise Exception(u'world body type {} can\'t be converted to marker'.format(geometry.__class__.__name__))
-        m.color = ColorRGBA(0, 1, 0, 0.5)
-        return m
+        marker.color = ColorRGBA(0, 1, 0, 0.5)
+        return marker
 
     def link_as_marker(self, link_name):
         if link_name not in self._link_to_marker:

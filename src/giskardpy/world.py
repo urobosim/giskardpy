@@ -200,7 +200,7 @@ class World(object):
             # I'm not using remove object, because has object ignores hidden objects in pybullet world
             self.__remove_object(object_name)
             logging.loginfo(u'<-- removed object {} from world'.format(object_name))
-        self._objects_names = {}
+        self._objects_names = []
         self.km_model.clean_structure()
         self.km_model.dispatch_events()
 

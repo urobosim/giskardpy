@@ -106,11 +106,8 @@ class WorldUpdatePlugin(GiskardBehavior):
         return res
 
     def get_attached_objects(self, req):
-        original_robot = URDFObject(self.get_robot().original_urdf)
-        link_names = self.get_robot().get_link_names()
-        original_link_names = original_robot.get_link_names()
-        attached_objects = list(set(link_names).difference(original_link_names))
-        attachment_points = [self.get_robot().get_parent_link_of_joint(object) for object in attached_objects]
+        attached_objects = [x[-1] for x in self.get_world().attached_objects]
+        attachment_points = [self.get_robot().get_parent_link_of_joint(object) for object in attached_objects] # FIXME this feel fragile
         res = GetAttachedObjectsResponse()
         res.object_names = attached_objects
         res.attachment_points = attachment_points
@@ -187,8 +184,8 @@ class WorldUpdatePlugin(GiskardBehavior):
         # assumes that parent has god map lock
         world_body = req.body
         global_pose = transform_pose(self.map_frame, req.pose).pose
-        world_object = WorldObject.from_world_body(world_body)
-        self.unsafe_get_world().add_object(world_object)
+        # world_object = WorldObject.from_world_body(world_body)
+        self.unsafe_get_world().add_object(world_body)
         self.unsafe_get_world().set_object_pose(world_body.name, global_pose)
         try:
             m = self.unsafe_get_world().get_object(world_body.name).as_marker_msg()
@@ -224,19 +221,21 @@ class WorldUpdatePlugin(GiskardBehavior):
             p.pose = self.unsafe_get_world().get_object(req.body.name).base_pose
             p = transform_pose(req.pose.header.frame_id, p)
             world_object = self.unsafe_get_world().get_object(req.body.name)
-            self.unsafe_get_world().attach_existing_obj_to_robot(req.body.name, req.pose.header.frame_id, p.pose)
+            self.unsafe_get_world().attach_existing_obj_to_robot(req.body.name, req.pose.header.frame_id)
             m = world_object.as_marker_msg()
             m.header.frame_id = p.header.frame_id
             m.pose = p.pose
         else:
-            world_object = WorldObject.from_world_body(req.body)
-            self.unsafe_get_world().robot.attach_urdf_object(world_object,
-                                                      req.pose.header.frame_id,
-                                                      req.pose.pose)
-            logging.loginfo(u'--> attached object {} on link {}'.format(req.body.name, req.pose.header.frame_id))
-            m = world_object.as_marker_msg()
-            m.pose = req.pose.pose
-            m.header = req.pose.header
+            self.add_object(req)
+            return self.attach_object(req)
+            # world_object = WorldObject.from_world_body(req.body)
+            # self.unsafe_get_world().robot.attach_urdf_object(world_object,
+            #                                           req.pose.header.frame_id,
+            #                                           req.pose.pose)
+            # logging.loginfo(u'--> attached object {} on link {}'.format(req.body.name, req.pose.header.frame_id))
+            # m = world_object.as_marker_msg()
+            # m.pose = req.pose.pose
+            # m.header = req.pose.header
         try:
             m.frame_locked = True
             self.publish_object_as_marker(m)
