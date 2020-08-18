@@ -328,19 +328,22 @@ class World(object):
         # FIXME there is some reference fuckup going on, but i don't know where; deepcopy is just a quick fix
         return deepcopy(fk)
 
-    def get_fk_pose(self, root_object_name, tip_object_name, root_object_link=None, tip_object_link=None):
-        if root_object_link is None:
-            if self._robot_name == root_object_name:
-                root_object_link = self.robot.get_root()
-            else:
-                root_object_link = self.get_object(root_object_name).get_root()
-        if tip_object_link is None:
-            if self._robot_name == tip_object_name:
-                tip_object_link = self.robot.get_root()
-            else:
-                tip_object_link = self.get_object(tip_object_name).get_root()
-        root_path = self.get_link_path(root_object_name, root_object_link)
-        tip_path = self.get_link_path(tip_object_name, tip_object_link)
+    def get_robot_fk_expression(self, root_link, tip_link):
+        """
+        :type root_link: str
+        :type tip_link: str
+        :return: 4d matrix describing the transformation from root_link to tip_link
+        :rtype: spw.Matrix
+        """
+        root_path = self.get_link_path(self._robot_name, root_link)
+        if root_path in self.attached_objects:
+            root_path = self.attached_objects[root_path]
+        tip_path = self.get_link_path(self._robot_name, tip_link)
+        if tip_path in self.attached_objects:
+            tip_path = self.attached_objects[tip_path]
+        return self.get_fk_expression(root_path, tip_path)
+
+    def get_fk_pose(self, root_path, tip_path):
         # try:
         homo_m = self.get_fk_np(root_path, tip_path)
         p = PoseStamped()
@@ -351,7 +354,6 @@ class World(object):
         #     pass
         return p
 
-    @memoize
     def get_fk_np(self, root_path, tip_path):
         world_joint_state = self.robot.get_joint_state_positions()
         world_joint_state = {str(Path(identifier.joint_states + [joint_name, u'position']).to_symbol()): world_joint_state[joint_name] for joint_name in world_joint_state}
@@ -370,14 +372,14 @@ class World(object):
 
         self._fks = KeyDefaultDict(f)
 
-    def get_robot_fk_np(self, root_link, tip_link):
+    def get_robot_fk_pose(self, root_link, tip_link):
         root_path = self.get_link_path(self._robot_name, root_link)
         if root_path in self.attached_objects:
             root_path = self.attached_objects[root_path]
         tip_path = self.get_link_path(self._robot_name, tip_link)
         if tip_path in self.attached_objects:
             tip_path = self.attached_objects[tip_path]
-        return self.get_fk_np(root_path, tip_path)
+        return self.get_fk_pose(root_path, tip_path)
 
     def get_link_path(self, object_name, link_name):
         """

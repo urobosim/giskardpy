@@ -116,17 +116,17 @@ def initialize_god_map():
                     ignored_pairs=god_map.get_data(identifier.ignored_self_collisions),
                     added_pairs=god_map.get_data(identifier.added_self_collisions))
 
-    joint_position_symbols = JointStatesInput(blackboard.god_map.to_symbol, world.robot.get_controllable_joints(),
-                                              identifier.joint_states,
-                                              suffix=[u'position']).joint_map
-    joint_vel_symbols = JointStatesInput(blackboard.god_map.to_symbol, world.robot.get_controllable_joints(),
-                                         identifier.joint_states,
-                                         suffix=[u'velocity'])
-    joint_position_symbols = {joint_name: god_map.get_kineverse_symbol(symbol) for joint_name, symbol in sorted(joint_position_symbols.items(), key=lambda (x,_): x)}
-    world.robot.update_joint_symbols(joint_position_symbols, joint_vel_symbols.joint_map,
-                                     joint_weight_symbols,
-                                     joint_velocity_linear_limit_symbols, joint_velocity_angular_limit_symbols,
-                                     joint_acceleration_linear_limit_symbols, joint_acceleration_angular_limit_symbols)
+    # joint_position_symbols = JointStatesInput(blackboard.god_map.to_symbol, world.robot.get_controllable_joints(),
+    #                                           identifier.joint_states,
+    #                                           suffix=[u'position']).joint_map
+    # joint_vel_symbols = JointStatesInput(blackboard.god_map.to_symbol, world.robot.get_controllable_joints(),
+    #                                      identifier.joint_states,
+    #                                      suffix=[u'velocity'])
+    # joint_position_symbols = {joint_name: god_map.get_kineverse_symbol(symbol) for joint_name, symbol in sorted(joint_position_symbols.items(), key=lambda (x,_): x)}
+    # world.robot.update_joint_symbols(joint_position_symbols, joint_vel_symbols.joint_map,
+    #                                  joint_weight_symbols,
+    #                                  joint_velocity_linear_limit_symbols, joint_velocity_angular_limit_symbols,
+    #                                  joint_acceleration_linear_limit_symbols, joint_acceleration_angular_limit_symbols)
     world.robot.init_self_collision_matrix()
     return god_map
 

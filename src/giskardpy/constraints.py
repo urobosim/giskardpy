@@ -81,7 +81,21 @@ class Constraint(object):
         """
         returns a symbol that referes to the given joint
         """
-        return self.get_robot().get_joint_position_symbol(joint_name)
+        return self.get_god_map().to_symbol(identifier.joint_states + [joint_name, u'position'])
+
+    def get_joint_position_symbols(self):
+        """
+        returns a symbol that referes to the given joint
+        """
+        return [self.get_god_map().to_symbol(identifier.joint_states + [joint_name, u'position']) for
+                joint_name in self.get_robot().controlled_joints]
+
+    def get_joint_velocity_symbols(self):
+        """
+        returns a symbol that referes to the given joint
+        """
+        return [self.get_god_map().to_symbol(identifier.joint_states + [joint_name, u'velocity']) for
+                joint_name in self.get_robot().controlled_joints]
 
     def get_input_sampling_period(self):
         return self.god_map.to_symbol(identifier.sample_period)
@@ -132,7 +146,7 @@ class Constraint(object):
         :type tip: str
         :return: root_T_tip
         """
-        return self.get_world().get_fk_expression(root, tip)
+        return self.get_world().get_robot_fk_expression(root, tip)
 
         # km = self.get_god_map().get_data(identifier.km_world) # type: GeometryModel
         # try:
@@ -235,8 +249,8 @@ class Constraint(object):
                                  prefix=self.get_identifier() + [name, u'point']).get_expression()
 
     def get_expr_velocity(self, expr):
-        expr_jacobian = w.jacobian(expr, self.get_robot().get_joint_position_symbols())
-        last_velocities = w.Matrix(self.get_robot().get_joint_velocity_symbols())
+        expr_jacobian = w.jacobian(expr, self.get_joint_position_symbols())
+        last_velocities = w.Matrix(self.get_joint_velocity_symbols())
         velocity = w.dot(expr_jacobian, last_velocities)
         if velocity.shape[0] * velocity.shape[0] == 1:
             return velocity[0]
@@ -473,7 +487,7 @@ class JointPositionContinuous(Constraint):
 
         max_acceleration = self.get_input_float(self.max_acceleration)
         max_velocity = w.Min(self.get_input_float(self.max_velocity),
-                             self.get_robot().get_joint_velocity_limit_expr(self.joint_name))
+                             self.get_robot().get_joint_velocity_limit(self.joint_name))
 
         error = w.shortest_angular_distance(current_joint, joint_goal)
         # capped_err = self.limit_acceleration(current_joint, error, max_acceleration, max_velocity)
@@ -540,7 +554,7 @@ class JointPositionPrismatic(Constraint):
         weight = self.get_input_float(self.weight)
 
         max_velocity = w.Min(self.get_input_float(self.max_velocity),
-                             self.get_robot().get_joint_velocity_limit_expr(self.joint_name))
+                             self.get_robot().get_joint_velocity_limit(self.joint_name)) # FIXME used the expression here in the old version
         max_acceleration = self.get_input_float(self.max_acceleration)
 
         err = joint_goal - current_joint
@@ -606,7 +620,7 @@ class JointPositionRevolute(Constraint):
         weight = self.get_input_float(self.weight)
 
         max_velocity = w.Min(self.get_input_float(self.max_velocity),
-                             self.get_robot().get_joint_velocity_limit_expr(self.joint_name))
+                             self.get_robot().get_joint_velocity_limit(self.joint_name))
 
         max_acceleration = self.get_input_float(self.max_acceleration)
 

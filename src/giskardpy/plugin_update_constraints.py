@@ -189,7 +189,8 @@ class GoalToConstraints(GetGoal):
         # FIXME you also still have to check the soft constraints for e.g. kitchen joints
         # joint_position_symbols = set(
         #     sum([list(cm.free_symbols(c.expression)) for c in self.soft_constraints.values()], []))
-        joint_position_symbols = set(self.get_robot().get_joint_position_symbols())
+        joint_position_symbols = set(self.get_god_map().to_symbol(identifier.joint_states + [joint_name, u'position']) for joint_name in self.get_robot().controlled_joints)
+        # joint_position_symbols = set(self.get_robot().get_joint_position_symbols())
         # for joint_name in self.get_robot().controlled_joints:
         #     s = self.get_god_map().to_symbol(identifier.joint_states + [joint_name, 'position'])
         #     s = self.get_god_map().get_kineverse_symbol(s)
@@ -226,7 +227,7 @@ class GoalToConstraints(GetGoal):
                 lower_limit = lower_limit * sample_period
                 upper_limit = upper_limit * sample_period
 
-                weight = self.get_robot()._joint_weights[joint_name]
+                weight = self.get_god_map().get_data(identifier.joint_cost)[joint_name]
                 weight = weight * (1. / (upper_limit)) ** 2
 
                 joint_constraints[joint_name] = JointConstraint(lower=lower_limit,
@@ -257,7 +258,7 @@ class GoalToConstraints(GetGoal):
                 else:
                     limit = self.get_god_map().get_data(identifier.default_joint_velocity_angular_limit)
                 lower, upper = -limit, limit
-                weight = self.get_robot()._joint_weights[joint_name]
+                weight = self.get_god_map().get_data(identifier.joint_cost)[joint_name]
                 weight = weight * (1. / (upper)) ** 2
                 joint_constraints[joint_name] = JointConstraint(lower, upper, weight)
 

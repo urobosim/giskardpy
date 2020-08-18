@@ -16,7 +16,6 @@ class ControllerPlugin(GiskardBehavior):
         self.nWSR = self.get_god_map().get_data(identifier.nWSR)
         self.soft_constraints = None
         self.joint_constraints = None
-        self.hard_constraints = None
         self.qp_data = {}
         self.get_god_map().safe_set_data(identifier.qp_data, self.qp_data)  # safe dict on godmap and work on ref
         self.rc_prismatic_velocity = self.get_god_map().get_data(identifier.rc_prismatic_velocity)
@@ -41,7 +40,8 @@ class ControllerPlugin(GiskardBehavior):
                                                                    self.get_robot().get_name()))
 
         joint_to_symbols_str = OrderedDict(
-            (x, self.robot.get_joint_position_symbol(x)) for x in self.get_robot().controlled_joints)
+            (x, self.get_god_map().to_symbol(identifier.joint_states + [x, u'position'])) for x in self.get_robot().controlled_joints)
+
 
         self.controller.update_constraints(joint_to_symbols_str,
                                            self.soft_constraints,
