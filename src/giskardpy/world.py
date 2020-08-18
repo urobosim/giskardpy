@@ -250,7 +250,7 @@ class World(object):
         self.km_model.clean_structure()
         self.km_model.dispatch_events()
 
-    @memoize
+    # @memoize
     def get_split_chain(self, root_path, tip_path, joints=True, links=True, fixed=True):
         if root_path == tip_path:
             return [], [], []
@@ -271,7 +271,7 @@ class World(object):
             tip_chain = tip_chain[1:]
         return root_chain, [connection] if links else [], tip_chain
 
-    @memoize
+    # @memoize
     def get_chain(self, root, tip, joints=True, links=True, fixed=True):
         """
         :type root: str
@@ -284,7 +284,7 @@ class World(object):
         root_chain, connection, tip_chain = self.get_split_chain(root, tip, joints, links, fixed)
         return root_chain + connection + tip_chain
 
-    @memoize
+    # @memoize
     def get_simple_chain(self, root_path, tip_path, joints=True, links=True, fixed=True):
         """
         :type root_path: Path
