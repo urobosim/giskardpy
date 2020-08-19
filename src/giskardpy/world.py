@@ -43,7 +43,8 @@ class World(object):
         keeps robot and other important objects like ground plane
         """
         self.remove_all_objects()
-        self.km_model.dispatch_events()
+        self.reset_cache()
+        # self.km_model.dispatch_events()
         # if self._robot_name is not None:
         #     self.robot.reset()
 
@@ -89,8 +90,7 @@ class World(object):
 
         self.km_model.register_on_model_changed(Path(name), obj.reset_cache)
         self.km_model.register_on_model_changed(Path(name), self.init_fast_fks)
-        self.km_model.clean_structure()
-        self.km_model.dispatch_events()
+        self.reset_cache()
         return name
 
     def world_body_to_urdf_str(self, world_body):
@@ -181,8 +181,9 @@ class World(object):
             self.__remove_object(name)
         else:
             raise UnknownBodyException(u'can\'t remove object \'{}\', because it doesn\' exist'.format(name))
-        self.km_model.clean_structure()
-        self.km_model.dispatch_events()
+        self.reset_cache()
+        # self.km_model.clean_structure()
+        # self.km_model.dispatch_events()
 
     def __remove_object(self, name):
         self.__remove_thing(name)
@@ -201,8 +202,9 @@ class World(object):
             self.__remove_object(object_name)
             logging.loginfo(u'<-- removed object {} from world'.format(object_name))
         self._objects_names = []
-        self.km_model.clean_structure()
-        self.km_model.dispatch_events()
+        self.reset_cache()
+        # self.km_model.clean_structure()
+        # self.km_model.dispatch_events()
 
     # Robot ------------------------------------------------------------------------------------------------------------
 
@@ -247,10 +249,11 @@ class World(object):
         self.__remove_thing(self._robot_name)
         logging.loginfo(u'<-- removed robot {} from world'.format(self._robot_name))
         self._robot_name = None
-        self.km_model.clean_structure()
-        self.km_model.dispatch_events()
+        self.reset_cache()
+        # self.km_model.clean_structure()
+        # self.km_model.dispatch_events()
 
-    # @memoize
+    @memoize
     def get_split_chain(self, root_path, tip_path, joints=True, links=True, fixed=True):
         if root_path == tip_path:
             return [], [], []
@@ -271,7 +274,7 @@ class World(object):
             tip_chain = tip_chain[1:]
         return root_chain, [connection] if links else [], tip_chain
 
-    # @memoize
+    @memoize
     def get_chain(self, root, tip, joints=True, links=True, fixed=True):
         """
         :type root: str
@@ -284,7 +287,7 @@ class World(object):
         root_chain, connection, tip_chain = self.get_split_chain(root, tip, joints, links, fixed)
         return root_chain + connection + tip_chain
 
-    # @memoize
+    @memoize
     def get_simple_chain(self, root_path, tip_path, joints=True, links=True, fixed=True):
         """
         :type root_path: Path
@@ -425,8 +428,9 @@ class World(object):
 
         self.km_model.apply_operation('connect {} {}'.format(parent_path, child_path),
                                       CreateURDFFrameConnection(joint_path, parent_path, child_path))
-        self.km_model.clean_structure()
-        self.km_model.dispatch_events()
+        self.reset_cache()
+        # self.km_model.clean_structure()
+        # self.km_model.dispatch_events()
         self._objects_names.remove(name)
         self.attached_objects[self.get_link_path(self._robot_name, name)] = child_path
 
@@ -448,8 +452,9 @@ class World(object):
         except Exception as e:
             raise UnknownBodyException(u'can\'t detach: {}\n{}'.format(joint_name, e))
 
-        self.km_model.clean_structure()
-        self.km_model.dispatch_events()
+        self.reset_cache()
+        # self.km_model.clean_structure()
+        # self.km_model.dispatch_events()
 
         try:
             del self.attached_objects[self.get_link_path(from_obj, o.get_name())]
@@ -748,3 +753,12 @@ class World(object):
                and self.all_robot_links(collision_entry) \
                and self.all_body_bs(collision_entry) \
                and self.all_link_bs(collision_entry)
+
+    def reset_cache(self, *args, **kwargs):
+        self.km_model.clean_structure()
+        self.km_model.dispatch_events()
+        for method_name in dir(self):
+            try:
+                getattr(self, method_name).memo.clear()
+            except:
+                pass
