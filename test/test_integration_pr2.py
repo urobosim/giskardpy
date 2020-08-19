@@ -1135,15 +1135,16 @@ class TestCollisionAvoidanceGoals(object):
         """
         :type zero_pose: PR2
         """
+        tip = u'base_link'
         pocky = u'box'
         p = PoseStamped()
-        p.header.frame_id = zero_pose.r_tip
+        p.header.frame_id = tip
         p.pose.position = Point(0.05, 0, 0)
         p.pose.orientation = Quaternion(0., 0., 0.47942554, 0.87758256)
         zero_pose.add_box(pocky, [0.1, 0.02, 0.02], pose=p)
-        zero_pose.attach_existing(pocky, frame_id=zero_pose.r_tip)
-        relative_pose = zero_pose.get_world().get_robot_fk_pose(zero_pose.r_tip, pocky).pose
-        compare_poses(p.pose, relative_pose)
+        zero_pose.attach_existing(pocky, frame_id=tip)
+        relative_pose = zero_pose.get_world().get_robot_fk_pose(tip, pocky).pose
+        compare_poses(relative_pose, p.pose)
 
     def test_attach_existing_box2(self, zero_pose):
         """

@@ -279,7 +279,7 @@ class TestWorld(object):
 
     def test_attach_detach_existing_obj_to_robot1(self, function_setup):
         obj_name = u'box'
-        tip = u'base_link'
+        tip = u'r_gripper_tool_frame'
         world = self.make_world_with_pr2()
         world.add_object(make_world_body_box(name=obj_name))
 
