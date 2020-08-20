@@ -181,14 +181,14 @@ class World(object):
             self.__remove_object(name)
         else:
             raise UnknownBodyException(u'can\'t remove object \'{}\', because it doesn\' exist'.format(name))
+        self._objects_names.remove(name)
         self.reset_cache()
-        # self.km_model.clean_structure()
-        # self.km_model.dispatch_events()
+        self.km_model.clean_structure()
+        self.km_model.dispatch_events()
 
     def __remove_object(self, name):
         self.__remove_thing(name)
         logging.loginfo(u'<-- removed object {} from world'.format(name))
-        self._objects_names.remove(name)
 
     def __remove_thing(self, name):
         self.km_model.deregister_on_model_changed(self.km_model.get_data(name).reset_cache)
@@ -203,8 +203,8 @@ class World(object):
             logging.loginfo(u'<-- removed object {} from world'.format(object_name))
         self._objects_names = []
         self.reset_cache()
-        # self.km_model.clean_structure()
-        # self.km_model.dispatch_events()
+        self.km_model.clean_structure()
+        self.km_model.dispatch_events()
 
     # Robot ------------------------------------------------------------------------------------------------------------
 
@@ -446,7 +446,7 @@ class World(object):
         parent_path = o.get_parent_path_of_joint(joint_name)
         child_path = o.get_child_path_of_joint(joint_name)
         try:
-        # if joint_name not in self.robot.get_joint_names():
+            # if joint_name not in self.robot.get_joint_names():
             self.km_model.remove_operation('connect {} {}'.format(parent_path, child_path))
             self.km_model.remove_operation('create {}'.format(joint_path))
         except Exception as e:
@@ -465,13 +465,13 @@ class World(object):
         # fixme remove pr2 arm
 
         # if from_obj is None or self.robot.get_name() == from_obj:
-            # this only works because attached simple objects have joint names equal to their name
-            # p = self.robot.get_fk_pose(self.robot.get_root(), joint_name)
-            # p_map = kdl_to_pose(self.robot.root_T_map.Inverse() * msg_to_kdl(p))
-            #
-            # parent_link = self.robot.get_parent_link_of_joint(joint_name)
-            # cut_off_obj = self.robot.detach_sub_tree(joint_name)
-            # logging.loginfo(u'<-- detached {} from link {}'.format(joint_name, parent_link))
+        # this only works because attached simple objects have joint names equal to their name
+        # p = self.robot.get_fk_pose(self.robot.get_root(), joint_name)
+        # p_map = kdl_to_pose(self.robot.root_T_map.Inverse() * msg_to_kdl(p))
+        #
+        # parent_link = self.robot.get_parent_link_of_joint(joint_name)
+        # cut_off_obj = self.robot.detach_sub_tree(joint_name)
+        # logging.loginfo(u'<-- detached {} from link {}'.format(joint_name, parent_link))
         # else:
 
         # wo = WorldObject.from_urdf_object(cut_off_obj)  # type: WorldObject
