@@ -371,6 +371,9 @@ class TestWorld(object):
         world_with_pr2.remove_all_objects()
         assert not world_with_pr2.has_object(name1)
         assert not world_with_pr2.has_object(name2)
+        assert not world_with_pr2.km_model.has_data(name1)
+        assert not world_with_pr2.km_model.has_data(name2)
+        assert world_with_pr2.km_model.has_data(world_with_pr2._robot_name)
         assert len(world_with_pr2.get_objects()) == 0
         assert world_with_pr2.has_robot()
         return world_with_pr2
