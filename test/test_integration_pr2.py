@@ -18,6 +18,7 @@ from giskardpy.identifier import fk_pose
 from giskardpy.robot import Robot
 from giskardpy.tfwrapper import init as tf_init
 import giskardpy.tfwrapper as tf
+from kineverse.model.paths import Path
 from utils_for_tests import PR2, compare_poses
 
 # TODO roslaunch iai_pr2_sim ros_control_sim_with_base.launch
@@ -1035,7 +1036,9 @@ class TestCollisionAvoidanceGoals(object):
         p.pose.position = Point(1.2, 0, 1.6)
         p.pose.orientation = Quaternion(0.0, 0.0, 0.47942554, 0.87758256)
         zero_pose.add_box(object_name, pose=p)
-        base_pose = zero_pose.get_world().get_object(object_name).base_pose
+        # base_pose = zero_pose.get_world().get_object(object_name).base_pose
+        base_pose = zero_pose.get_world().get_fk_pose(Path(zero_pose.get_world().world_frame),
+                                          zero_pose.get_world().get_link_path(object_name, object_name)).pose
         compare_poses(base_pose, p.pose)
 
     def test_add_box_twice(self, zero_pose):
@@ -1455,6 +1458,10 @@ class TestCollisionAvoidanceGoals(object):
         p.pose.orientation.w = 1
         zero_pose.set_cart_goal(p, zero_pose.l_tip, zero_pose.default_root)
         zero_pose.send_goal()
+        # zero_pose.km_visualizer.begin_draw_cycle('collision')
+        # zero_pose.km_visualizer.draw_world('collision', zero_pose.get_world().pb_suboworld)
+        # zero_pose.km_visualizer.render()
+
         zero_pose.check_cpi_geq(zero_pose.get_l_gripper_links(), 0.048)
 
     def test_get_out_of_self_collision(self, zero_pose):

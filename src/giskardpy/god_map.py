@@ -16,7 +16,10 @@ def get_member(identifier, member):
         return identifier[member]
     except (TypeError, AttributeError):
         if callable(identifier):
-            return identifier(*member)
+            try:
+                return identifier(*member)
+            except TypeError:
+                pass
         try:
             return getattr(identifier, member)
         except TypeError:
@@ -25,6 +28,7 @@ def get_member(identifier, member):
         return identifier[int(member)]
     except RuntimeError:
         pass
+
 
 
 def get_data(identifier, data, default_value=0.0):

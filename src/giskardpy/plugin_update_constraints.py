@@ -86,7 +86,7 @@ class GoalToConstraints(GetGoal):
 
         self.soft_constraints = {}
         # TODO we only have to update the collision constraints, if the robot changed
-        # self.add_collision_avoidance_soft_constraints()
+        self.add_collision_avoidance_soft_constraints()
 
         try:
             self.parse_constraints(move_cmd)
@@ -190,6 +190,7 @@ class GoalToConstraints(GetGoal):
         # joint_position_symbols = set(
         #     sum([list(cm.free_symbols(c.expression)) for c in self.soft_constraints.values()], []))
         joint_position_symbols = set(self.get_god_map().to_symbol(identifier.joint_states + [joint_name, u'position']) for joint_name in self.get_robot().controlled_joints)
+        # all_joint_position_symbols = [self.get_god_map().to_symbol(identifier.joint_states + [joint_name, u'position']) for joint_name in self.get_robot().get_controllable_joints()]
         # joint_position_symbols = set(self.get_robot().get_joint_position_symbols())
         # for joint_name in self.get_robot().controlled_joints:
         #     s = self.get_god_map().to_symbol(identifier.joint_states + [joint_name, 'position'])
@@ -208,6 +209,7 @@ class GoalToConstraints(GetGoal):
         joint_constraints = OrderedDict()
         to_remove = set()
         symbols = []
+        # symbols.extend(all_joint_position_symbols)
 
         for k, c in sorted(constraints.items()):
             if cm.is_symbol(c.expr) and c.expr in joint_velocity_symbols and str(c.expr) not in joint_constraints:

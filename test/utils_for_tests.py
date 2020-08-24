@@ -26,6 +26,8 @@ from giskardpy.python_interface import GiskardWrapper
 from giskardpy.robot import Robot
 from giskardpy.tfwrapper import transform_pose, lookup_pose
 from giskardpy.utils import msg_to_list, KeyDefaultDict, dict_to_joint_states, get_ros_pkg_path, to_joint_state_dict2
+from giskardpy.world import World
+from kineverse.visualization.bpb_visualizer import ROSBPBVisualizer
 
 BIG_NUMBER = 1e100
 SMALL_NUMBER = 1e-100
@@ -237,6 +239,7 @@ class GiskardTestWrapper(object):
             rospy.sleep(.2)
             return p
 
+        self.km_visualizer = ROSBPBVisualizer(u'km/visualization_marker', u'map')
         self.joint_state_publisher = KeyDefaultDict(create_publisher)
         # rospy.sleep(1)
 
@@ -279,7 +282,7 @@ class GiskardTestWrapper(object):
         return self.get_robot().controlled_joints
 
     def get_controllable_links(self):
-        return self.get_robot().get_controlled_links()
+        return self.get_world().get_controlled_robot_links()
 
     def get_current_joint_state(self):
         """
@@ -498,7 +501,7 @@ class GiskardTestWrapper(object):
     #
     def get_world(self):
         """
-        :rtype: PyBulletWorld
+        :rtype: World
         """
         return self.get_god_map().get_data(world)
 
@@ -679,7 +682,9 @@ class GiskardTestWrapper(object):
         collision_matrix = self.get_world().collision_goals_to_collision_matrix(collision_goals,
                                                                                 self.get_god_map().get_data(
                                                                                     identifier.distance_thresholds))
-        collisions = self.get_world().check_collisions(collision_matrix)
+        symbols = self.get_world().pb_suboworld.pose_generator.str_params
+        data = dict(zip(symbols, self.get_god_map().get_values(symbols)))
+        collisions = self.get_world().check_collisions(collision_matrix, data)
         controlled_parent_joint = self.get_robot().get_controlled_parent_joint(link)
         controlled_parent_link = self.get_robot().get_child_link_of_joint(controlled_parent_joint)
         collision_list = collisions.get_external_collisions(controlled_parent_link)

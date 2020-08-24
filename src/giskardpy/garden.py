@@ -167,7 +167,7 @@ def grow_tree():
     wait_for_goal.add_child(ConfigurationPlugin(u'js'))
     # ----------------------------------------------
     planning_3 = PluginBehavior(u'planning III', sleep=0)
-    # planning_3.add_plugin(CollisionChecker(u'coll'))
+    planning_3.add_plugin(CollisionChecker(u'coll'))
     # if god_map.safe_get_data(identifier.enable_collision_marker):
     #     planning_3.add_plugin(success_is_running(CPIMarker)(u'cpi marker'))
     planning_3.add_plugin(ControllerPlugin(u'controller'))
@@ -188,8 +188,8 @@ def grow_tree():
     # planning.add_child(CollisionCancel(u'in collision', collision_time_threshold))
     if god_map.get_data(identifier.enable_VisualizationBehavior):
         planning_2.add_child(success_is_failure(VisualizationBehavior)(u'visualization'))
-    # if god_map.get_data(identifier.enable_CPIMarker):
-    #     planning_2.add_child(success_is_failure(CollisionMarker)(u'cpi marker'))
+    if god_map.get_data(identifier.enable_CPIMarker):
+        planning_2.add_child(success_is_failure(CollisionMarker)(u'cpi marker'))
     planning_2.add_child(planning_3)
     # ----------------------------------------------
     move_robot = failure_is_success(Sequence)(u'move robot')

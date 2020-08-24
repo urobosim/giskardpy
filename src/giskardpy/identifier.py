@@ -1,6 +1,6 @@
 world = [u'world']
 km_world = world + [u'km_model']
-robot = world + [u'robot']
+robot = km_world + [u'data_tree', u'data_tree', u'robot']
 km_robot = km_world + [u'robot']
 fk_pose = world + [u'get_robot_fk_pose']
 fk_np = world + [u'get_robot_fk_np']

@@ -1,5 +1,6 @@
 import shutil
 from collections import defaultdict
+from itertools import product
 
 import giskardpy
 
@@ -205,11 +206,11 @@ class TestWorld(object):
         """
         return self.make_world_with_robot(pr2_without_base_urdf(), path_to_data_folder)
 
-    # def make_world_with_donbot(self, path_to_data_folder=None):
-    #     """
-    #     :rtype: World
-    #     """
-    #     return self.make_world_with_robot(donbot_urdf(), path_to_data_folder)
+    def make_world_with_donbot(self, path_to_data_folder=None):
+        """
+        :rtype: World
+        """
+        return self.make_world_with_robot(donbot_urdf(), path_to_data_folder)
 
     def test_add_robot(self, function_setup):
         empty_world = self.world_cls()
@@ -378,594 +379,594 @@ class TestWorld(object):
         assert world_with_pr2.has_robot()
         return world_with_pr2
 
-    # def test_verify_collision_entries_empty(self, test_folder):
-    #     world_with_donbot = self.make_world_with_donbot(test_folder)
-    #     ces = []
-    #     new_ces = world_with_donbot.verify_collision_entries(ces, 0.05)
-    #     assert len(new_ces) == 1
-    #
-    # def test_verify_collision_entries_allow_all(self, test_folder):
-    #     world_with_donbot = self.make_world_with_donbot(test_folder)
-    #     ces = [allow_all_entry()]
-    #     new_ces = world_with_donbot.verify_collision_entries(ces, 0.05)
-    #     assert len(new_ces) == 0
-    #
-    # def test_verify_collision_entries_allow_all_self(self, test_folder):
-    #     world_with_donbot = self.make_world_with_donbot(test_folder)
-    #     ce = CollisionEntry()
-    #     ce.type = CollisionEntry.ALLOW_COLLISION
-    #     ce.robot_links = [CollisionEntry.ALL]
-    #     ce.body_b = world_with_donbot.robot.get_name()
-    #     ce.link_bs = [CollisionEntry.ALL]
-    #     ces = [ce]
-    #     new_ces = world_with_donbot.verify_collision_entries(ces, 0.05)
-    #     assert len(new_ces) == 1 + len(world_with_donbot.robot.get_self_collision_matrix()) * 2
-    #
-    # def test_verify_collision_entries_unknown_robot_link(self, test_folder):
-    #     world_with_donbot = self.make_world_with_donbot(test_folder)
-    #     min_dist = 0.1
-    #     ces = []
-    #     ce = CollisionEntry()
-    #     ce.type = CollisionEntry.AVOID_COLLISION
-    #     ce.robot_links = [u'muh']
-    #     ce.min_dist = min_dist
-    #     ces.append(ce)
-    #     try:
-    #         new_ces = world_with_donbot.verify_collision_entries(ces, min_dist)
-    #     except UnknownBodyException:
-    #         assert True
-    #     else:
-    #         assert False, u'expected exception'
-    #
-    # def test_verify_collision_entries_unknown_body_b(self, test_folder):
-    #     world_with_donbot = self.make_world_with_donbot(test_folder)
-    #     min_dist = 0.1
-    #     ces = []
-    #     ce = CollisionEntry()
-    #     ce.type = CollisionEntry.AVOID_COLLISION
-    #     ce.robot_links = [CollisionEntry.ALL]
-    #     ce.body_b = u'muh'
-    #     ce.link_bs = [CollisionEntry.ALL]
-    #     ce.min_dist = min_dist
-    #     ces.append(ce)
-    #     try:
-    #         new_ces = world_with_donbot.verify_collision_entries(ces, min_dist)
-    #     except UnknownBodyException:
-    #         assert True
-    #     else:
-    #         assert False, u'expected exception'
-    #
-    # def test_verify_collision_entries_unknown_link_b(self, test_folder):
-    #     world_with_donbot = self.make_world_with_donbot(test_folder)
-    #     min_dist = 0.1
-    #     ces = []
-    #     ce = CollisionEntry()
-    #     ce.type = CollisionEntry.AVOID_COLLISION
-    #     ce.robot_links = [CollisionEntry.ALL]
-    #     ce.body_b = u'muh'
-    #     ce.link_bs = [u'muh']
-    #     ce.min_dist = min_dist
-    #     ces.append(ce)
-    #     try:
-    #         new_ces = world_with_donbot.verify_collision_entries(ces, min_dist)
-    #     except UnknownBodyException:
-    #         assert True
-    #     else:
-    #         assert False, u'expected exception'
-    #
-    # def test_verify_collision_entries_unknown_link_b2(self, test_folder):
-    #     world_with_donbot = self.make_world_with_donbot(test_folder)
-    #     min_dist = 0.1
-    #     ces = []
-    #     ce = CollisionEntry()
-    #     ce.type = CollisionEntry.AVOID_COLLISION
-    #     ce.robot_links = [CollisionEntry.ALL]
-    #     ce.body_b = world_with_donbot.robot.get_name()
-    #     ce.link_bs = [u'muh']
-    #     ce.min_dist = min_dist
-    #     ces.append(ce)
-    #     try:
-    #         new_ces = world_with_donbot.verify_collision_entries(ces, min_dist)
-    #     except UnknownBodyException:
-    #         assert True
-    #     else:
-    #         assert False, u'expected exception'
-    #
-    # def test_verify_collision_entries1(self, test_folder):
-    #     world_with_donbot = self.make_world_with_donbot(test_folder)
-    #     min_dist = 0.1
-    #     ces = []
-    #     ce = CollisionEntry()
-    #     ce.type = CollisionEntry.AVOID_COLLISION
-    #     ce.robot_links = [CollisionEntry.ALL, u'plate']
-    #     ce.min_dist = min_dist
-    #     ces.append(ce)
-    #     try:
-    #         new_ces = world_with_donbot.verify_collision_entries(ces, min_dist)
-    #     except PhysicsWorldException:
-    #         assert True
-    #     else:
-    #         assert False, u'expected exception'
-    #
-    # def test_verify_collision_entries2(self, test_folder):
-    #     world_with_donbot = self.make_world_with_donbot(test_folder)
-    #     min_dist = 0.1
-    #     ces = []
-    #     ce = CollisionEntry()
-    #     ce.type = CollisionEntry.AVOID_COLLISION
-    #     ce.link_bs = [CollisionEntry.ALL, u'muh']
-    #     ce.min_dist = min_dist
-    #     ces.append(ce)
-    #     try:
-    #         new_ces = world_with_donbot.verify_collision_entries(ces, min_dist)
-    #     except PhysicsWorldException:
-    #         assert True
-    #     else:
-    #         assert False, u'expected exception'
-    #
-    # def test_verify_collision_entries3(self, test_folder):
-    #     world_with_donbot = self.make_world_with_donbot(test_folder)
-    #     min_dist = 0.1
-    #     ces = []
-    #     ce = CollisionEntry()
-    #     ce.type = CollisionEntry.AVOID_COLLISION
-    #     ce.link_bs = [CollisionEntry.ALL, u'muh']
-    #     ce.robot_links = [CollisionEntry.ALL, u'muh']
-    #     ce.min_dist = min_dist
-    #     ces.append(ce)
-    #     try:
-    #         new_ces = world_with_donbot.verify_collision_entries(ces, min_dist)
-    #     except PhysicsWorldException:
-    #         assert True
-    #     else:
-    #         assert False, u'expected exception'
-    #
-    # def test_verify_collision_entries3_1(self, test_folder):
-    #     world_with_donbot = self.make_world_with_donbot(test_folder)
-    #     min_dist = 0.1
-    #     ces = []
-    #     ce = CollisionEntry()
-    #     ce.type = CollisionEntry.AVOID_COLLISION
-    #     ce.body_b = CollisionEntry.ALL
-    #     ce.link_bs = [u'muh']
-    #     ce.min_dist = min_dist
-    #     ces.append(ce)
-    #     try:
-    #         new_ces = world_with_donbot.verify_collision_entries(ces, min_dist)
-    #     except PhysicsWorldException:
-    #         assert True
-    #     else:
-    #         assert False, u'expected exception'
-    #
-    # def test_verify_collision_entries_cut_off1(self, test_folder):
-    #     world_with_donbot = self.make_world_with_donbot(test_folder)
-    #     min_dist = 0.1
-    #     ces = []
-    #     ces.append(avoid_all_entry(min_dist))
-    #     ces.append(allow_all_entry())
-    #     new_ces = world_with_donbot.verify_collision_entries(ces, min_dist)
-    #     assert len(new_ces) == 0
-    #
-    # def test_verify_collision_entries_split0(self, test_folder):
-    #     world_with_donbot = self.make_world_with_donbot(test_folder)
-    #     min_dist = 0.1
-    #     ces = [avoid_all_entry(min_dist)]
-    #     new_ces = world_with_donbot.verify_collision_entries(ces, min_dist)
-    #     assert len(new_ces) == 1
-    #     for ce in new_ces:
-    #         assert ce.body_b == world_with_donbot.robot.get_name()
-    #         assert ce.body_b != CollisionEntry.ALL
-    #         assert world_with_donbot.all_robot_links(ce)
-    #         assert world_with_donbot.all_link_bs(ce)
-    #         assert ce.type == CollisionEntry. \
-    #             AVOID_COLLISION
-    #
-    # def test_verify_collision_entries_split1(self, test_folder):
-    #     world_with_donbot = self.make_world_with_donbot(test_folder)
-    #     min_dist = 0.05
-    #     ces = []
-    #     ce1 = CollisionEntry()
-    #     ce1.type = CollisionEntry.AVOID_COLLISION
-    #     ce1.robot_links = [CollisionEntry.ALL]
-    #     ce1.body_b = CollisionEntry.ALL
-    #     ce1.link_bs = [CollisionEntry.ALL]
-    #     ce1.min_dist = 0.1
-    #     ces.append(ce1)
-    #     ce = CollisionEntry()
-    #     ce.type = CollisionEntry.ALLOW_COLLISION
-    #     ce.robot_links = [u'plate']
-    #     ce.body_b = CollisionEntry.ALL
-    #     ce.link_bs = [CollisionEntry.ALL]
-    #     ces.append(ce)
-    #     new_ces = world_with_donbot.verify_collision_entries(ces, min_dist)
-    #     assert len(new_ces) == 1 + \
-    #            len(world_with_donbot.robot.get_possible_collisions(u'plate'))
-    #     assert world_with_donbot.all_robot_links(new_ces[0])
-    #     assert world_with_donbot.all_link_bs(new_ces[0])
-    #     for ce in new_ces[1:]:
-    #         assert ce.body_b == world_with_donbot.robot.get_name()
-    #         assert ce.body_b != CollisionEntry.ALL
-    #         assert CollisionEntry.ALL not in ce.robot_links
-    #     i = 0
-    #     for i in range(1):
-    #         ce = new_ces[i]
-    #         assert ce.type == CollisionEntry.AVOID_COLLISION
-    #     i += 1
-    #     for j in range(len(world_with_donbot.robot.get_possible_collisions(u'plate'))):
-    #         ce = new_ces[i + j]
-    #         assert ce.type == CollisionEntry.ALLOW_COLLISION
-    #
-    # def test_verify_collision_entries_split2(self, test_folder):
-    #     world_with_donbot = self.make_world_with_donbot(test_folder)
-    #     name = u'muh'
-    #     min_dist = 0.05
-    #     box = self.cls.from_world_body(make_world_body_box(name))
-    #     world_with_donbot.add_object(box)
-    #
-    #     ces = [avoid_all_entry(min_dist)]
-    #     ce = CollisionEntry()
-    #     ce.type = CollisionEntry.ALLOW_COLLISION
-    #     ce.robot_links = [CollisionEntry.ALL]
-    #     ce.body_b = name
-    #     ce.link_bs = [CollisionEntry.ALL]
-    #     ces.append(ce)
-    #     new_ces = world_with_donbot.verify_collision_entries(ces, min_dist)
-    #     assert len(new_ces) == 1 + len(world_with_donbot.robot.get_controlled_links()) * 2
-    #     for ce in new_ces[1:]:
-    #         assert ce.body_b != CollisionEntry.ALL
-    #         assert CollisionEntry.ALL not in ce.robot_links
-    #         if ce.body_b != world_with_donbot.robot.get_name():
-    #             assert CollisionEntry.ALL in ce.link_bs
-    #         else:
-    #             assert CollisionEntry.ALL not in ce.link_bs
-    #         assert len(ce.link_bs) == 1
-    #     i = 0
-    #     for i in range(len(world_with_donbot.robot.get_controlled_links()) + 1):
-    #         ce = new_ces[i]
-    #         assert ce.type == CollisionEntry.AVOID_COLLISION
-    #     i += 1
-    #     for j in range(len(world_with_donbot.robot.get_controlled_links())):
-    #         ce = new_ces[i + j]
-    #         assert ce.type == CollisionEntry.ALLOW_COLLISION
-    #
-    # def test_verify_collision_entries_split3(self, test_folder):
-    #     world_with_donbot = self.make_world_with_donbot(test_folder)
-    #     name = u'muh'
-    #     min_dist = 0.05
-    #     box = self.cls.from_world_body(make_world_body_box(name))
-    #     world_with_donbot.add_object(box)
-    #
-    #     ces = []
-    #     ce1 = CollisionEntry()
-    #     ce1.type = CollisionEntry.AVOID_COLLISION
-    #     ce1.robot_links = [CollisionEntry.ALL]
-    #     ce1.link_bs = [CollisionEntry.ALL]
-    #     ce1.min_dist = min_dist
-    #     ces.append(ce1)
-    #     ce = CollisionEntry()
-    #     ce.type = CollisionEntry.ALLOW_COLLISION
-    #     ce.robot_links = [CollisionEntry.ALL]
-    #     ce.body_b = name
-    #     ce.link_bs = [name]
-    #     ces.append(ce)
-    #     new_ces = world_with_donbot.verify_collision_entries(ces, min_dist)
-    #     assert len(new_ces) == len(world_with_donbot.robot.get_controlled_links()) * 2 + 1
-    #     for ce in new_ces[1:]:
-    #         assert ce.body_b != CollisionEntry.ALL
-    #         assert CollisionEntry.ALL not in ce.robot_links
-    #         assert CollisionEntry.ALL not in ce.link_bs
-    #         assert len(ce.link_bs) == 1
-    #     i = 0
-    #     for i in range(1 +
-    #                    len(world_with_donbot.robot.get_controlled_links())):
-    #         ce = new_ces[i]
-    #         assert ce.type == CollisionEntry.AVOID_COLLISION
-    #     i += 1
-    #     for j in range(len(world_with_donbot.robot.get_controlled_links())):
-    #         ce = new_ces[i + j]
-    #         assert ce.type == CollisionEntry.ALLOW_COLLISION
-    #
-    # def test_verify_collision_entries_split4(self, test_folder):
-    #     world_with_donbot = self.make_world_with_donbot(test_folder)
-    #     name = u'muh'
-    #     min_dist = 0.05
-    #     box = self.cls.from_world_body(make_world_body_box(name))
-    #     world_with_donbot.add_object(box)
-    #     name2 = u'box2'
-    #     box2 = self.cls.from_world_body(make_world_body_box(name2))
-    #     world_with_donbot.add_object(box2)
-    #
-    #     ces = []
-    #     ce1 = CollisionEntry()
-    #     ce1.type = CollisionEntry.AVOID_COLLISION
-    #     ce1.robot_links = [CollisionEntry.ALL]
-    #     ce1.link_bs = [CollisionEntry.ALL]
-    #     ce1.min_dist = min_dist
-    #     ces.append(ce1)
-    #     ce = CollisionEntry()
-    #     ce.type = CollisionEntry.ALLOW_COLLISION
-    #     ce.robot_links = [CollisionEntry.ALL]
-    #     ce.body_b = name
-    #     ce.link_bs = [name]
-    #     ces.append(ce)
-    #     new_ces = world_with_donbot.verify_collision_entries(ces, min_dist)
-    #     assert len(new_ces) == len(world_with_donbot.robot.get_controlled_links()) * 3 + 1
-    #     for ce in new_ces[1:]:
-    #         assert ce.body_b != CollisionEntry.ALL
-    #         assert CollisionEntry.ALL not in ce.robot_links
-    #         if ce.body_b == name2:
-    #             assert CollisionEntry.ALL in ce.link_bs
-    #         else:
-    #             assert CollisionEntry.ALL not in ce.link_bs
-    #         assert len(ce.link_bs) == 1
-    #     i = -1
-    #     for i in range(1 + len(world_with_donbot.robot.get_controlled_links()) * 2):
-    #         ce = new_ces[i]
-    #         assert ce.type == CollisionEntry.AVOID_COLLISION
-    #     i += 1
-    #     for j in range(len(world_with_donbot.robot.get_controlled_links())):
-    #         ce = new_ces[i + j]
-    #         assert ce.type == CollisionEntry.ALLOW_COLLISION
-    #
-    # def test_verify_collision_entries_split5(self, test_folder):
-    #     world_with_donbot = self.make_world_with_donbot(test_folder)
-    #     name = u'muh'
-    #     min_dist = 0.05
-    #     box = self.cls.from_world_body(make_world_body_box(name))
-    #     world_with_donbot.add_object(box)
-    #
-    #     ces = [allow_all_entry()]
-    #     ce1 = CollisionEntry()
-    #     ce1.type = CollisionEntry.AVOID_COLLISION
-    #     ce1.robot_links = [u'plate', u'base_link']
-    #     ce1.body_b = name
-    #     ce1.link_bs = [CollisionEntry.ALL]
-    #     ce1.min_dist = min_dist
-    #     ces.append(ce1)
-    #     new_ces = world_with_donbot.verify_collision_entries(ces, min_dist)
-    #     assert len(new_ces) == 2
-    #
-    #     for j in range(2):
-    #         ce = new_ces[j]
-    #         assert ce.type == CollisionEntry.AVOID_COLLISION
-    #
-    # def test_verify_collision_entries_split6(self, test_folder):
-    #     world_with_donbot = self.make_world_with_donbot(test_folder)
-    #     min_dist = 0.05
-    #     ces = []
-    #     ce1 = CollisionEntry()
-    #     ce1.type = CollisionEntry.ALLOW_COLLISION
-    #     ce1.robot_links = [u'plate', u'base_link']
-    #     ce1.body_b = world_with_donbot.robot.get_name()
-    #     ce1.link_bs = [u'gripper_finger_left_link', u'gripper_finger_right_link']
-    #     ce1.min_dist = min_dist
-    #     ces.append(ce1)
-    #     new_ces = world_with_donbot.verify_collision_entries(ces, min_dist)
-    #     assert len(new_ces) == 4 + 1
-    #     i = -1
-    #     for i in range(1):
-    #         ce = new_ces[i]
-    #         assert ce.type == CollisionEntry.AVOID_COLLISION
-    #     i += 1
-    #     for j in range(4):
-    #         ce = new_ces[i + j]
-    #         assert ce.type == CollisionEntry.ALLOW_COLLISION
-    #
-    # def test_collision_goals_to_collision_matrix1(self, delete_test_folder):
-    #     """
-    #     test with no collision entries which is equal to avoid all collisions
-    #     collision matrix should be empty, because world has no collision checker
-    #     :param test_folder:
-    #     :return:
-    #     """
-    #     world_with_donbot = self.make_world_with_donbot(delete_test_folder)
-    #     min_dist = defaultdict(lambda: {u'zero_weight_distance': 0.05})
-    #     collision_matrix = world_with_donbot.collision_goals_to_collision_matrix([], min_dist)
-    #     assert len(collision_matrix) == 0
-    #     return world_with_donbot
-    #
-    # def test_collision_goals_to_collision_matrix2(self, test_folder):
-    #     """
-    #     avoid all with an added object should enlarge the collision matrix
-    #     :param test_folder:
-    #     :return:
-    #     """
-    #     min_dist = defaultdict(lambda: {u'zero_weight_distance': 0.05})
-    #     world_with_donbot = self.make_world_with_donbot(test_folder)
-    #     base_collision_matrix = world_with_donbot.collision_goals_to_collision_matrix([], min_dist)
-    #     name = u'muh'
-    #     box = self.cls.from_world_body(make_world_body_box(name))
-    #     world_with_donbot.add_object(box)
-    #     collision_matrix = world_with_donbot.collision_goals_to_collision_matrix([], min_dist)
-    #     assert len(collision_matrix) == len(base_collision_matrix) + len(world_with_donbot.robot.get_controlled_links())
-    #     robot_link_names = world_with_donbot.robot.get_link_names()
-    #     for (robot_link, body_b, body_b_link), dist in collision_matrix.items():
-    #         assert dist == min_dist[robot_link][u'zero_weight_distance']
-    #         if body_b == name:
-    #             assert body_b_link == u''
-    #         assert robot_link in robot_link_names
-    #     return world_with_donbot
-    #
-    # def test_collision_goals_to_collision_matrix3(self, test_folder):
-    #     """
-    #     empty list should have the same effect than avoid all entry
-    #     :param test_folder:
-    #     :return:
-    #     """
-    #     min_dist = defaultdict(lambda: {u'zero_weight_distance': 0.05})
-    #     world_with_donbot = self.make_world_with_donbot(test_folder)
-    #     base_collision_matrix = world_with_donbot.collision_goals_to_collision_matrix([], min_dist)
-    #     name = u'muh'
-    #     box = self.cls.from_world_body(make_world_body_box(name))
-    #     world_with_donbot.add_object(box)
-    #     ces = []
-    #     ces.append(avoid_all_entry(min_dist))
-    #     collision_matrix = world_with_donbot.collision_goals_to_collision_matrix(ces, min_dist)
-    #     assert len(collision_matrix) == len(base_collision_matrix) + len(world_with_donbot.robot.get_controlled_links())
-    #     robot_link_names = world_with_donbot.robot.get_link_names()
-    #     for (robot_link, body_b, body_b_link), dist in collision_matrix.items():
-    #         assert dist == min_dist[robot_link][u'zero_weight_distance']
-    #         if body_b == name:
-    #             assert body_b_link == u''
-    #         assert robot_link in robot_link_names
-    #     return world_with_donbot
-    #
-    # def test_collision_goals_to_collision_matrix4(self, test_folder):
-    #     """
-    #     allow all should lead to an empty collision matrix
-    #     :param test_folder:
-    #     :return:
-    #     """
-    #     world_with_donbot = self.make_world_with_donbot(test_folder)
-    #     name = u'muh'
-    #
-    #     box = self.cls.from_world_body(make_world_body_box(name))
-    #     world_with_donbot.add_object(box)
-    #
-    #     ces = []
-    #     ces.append(allow_all_entry())
-    #     ces.append(allow_all_entry())
-    #     min_dist = defaultdict(lambda: {u'zero_weight_distance': 0.05})
-    #     collision_matrix = world_with_donbot.collision_goals_to_collision_matrix(ces, min_dist)
-    #
-    #     assert len(collision_matrix) == 0
-    #     return world_with_donbot
-    #
-    # def test_collision_goals_to_collision_matrix5(self, test_folder):
-    #     """
-    #
-    #     :param test_folder:
-    #     :return:
-    #     """
-    #     # FIXME min dist is kinda outdated so this test is hacked to succeed
-    #     world_with_donbot = self.make_world_with_donbot(test_folder)
-    #     name = u'muh'
-    #     robot_link_names = list(world_with_donbot.robot.get_controlled_links())
-    #
-    #     box = self.cls.from_world_body(make_world_body_box(name))
-    #     world_with_donbot.add_object(box)
-    #
-    #     ces = []
-    #     ces.append(allow_all_entry())
-    #     ce = CollisionEntry()
-    #     ce.type = CollisionEntry.AVOID_COLLISION
-    #     ce.robot_links = [robot_link_names[0]]
-    #     ce.body_b = name
-    #     ce.min_dist = 0.1
-    #     ces.append(ce)
-    #     min_dist = defaultdict(lambda: {u'zero_weight_distance': 0.1})
-    #     collision_matrix = world_with_donbot.collision_goals_to_collision_matrix(ces, min_dist)
-    #
-    #     assert len(collision_matrix) == 1
-    #     for (robot_link, body_b, body_b_link), dist in collision_matrix.items():
-    #         assert dist == ce.min_dist
-    #         assert body_b == name
-    #         assert body_b_link == u''
-    #         assert robot_link in robot_link_names
-    #     return world_with_donbot
-    #
-    # def test_collision_goals_to_collision_matrix6(self, test_folder):
-    #     """
-    #     allow collision with a specific object
-    #     :param test_folder:
-    #     :return:
-    #     """
-    #     world_with_donbot = self.make_world_with_donbot(test_folder)
-    #     name = u'muh'
-    #     robot_link_names = list(world_with_donbot.robot.get_controlled_links())
-    #     min_dist = defaultdict(lambda: {u'zero_weight_distance': 0.1})
-    #
-    #     box = self.cls.from_world_body(make_world_body_box(name))
-    #     world_with_donbot.add_object(box)
-    #
-    #     allowed_link = robot_link_names[0]
-    #
-    #     ces = []
-    #     ce = CollisionEntry()
-    #     ce.type = CollisionEntry.ALLOW_COLLISION
-    #     ce.robot_links = [allowed_link]
-    #     ce.link_bs = [CollisionEntry.ALL]
-    #     ce.min_dist = 0.1
-    #     ces.append(ce)
-    #     collision_matrix = world_with_donbot.collision_goals_to_collision_matrix(ces, min_dist)
-    #
-    #     assert len([x for x in collision_matrix if x[0] == allowed_link]) == 0
-    #     for (robot_link, body_b, body_b_link), dist in collision_matrix.items():
-    #         assert dist == min_dist[robot_link][u'zero_weight_distance']
-    #         if body_b == name:
-    #             assert body_b_link == u''
-    #         assert robot_link in robot_link_names
-    #     return world_with_donbot
-    #
-    # def test_collision_goals_to_collision_matrix7(self, test_folder):
-    #     """
-    #     allow collision with specific object
-    #     :param test_folder:
-    #     :return:
-    #     """
-    #     world_with_donbot = self.make_world_with_donbot(test_folder)
-    #     name = u'muh'
-    #     name2 = u'muh2'
-    #     robot_link_names = list(world_with_donbot.robot.get_controlled_links())
-    #     min_dist = defaultdict(lambda: {u'zero_weight_distance': 0.05})
-    #
-    #     box = self.cls.from_world_body(make_world_body_box(name))
-    #     box2 = self.cls.from_world_body(make_world_body_box(name2))
-    #     world_with_donbot.add_object(box)
-    #     world_with_donbot.add_object(box2)
-    #
-    #     ces = []
-    #     ce = CollisionEntry()
-    #     ce.type = CollisionEntry.ALLOW_COLLISION
-    #     ce.body_b = name2
-    #     ce.min_dist = 0.1
-    #     ces.append(ce)
-    #     collision_matrix = world_with_donbot.collision_goals_to_collision_matrix(ces, min_dist)
-    #
-    #     assert len([x for x in collision_matrix if x[2] == name2]) == 0
-    #     for (robot_link, body_b, body_b_link), dist in collision_matrix.items():
-    #         assert dist == min_dist[robot_link][u'zero_weight_distance']
-    #         if body_b == name:
-    #             assert body_b_link == u''
-    #         assert robot_link in robot_link_names
-    #     return world_with_donbot
-    #
-    # def test_collision_goals_to_collision_matrix8(self, test_folder):
-    #     """
-    #     allow collision between specific object and link
-    #     :param test_folder:
-    #     :return:
-    #     """
-    #     world_with_donbot = self.make_world_with_donbot(test_folder)
-    #     name = u'muh'
-    #     name2 = u'muh2'
-    #     robot_link_names = list(world_with_donbot.robot.get_controlled_links())
-    #     allowed_link = robot_link_names[0]
-    #     min_dist = defaultdict(lambda: {u'zero_weight_distance': 0.05})
-    #
-    #     box = self.cls.from_world_body(make_world_body_box(name))
-    #     box2 = self.cls.from_world_body(make_world_body_box(name2))
-    #     world_with_donbot.add_object(box)
-    #     world_with_donbot.add_object(box2)
-    #
-    #     ces = []
-    #     ce = CollisionEntry()
-    #     ce.type = CollisionEntry.ALLOW_COLLISION
-    #     ce.robot_links = [allowed_link]
-    #     ce.body_b = name2
-    #     ce.min_dist = 0.1
-    #     ces.append(ce)
-    #     collision_matrix = world_with_donbot.collision_goals_to_collision_matrix(ces, min_dist)
-    #
-    #     assert len([x for x in collision_matrix if x[0] == allowed_link and x[2] == name2]) == 0
-    #     for (robot_link, body_b, body_b_link), dist in collision_matrix.items():
-    #         assert dist == min_dist[robot_link][u'zero_weight_distance']
-    #         if body_b != world_with_donbot.robot.get_name():
-    #             assert body_b_link == u''
-    #         assert robot_link in robot_link_names
-    #         if body_b == name2:
-    #             assert robot_link != robot_link_names[0]
-    #     return world_with_donbot
+    def test_verify_collision_entries_empty(self, test_folder):
+        world_with_donbot = self.make_world_with_donbot(test_folder)
+        ces = []
+        new_ces = world_with_donbot.verify_collision_entries(ces, 0.05)
+        assert len(new_ces) == 1
+
+    def test_verify_collision_entries_allow_all(self, test_folder):
+        world_with_donbot = self.make_world_with_donbot(test_folder)
+        ces = [allow_all_entry()]
+        new_ces = world_with_donbot.verify_collision_entries(ces, 0.05)
+        assert len(new_ces) == 0
+
+    def test_verify_collision_entries_allow_all_self(self, test_folder):
+        world_with_donbot = self.make_world_with_donbot(test_folder)
+        ce = CollisionEntry()
+        ce.type = CollisionEntry.ALLOW_COLLISION
+        ce.robot_links = [CollisionEntry.ALL]
+        ce.body_b = world_with_donbot.robot.get_name()
+        ce.link_bs = [CollisionEntry.ALL]
+        ces = [ce]
+        new_ces = world_with_donbot.verify_collision_entries(ces, 0.05)
+        assert len(new_ces) == 1 + len(world_with_donbot.robot.get_self_collision_matrix()) * 2
+
+    def test_verify_collision_entries_unknown_robot_link(self, test_folder):
+        world_with_donbot = self.make_world_with_donbot(test_folder)
+        min_dist = 0.1
+        ces = []
+        ce = CollisionEntry()
+        ce.type = CollisionEntry.AVOID_COLLISION
+        ce.robot_links = [u'muh']
+        ce.min_dist = min_dist
+        ces.append(ce)
+        try:
+            new_ces = world_with_donbot.verify_collision_entries(ces, min_dist)
+        except UnknownBodyException:
+            assert True
+        else:
+            assert False, u'expected exception'
+
+    def test_verify_collision_entries_unknown_body_b(self, test_folder):
+        world_with_donbot = self.make_world_with_donbot(test_folder)
+        min_dist = 0.1
+        ces = []
+        ce = CollisionEntry()
+        ce.type = CollisionEntry.AVOID_COLLISION
+        ce.robot_links = [CollisionEntry.ALL]
+        ce.body_b = u'muh'
+        ce.link_bs = [CollisionEntry.ALL]
+        ce.min_dist = min_dist
+        ces.append(ce)
+        try:
+            new_ces = world_with_donbot.verify_collision_entries(ces, min_dist)
+        except UnknownBodyException:
+            assert True
+        else:
+            assert False, u'expected exception'
+
+    def test_verify_collision_entries_unknown_link_b(self, test_folder):
+        world_with_donbot = self.make_world_with_donbot(test_folder)
+        min_dist = 0.1
+        ces = []
+        ce = CollisionEntry()
+        ce.type = CollisionEntry.AVOID_COLLISION
+        ce.robot_links = [CollisionEntry.ALL]
+        ce.body_b = u'muh'
+        ce.link_bs = [u'muh']
+        ce.min_dist = min_dist
+        ces.append(ce)
+        try:
+            new_ces = world_with_donbot.verify_collision_entries(ces, min_dist)
+        except UnknownBodyException:
+            assert True
+        else:
+            assert False, u'expected exception'
+
+    def test_verify_collision_entries_unknown_link_b2(self, test_folder):
+        world_with_donbot = self.make_world_with_donbot(test_folder)
+        min_dist = 0.1
+        ces = []
+        ce = CollisionEntry()
+        ce.type = CollisionEntry.AVOID_COLLISION
+        ce.robot_links = [CollisionEntry.ALL]
+        ce.body_b = world_with_donbot.robot.get_name()
+        ce.link_bs = [u'muh']
+        ce.min_dist = min_dist
+        ces.append(ce)
+        try:
+            new_ces = world_with_donbot.verify_collision_entries(ces, min_dist)
+        except UnknownBodyException:
+            assert True
+        else:
+            assert False, u'expected exception'
+
+    def test_verify_collision_entries1(self, test_folder):
+        world_with_donbot = self.make_world_with_donbot(test_folder)
+        min_dist = 0.1
+        ces = []
+        ce = CollisionEntry()
+        ce.type = CollisionEntry.AVOID_COLLISION
+        ce.robot_links = [CollisionEntry.ALL, u'plate']
+        ce.min_dist = min_dist
+        ces.append(ce)
+        try:
+            new_ces = world_with_donbot.verify_collision_entries(ces, min_dist)
+        except PhysicsWorldException:
+            assert True
+        else:
+            assert False, u'expected exception'
+
+    def test_verify_collision_entries2(self, test_folder):
+        world_with_donbot = self.make_world_with_donbot(test_folder)
+        min_dist = 0.1
+        ces = []
+        ce = CollisionEntry()
+        ce.type = CollisionEntry.AVOID_COLLISION
+        ce.link_bs = [CollisionEntry.ALL, u'muh']
+        ce.min_dist = min_dist
+        ces.append(ce)
+        try:
+            new_ces = world_with_donbot.verify_collision_entries(ces, min_dist)
+        except PhysicsWorldException:
+            assert True
+        else:
+            assert False, u'expected exception'
+
+    def test_verify_collision_entries3(self, test_folder):
+        world_with_donbot = self.make_world_with_donbot(test_folder)
+        min_dist = 0.1
+        ces = []
+        ce = CollisionEntry()
+        ce.type = CollisionEntry.AVOID_COLLISION
+        ce.link_bs = [CollisionEntry.ALL, u'muh']
+        ce.robot_links = [CollisionEntry.ALL, u'muh']
+        ce.min_dist = min_dist
+        ces.append(ce)
+        try:
+            new_ces = world_with_donbot.verify_collision_entries(ces, min_dist)
+        except PhysicsWorldException:
+            assert True
+        else:
+            assert False, u'expected exception'
+
+    def test_verify_collision_entries3_1(self, test_folder):
+        world_with_donbot = self.make_world_with_donbot(test_folder)
+        min_dist = 0.1
+        ces = []
+        ce = CollisionEntry()
+        ce.type = CollisionEntry.AVOID_COLLISION
+        ce.body_b = CollisionEntry.ALL
+        ce.link_bs = [u'muh']
+        ce.min_dist = min_dist
+        ces.append(ce)
+        try:
+            new_ces = world_with_donbot.verify_collision_entries(ces, min_dist)
+        except PhysicsWorldException:
+            assert True
+        else:
+            assert False, u'expected exception'
+
+    def test_verify_collision_entries_cut_off1(self, test_folder):
+        world_with_donbot = self.make_world_with_donbot(test_folder)
+        min_dist = 0.1
+        ces = []
+        ces.append(avoid_all_entry(min_dist))
+        ces.append(allow_all_entry())
+        new_ces = world_with_donbot.verify_collision_entries(ces, min_dist)
+        assert len(new_ces) == 0
+
+    def test_verify_collision_entries_split0(self, test_folder):
+        world_with_donbot = self.make_world_with_donbot(test_folder)
+        min_dist = 0.1
+        ces = [avoid_all_entry(min_dist)]
+        new_ces = world_with_donbot.verify_collision_entries(ces, min_dist)
+        assert len(new_ces) == 1
+        for ce in new_ces:
+            assert ce.body_b == world_with_donbot.robot.get_name()
+            assert ce.body_b != CollisionEntry.ALL
+            assert world_with_donbot.all_robot_links(ce)
+            assert world_with_donbot.all_link_bs(ce)
+            assert ce.type == CollisionEntry. \
+                AVOID_COLLISION
+
+    def test_verify_collision_entries_split1(self, test_folder):
+        world_with_donbot = self.make_world_with_donbot(test_folder)
+        min_dist = 0.05
+        ces = []
+        ce1 = CollisionEntry()
+        ce1.type = CollisionEntry.AVOID_COLLISION
+        ce1.robot_links = [CollisionEntry.ALL]
+        ce1.body_b = CollisionEntry.ALL
+        ce1.link_bs = [CollisionEntry.ALL]
+        ce1.min_dist = 0.1
+        ces.append(ce1)
+        ce = CollisionEntry()
+        ce.type = CollisionEntry.ALLOW_COLLISION
+        ce.robot_links = [u'plate']
+        ce.body_b = CollisionEntry.ALL
+        ce.link_bs = [CollisionEntry.ALL]
+        ces.append(ce)
+        new_ces = world_with_donbot.verify_collision_entries(ces, min_dist)
+        assert len(new_ces) == 1 + \
+               len(world_with_donbot.robot.get_possible_collisions(u'plate'))
+        assert world_with_donbot.all_robot_links(new_ces[0])
+        assert world_with_donbot.all_link_bs(new_ces[0])
+        for ce in new_ces[1:]:
+            assert ce.body_b == world_with_donbot.robot.get_name()
+            assert ce.body_b != CollisionEntry.ALL
+            assert CollisionEntry.ALL not in ce.robot_links
+        i = 0
+        for i in range(1):
+            ce = new_ces[i]
+            assert ce.type == CollisionEntry.AVOID_COLLISION
+        i += 1
+        for j in range(len(world_with_donbot.robot.get_possible_collisions(u'plate'))):
+            ce = new_ces[i + j]
+            assert ce.type == CollisionEntry.ALLOW_COLLISION
+
+    def test_verify_collision_entries_split2(self, test_folder):
+        world_with_donbot = self.make_world_with_donbot(test_folder)
+        name = u'muh'
+        min_dist = 0.05
+        box = make_world_body_box(name)
+        world_with_donbot.add_object(box)
+
+        ces = [avoid_all_entry(min_dist)]
+        ce = CollisionEntry()
+        ce.type = CollisionEntry.ALLOW_COLLISION
+        ce.robot_links = [CollisionEntry.ALL]
+        ce.body_b = name
+        ce.link_bs = [CollisionEntry.ALL]
+        ces.append(ce)
+        new_ces = world_with_donbot.verify_collision_entries(ces, min_dist)
+        assert len(new_ces) == 1 + len(world_with_donbot.get_controlled_robot_links()) * 2
+        for ce in new_ces[1:]:
+            assert ce.body_b != CollisionEntry.ALL
+            assert CollisionEntry.ALL not in ce.robot_links
+            if ce.body_b != world_with_donbot.robot.get_name():
+                assert CollisionEntry.ALL in ce.link_bs
+            else:
+                assert CollisionEntry.ALL not in ce.link_bs
+            assert len(ce.link_bs) == 1
+        i = 0
+        for i in range(len(world_with_donbot.get_controlled_robot_links()) + 1):
+            ce = new_ces[i]
+            assert ce.type == CollisionEntry.AVOID_COLLISION
+        i += 1
+        for j in range(len(world_with_donbot.get_controlled_robot_links())):
+            ce = new_ces[i + j]
+            assert ce.type == CollisionEntry.ALLOW_COLLISION
+
+    def test_verify_collision_entries_split3(self, test_folder):
+        world_with_donbot = self.make_world_with_donbot(test_folder)
+        name = u'muh'
+        min_dist = 0.05
+        box = make_world_body_box(name)
+        world_with_donbot.add_object(box)
+
+        ces = []
+        ce1 = CollisionEntry()
+        ce1.type = CollisionEntry.AVOID_COLLISION
+        ce1.robot_links = [CollisionEntry.ALL]
+        ce1.link_bs = [CollisionEntry.ALL]
+        ce1.min_dist = min_dist
+        ces.append(ce1)
+        ce = CollisionEntry()
+        ce.type = CollisionEntry.ALLOW_COLLISION
+        ce.robot_links = [CollisionEntry.ALL]
+        ce.body_b = name
+        ce.link_bs = [name]
+        ces.append(ce)
+        new_ces = world_with_donbot.verify_collision_entries(ces, min_dist)
+        assert len(new_ces) == len(world_with_donbot.get_controlled_robot_links()) * 2 + 1
+        for ce in new_ces[1:]:
+            assert ce.body_b != CollisionEntry.ALL
+            assert CollisionEntry.ALL not in ce.robot_links
+            assert CollisionEntry.ALL not in ce.link_bs
+            assert len(ce.link_bs) == 1
+        i = 0
+        for i in range(1 +
+                       len(world_with_donbot.get_controlled_robot_links())):
+            ce = new_ces[i]
+            assert ce.type == CollisionEntry.AVOID_COLLISION
+        i += 1
+        for j in range(len(world_with_donbot.get_controlled_robot_links())):
+            ce = new_ces[i + j]
+            assert ce.type == CollisionEntry.ALLOW_COLLISION
+
+    def test_verify_collision_entries_split4(self, test_folder):
+        world_with_donbot = self.make_world_with_donbot(test_folder)
+        name = u'muh'
+        min_dist = 0.05
+        box = make_world_body_box(name)
+        world_with_donbot.add_object(box)
+        name2 = u'box2'
+        box2 = make_world_body_box(name2)
+        world_with_donbot.add_object(box2)
+
+        ces = []
+        ce1 = CollisionEntry()
+        ce1.type = CollisionEntry.AVOID_COLLISION
+        ce1.robot_links = [CollisionEntry.ALL]
+        ce1.link_bs = [CollisionEntry.ALL]
+        ce1.min_dist = min_dist
+        ces.append(ce1)
+        ce = CollisionEntry()
+        ce.type = CollisionEntry.ALLOW_COLLISION
+        ce.robot_links = [CollisionEntry.ALL]
+        ce.body_b = name
+        ce.link_bs = [name]
+        ces.append(ce)
+        new_ces = world_with_donbot.verify_collision_entries(ces, min_dist)
+        assert len(new_ces) == len(world_with_donbot.get_controlled_robot_links()) * 3 + 1
+        for ce in new_ces[1:]:
+            assert ce.body_b != CollisionEntry.ALL
+            assert CollisionEntry.ALL not in ce.robot_links
+            if ce.body_b == name2:
+                assert CollisionEntry.ALL in ce.link_bs
+            else:
+                assert CollisionEntry.ALL not in ce.link_bs
+            assert len(ce.link_bs) == 1
+        i = -1
+        for i in range(1 + len(world_with_donbot.get_controlled_robot_links()) * 2):
+            ce = new_ces[i]
+            assert ce.type == CollisionEntry.AVOID_COLLISION
+        i += 1
+        for j in range(len(world_with_donbot.get_controlled_robot_links())):
+            ce = new_ces[i + j]
+            assert ce.type == CollisionEntry.ALLOW_COLLISION
+
+    def test_verify_collision_entries_split5(self, test_folder):
+        world_with_donbot = self.make_world_with_donbot(test_folder)
+        name = u'muh'
+        min_dist = 0.05
+        box = make_world_body_box(name)
+        world_with_donbot.add_object(box)
+
+        ces = [allow_all_entry()]
+        ce1 = CollisionEntry()
+        ce1.type = CollisionEntry.AVOID_COLLISION
+        ce1.robot_links = [u'plate', u'base_link']
+        ce1.body_b = name
+        ce1.link_bs = [CollisionEntry.ALL]
+        ce1.min_dist = min_dist
+        ces.append(ce1)
+        new_ces = world_with_donbot.verify_collision_entries(ces, min_dist)
+        assert len(new_ces) == 2
+
+        for j in range(2):
+            ce = new_ces[j]
+            assert ce.type == CollisionEntry.AVOID_COLLISION
+
+    def test_verify_collision_entries_split6(self, test_folder):
+        world_with_donbot = self.make_world_with_donbot(test_folder)
+        min_dist = 0.05
+        ces = []
+        ce1 = CollisionEntry()
+        ce1.type = CollisionEntry.ALLOW_COLLISION
+        ce1.robot_links = [u'plate', u'base_link']
+        ce1.body_b = world_with_donbot.robot.get_name()
+        ce1.link_bs = [u'gripper_finger_left_link', u'gripper_finger_right_link']
+        ce1.min_dist = min_dist
+        ces.append(ce1)
+        new_ces = world_with_donbot.verify_collision_entries(ces, min_dist)
+        assert len(new_ces) == 4 + 1
+        i = -1
+        for i in range(1):
+            ce = new_ces[i]
+            assert ce.type == CollisionEntry.AVOID_COLLISION
+        i += 1
+        for j in range(4):
+            ce = new_ces[i + j]
+            assert ce.type == CollisionEntry.ALLOW_COLLISION
+
+    def test_collision_goals_to_collision_matrix1(self, delete_test_folder):
+        """
+        test with no collision entries which is equal to avoid all collisions
+        collision matrix should be empty, because world has no collision checker
+        :param test_folder:
+        :return:
+        """
+        world_with_donbot = self.make_world_with_donbot(delete_test_folder)
+        min_dist = defaultdict(lambda: {u'zero_weight_distance': 0.05})
+        collision_matrix = world_with_donbot.collision_goals_to_collision_matrix([], min_dist)
+        assert len(collision_matrix) == 0
+        return world_with_donbot
+
+    def test_collision_goals_to_collision_matrix2(self, test_folder):
+        """
+        avoid all with an added object should enlarge the collision matrix
+        :param test_folder:
+        :return:
+        """
+        min_dist = defaultdict(lambda: {u'zero_weight_distance': 0.05})
+        world_with_donbot = self.make_world_with_donbot(test_folder)
+        base_collision_matrix = world_with_donbot.collision_goals_to_collision_matrix([], min_dist)
+        name = u'muh'
+        box = make_world_body_box(name)
+        world_with_donbot.add_object(box)
+        collision_matrix = world_with_donbot.collision_goals_to_collision_matrix([], min_dist)
+        assert len(collision_matrix) == len(base_collision_matrix) + len(world_with_donbot.get_controlled_robot_links())
+        robot_link_names = world_with_donbot.robot.get_link_names()
+        for (robot_link, body_b, body_b_link), dist in collision_matrix.items():
+            assert dist == min_dist[robot_link][u'zero_weight_distance']
+            if body_b == name:
+                assert body_b_link == u''
+            assert robot_link in robot_link_names
+        return world_with_donbot
+
+    def test_collision_goals_to_collision_matrix3(self, test_folder):
+        """
+        empty list should have the same effect than avoid all entry
+        :param test_folder:
+        :return:
+        """
+        min_dist = defaultdict(lambda: {u'zero_weight_distance': 0.05})
+        world_with_donbot = self.make_world_with_donbot(test_folder)
+        base_collision_matrix = world_with_donbot.collision_goals_to_collision_matrix([], min_dist)
+        name = u'muh'
+        box = make_world_body_box(name)
+        world_with_donbot.add_object(box)
+        ces = []
+        ces.append(avoid_all_entry(min_dist))
+        collision_matrix = world_with_donbot.collision_goals_to_collision_matrix(ces, min_dist)
+        assert len(collision_matrix) == len(base_collision_matrix) + len(world_with_donbot.get_controlled_robot_links())
+        robot_link_names = world_with_donbot.robot.get_link_names()
+        for (robot_link, body_b, body_b_link), dist in collision_matrix.items():
+            assert dist == min_dist[robot_link][u'zero_weight_distance']
+            if body_b == name:
+                assert body_b_link == u''
+            assert robot_link in robot_link_names
+        return world_with_donbot
+
+    def test_collision_goals_to_collision_matrix4(self, test_folder):
+        """
+        allow all should lead to an empty collision matrix
+        :param test_folder:
+        :return:
+        """
+        world_with_donbot = self.make_world_with_donbot(test_folder)
+        name = u'muh'
+
+        box = make_world_body_box(name)
+        world_with_donbot.add_object(box)
+
+        ces = []
+        ces.append(allow_all_entry())
+        ces.append(allow_all_entry())
+        min_dist = defaultdict(lambda: {u'zero_weight_distance': 0.05})
+        collision_matrix = world_with_donbot.collision_goals_to_collision_matrix(ces, min_dist)
+
+        assert len(collision_matrix) == 0
+        return world_with_donbot
+
+    def test_collision_goals_to_collision_matrix5(self, test_folder):
+        """
+
+        :param test_folder:
+        :return:
+        """
+        # FIXME min dist is kinda outdated so this test is hacked to succeed
+        world_with_donbot = self.make_world_with_donbot(test_folder)
+        name = u'muh'
+        robot_link_names = list(world_with_donbot.get_controlled_robot_links())
+
+        box = make_world_body_box(name)
+        world_with_donbot.add_object(box)
+
+        ces = []
+        ces.append(allow_all_entry())
+        ce = CollisionEntry()
+        ce.type = CollisionEntry.AVOID_COLLISION
+        ce.robot_links = [robot_link_names[0]]
+        ce.body_b = name
+        ce.min_dist = 0.1
+        ces.append(ce)
+        min_dist = defaultdict(lambda: {u'zero_weight_distance': 0.1})
+        collision_matrix = world_with_donbot.collision_goals_to_collision_matrix(ces, min_dist)
+
+        assert len(collision_matrix) == 1
+        for (robot_link, body_b, body_b_link), dist in collision_matrix.items():
+            assert dist == ce.min_dist
+            assert body_b == name
+            assert body_b_link == u''
+            assert robot_link in robot_link_names
+        return world_with_donbot
+
+    def test_collision_goals_to_collision_matrix6(self, test_folder):
+        """
+        allow collision with a specific object
+        :param test_folder:
+        :return:
+        """
+        world_with_donbot = self.make_world_with_donbot(test_folder)
+        name = u'muh'
+        robot_link_names = list(world_with_donbot.get_controlled_robot_links())
+        min_dist = defaultdict(lambda: {u'zero_weight_distance': 0.1})
+
+        box = make_world_body_box(name)
+        world_with_donbot.add_object(box)
+
+        allowed_link = robot_link_names[0]
+
+        ces = []
+        ce = CollisionEntry()
+        ce.type = CollisionEntry.ALLOW_COLLISION
+        ce.robot_links = [allowed_link]
+        ce.link_bs = [CollisionEntry.ALL]
+        ce.min_dist = 0.1
+        ces.append(ce)
+        collision_matrix = world_with_donbot.collision_goals_to_collision_matrix(ces, min_dist)
+
+        assert len([x for x in collision_matrix if x[0] == allowed_link]) == 0
+        for (robot_link, body_b, body_b_link), dist in collision_matrix.items():
+            assert dist == min_dist[robot_link][u'zero_weight_distance']
+            if body_b == name:
+                assert body_b_link == u''
+            assert robot_link in robot_link_names
+        return world_with_donbot
+
+    def test_collision_goals_to_collision_matrix7(self, test_folder):
+        """
+        allow collision with specific object
+        :param test_folder:
+        :return:
+        """
+        world_with_donbot = self.make_world_with_donbot(test_folder)
+        name = u'muh'
+        name2 = u'muh2'
+        robot_link_names = list(world_with_donbot.get_controlled_robot_links())
+        min_dist = defaultdict(lambda: {u'zero_weight_distance': 0.05})
+
+        box = make_world_body_box(name)
+        box2 = make_world_body_box(name2)
+        world_with_donbot.add_object(box)
+        world_with_donbot.add_object(box2)
+
+        ces = []
+        ce = CollisionEntry()
+        ce.type = CollisionEntry.ALLOW_COLLISION
+        ce.body_b = name2
+        ce.min_dist = 0.1
+        ces.append(ce)
+        collision_matrix = world_with_donbot.collision_goals_to_collision_matrix(ces, min_dist)
+
+        assert len([x for x in collision_matrix if x[2] == name2]) == 0
+        for (robot_link, body_b, body_b_link), dist in collision_matrix.items():
+            assert dist == min_dist[robot_link][u'zero_weight_distance']
+            if body_b == name:
+                assert body_b_link == u''
+            assert robot_link in robot_link_names
+        return world_with_donbot
+
+    def test_collision_goals_to_collision_matrix8(self, test_folder):
+        """
+        allow collision between specific object and link
+        :param test_folder:
+        :return:
+        """
+        world_with_donbot = self.make_world_with_donbot(test_folder)
+        name = u'muh'
+        name2 = u'muh2'
+        robot_link_names = list(world_with_donbot.get_controlled_robot_links())
+        allowed_link = robot_link_names[0]
+        min_dist = defaultdict(lambda: {u'zero_weight_distance': 0.05})
+
+        box = make_world_body_box(name)
+        box2 = make_world_body_box(name2)
+        world_with_donbot.add_object(box)
+        world_with_donbot.add_object(box2)
+
+        ces = []
+        ce = CollisionEntry()
+        ce.type = CollisionEntry.ALLOW_COLLISION
+        ce.robot_links = [allowed_link]
+        ce.body_b = name2
+        ce.min_dist = 0.1
+        ces.append(ce)
+        collision_matrix = world_with_donbot.collision_goals_to_collision_matrix(ces, min_dist)
+
+        assert len([x for x in collision_matrix if x[0] == allowed_link and x[2] == name2]) == 0
+        for (robot_link, body_b, body_b_link), dist in collision_matrix.items():
+            assert dist == min_dist[robot_link][u'zero_weight_distance']
+            if body_b != world_with_donbot.robot.get_name():
+                assert body_b_link == u''
+            assert robot_link in robot_link_names
+            if body_b == name2:
+                assert robot_link != robot_link_names[0]
+        return world_with_donbot
 
     def test_collision_goals_to_collision_matrix9(self, test_folder):
         """
@@ -1022,3 +1023,57 @@ class TestWorld(object):
         assert collision_matrix == {(u'base_link', u'pr2', u'r_wrist_flex_link'): 0.05}
 
         return world_with_pr2
+
+
+    def test_check_collisions(self, test_folder):
+        w = self.make_world_with_pr2()
+        w.add_object(pr2_urdf(), 'pr22')
+        base_pose = Pose()
+        base_pose.position.x = 10
+        base_pose.orientation.w = 1
+        w.set_object_pose('pr22', base_pose)
+        robot_links = w.get_controlled_robot_links()
+        cut_off_distances = {(link1, 'pr22', link2): 0.1 for link1, link2 in product(robot_links, repeat=2)}
+        w.reset_pb_subworld()
+        assert len(w.check_collisions(cut_off_distances).all_collisions) == 0
+
+    def test_check_collisions2(self, test_folder):
+        w = self.make_world_with_pr2()
+        pr22 = self.cls(pr2_urdf())
+        pr22.set_name('pr22')
+        w.add_object(pr22)
+        base_pose = Pose()
+        base_pose.position.x = 0.05
+        base_pose.orientation.w = 1
+        w.set_object_pose('pr22', base_pose)
+
+        pr23 = self.cls(pr2_urdf())
+        pr23.set_name('pr23')
+        w.add_object(pr23)
+        base_pose = Pose()
+        base_pose.position.y = 0.05
+        base_pose.orientation.w = 1
+        w.set_object_pose('pr23', base_pose)
+
+        min_dist = defaultdict(lambda: {u'zero_weight_distance': 0.1})
+        cut_off_distances = w.collision_goals_to_collision_matrix([], min_dist)
+
+        for i in range(160):
+            assert len(w.check_collisions(cut_off_distances).all_collisions) == 1328
+
+    def test_check_collisions3(self, test_folder):
+        w = self.make_world_with_pr2()
+        pr22 = self.cls(pr2_urdf())
+        pr22.set_name('pr22')
+        w.add_object(pr22)
+        base_pose = Pose()
+        base_pose.position.x = 1.5
+        base_pose.orientation.w = 1
+        w.set_object_pose('pr22', base_pose)
+        min_dist = defaultdict(lambda: {u'zero_weight_distance': 0.1})
+        cut_off_distances = w.collision_goals_to_collision_matrix([], min_dist)
+        robot_links = pr22.get_link_names()
+        cut_off_distances.update({(link1, 'pr22', link2): 0.1 for link1, link2 in product(robot_links, repeat=2)})
+
+        for i in range(160):
+            assert len(w.check_collisions(cut_off_distances).all_collisions) == 60

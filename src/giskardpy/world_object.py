@@ -39,6 +39,17 @@ class WorldObject(URDFObject):
         self._self_collision_matrix = set()
         super(WorldObject, self).init2(*args, **kwargs)
 
+    def dump_state(self):
+        state = {}
+        for name in vars(self):
+            if name.startswith('_'):
+                state[name] = getattr(self, name)
+        return state
+
+    def load_state(self, state):
+        for att_name, value in state.items():
+            setattr(self, att_name, value)
+
 
     @property
     def joint_state(self):

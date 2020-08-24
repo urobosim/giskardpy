@@ -1,26 +1,29 @@
-import traceback
+import itertools
 from copy import deepcopy
-from giskardpy import identifier
+import kineverse.gradients.gradient_math as gm
 import urdf_parser_py.urdf as up
+from betterpybullet import ClosestPair
+from betterpybullet import CollisionObject
+from betterpybullet import ContactPoint
 from geometry_msgs.msg import PoseStamped
 from giskard_msgs.msg import CollisionEntry, WorldBody
+import betterpybullet as pb
 from giskardpy import cas_wrapper as w
+from giskardpy import identifier
 from giskardpy import logging
-from giskardpy.casadi_wrapper import to_numpy
+from giskardpy.data_types import Collisions, Collision
 from giskardpy.exceptions import RobotExistsException, DuplicateNameException, PhysicsWorldException, \
     UnknownBodyException, UnsupportedOptionException, CorruptShapeException
+from giskardpy.input_system import PoseStampedInput
 from giskardpy.robot import Robot
-from giskardpy.tfwrapper import msg_to_kdl, kdl_to_pose
 from giskardpy.urdf_object import URDFObject, hacky_urdf_parser_fix
 from giskardpy.utils import KeyDefaultDict, memoize, homo_matrix_to_pose
-from giskardpy.world_object import WorldObject
 from kineverse.model.geometry_model import GeometryModel
 from kineverse.model.paths import Path
 from kineverse.operations.basic_operations import ExecFunction
-from kineverse.operations.urdf_operations import load_urdf, FixedJoint, urdf_origin_to_transform, \
-    CreateURDFFrameConnection
+from kineverse.operations.urdf_operations import load_urdf, FixedJoint, CreateURDFFrameConnection
 from kineverse.urdf_fix import urdf_filler
-import giskardpy.tfwrapper as tf
+
 
 class World(object):
     world_frame = u'map'
@@ -29,7 +32,7 @@ class World(object):
         self._fks = {}
         self.__prefix = '/'.join(prefix)
         self._objects_names = []
-        self._robot_name = None
+        self._robot_name = u'robot'
         self.km_model = GeometryModel()
         self.attached_objects = {}
         if path_to_data_folder is None:
@@ -55,8 +58,82 @@ class World(object):
         self.soft_reset()
         self.remove_robot()
 
-    def check_collisions(self, cut_off_distances):
-        pass
+    def getClosestPoints(self, body_a, body_b, distance, link_a, link_b=None):
+        obj_a = self.pb_suboworld.named_objects[str(self.get_link_path(body_a, link_a))]
+        if link_b is None:
+            link_bs = self.get_object(body_b).links.keys()
+        else:
+            link_bs = [link_b]
+        result = []
+        obj_bs = {}
+        for link_b in link_bs:
+            link_b_path = str(self.get_link_path(body_b, link_b))
+            if link_b_path in self.pb_suboworld.named_objects:
+                obj_bs[self.pb_suboworld.named_objects[link_b_path]] = link_b
+        input = {obj_a: distance}
+        query_result = self.pb_suboworld.closest_distances(input)
+        map_T_a = obj_a.transform
+        for o, contacts in query_result.items():
+            for contact in contacts:  # type: ClosestPair
+                if contact.obj_b in obj_bs:
+                    map_T_b = contact.obj_b.transform
+                    for p in contact.points:  # type: ContactPoint
+                        c = Collision(link_a, body_b, obj_bs[contact.obj_b], p.point_a, p.point_b, p.normal_world_b,
+                                      p.distance)
+                        c.set_position_on_a_in_map(map_T_a * p.point_a)
+                        c.set_position_on_b_in_map(map_T_b * p.point_b)
+                        c.set_contact_normal_in_b(map_T_b.inv() * p.normal_world_b)
+                        result.append(c)
+        return result
+
+    def check_collisions(self, cut_off_distances, data):
+        pb.batch_set_transforms(self.pb_suboworld.collision_objects, self.pb_suboworld.pose_generator(**data))
+        self.pb_suboworld._state.update(data)
+
+        collisions = Collisions(self)
+        robot_name = self.robot.get_name()
+        for (robot_link, body_b, link_b), distance in cut_off_distances.items():
+            # if robot_name == body_b:
+            #     object_id = self.robot.get_pybullet_id()
+            #     link_b_id = self.robot.get_pybullet_link_id(link_b)
+            # else:
+            #     object_id = self.__get_pybullet_object_id(body_b)
+            #     if link_b != CollisionEntry.ALL:
+            #         link_b_id = self.get_object(body_b).get_pybullet_link_id(link_b)
+
+            # robot_link_id = self.robot.get_pybullet_link_id(robot_link)
+            if body_b == robot_name or link_b != CollisionEntry.ALL:
+                for collision in self.getClosestPoints(self._robot_name, body_b,
+                                                       distance * 3,
+                                                       robot_link, link_b):
+                    collisions.add(collision)
+            else:
+                for collision in self.getClosestPoints(self._robot_name, body_b,
+                                                       distance * 3,
+                                                       robot_link):
+                    collisions.add(collision)
+            # if len(contacts) > 0:
+            #     try:
+            #         body_b_object = self.get_object(body_b)
+            #     except KeyError:
+            #         body_b_object = self.robot
+            #     for contact in contacts:  # type: ContactInfo
+            #         # if link_b == CollisionEntry.ALL:
+            #         #     link_b = body_b_object.pybullet_link_id_to_name(contact.link_index_b)
+            #         # if self.__should_flip_collision(contact.position_on_a, robot_link):
+            #         #     flipped_normal = [-contact.contact_normal_on_b[0],
+            #         #                       -contact.contact_normal_on_b[1],
+            #         #                       -contact.contact_normal_on_b[2]]
+            #         #     collision = Collision(robot_link, body_b, link_b,
+            #         #                           contact.position_on_b, contact.position_on_a,
+            #         #                           flipped_normal, contact.contact_distance)
+            #         #     collisions.add(collision)
+            #         # else:
+            #             # collision = Collision(robot_link, body_b, link_b,
+            #             #                       contact.position_on_a, contact.position_on_b,
+            #             #                       contact.contact_normal_on_b, contact.contact_distance)
+            #             collisions.add(collision)
+        return collisions
 
     # Objects ----------------------------------------------------------------------------------------------------------
 
@@ -78,13 +155,24 @@ class World(object):
         if self.km_model.has_data(name):
             raise DuplicateNameException(u'Something with name \'{}\' already exists'.format(name))
 
+        root_pose = PoseStampedInput(lambda path: Path(path).to_symbol(),
+                                     translation_prefix=Path(
+                                         [self.__prefix, u'km_model', u'data_tree', u'data_tree', name, u'base_pose',
+                                          u'position']),
+                                     rotation_prefix=Path(
+                                         [self.__prefix, u'km_model', u'data_tree', u'data_tree', name, u'base_pose',
+                                          u'orientation'])).get_frame()
+
         limit_map = load_urdf(ks=self.km_model,
                               prefix=Path(str(name)),
                               urdf=urdf_obj,
                               reference_frame=self.world_frame,
-                              joint_prefix=Path(str(self.__prefix + '/' + name + '/joint_state')),
-                              limit_prefix=Path(str(self.__prefix + '/' + name + '/limits')),
-                              robot_class=Robot)
+                              joint_prefix=Path(
+                                  [self.__prefix, u'km_model', u'data_tree', u'data_tree', name, u'joint_state']),
+                              limit_prefix=Path(
+                                  [self.__prefix, u'km_model', u'data_tree', u'data_tree', name, u'limits']),
+                              robot_class=Robot,
+                              root_transform=root_pose)
         obj = self.km_model.get_data(name)
         obj.init2(limit_map=limit_map, **kwargs)
 
@@ -216,12 +304,12 @@ class World(object):
         """
         if self.has_robot():
             raise RobotExistsException(u'A robot is already loaded')
-        self._robot_name = self.add_thing(robot_urdf,
-                                          name=u'robot',
-                                          base_pose=base_pose,
-                                          controlled_joints=controlled_joints,
-                                          ignored_pairs=ignored_pairs,
-                                          added_pairs=added_pairs)
+        self.add_thing(robot_urdf,
+                       name=self._robot_name,
+                       base_pose=base_pose,
+                       controlled_joints=controlled_joints,
+                       ignored_pairs=ignored_pairs,
+                       added_pairs=added_pairs)
         logging.loginfo(u'--> added {} to world'.format(self._robot_name))
 
     @property
@@ -235,7 +323,11 @@ class World(object):
         """
         :rtype: bool
         """
-        return self._robot_name is not None
+        try:
+            self.robot
+        except:
+            return False
+        return True
 
     def set_robot_joint_state(self, joint_state):
         """
@@ -253,6 +345,9 @@ class World(object):
         # self.km_model.clean_structure()
         # self.km_model.dispatch_events()
 
+    def reset_pb_subworld(self):
+        self.pb_suboworld = self.km_model.get_active_geometry(self.km_model._symbol_co_map.keys())
+
     @memoize
     def get_split_chain(self, root_path, tip_path, joints=True, links=True, fixed=True):
         if root_path == tip_path:
@@ -262,7 +357,7 @@ class World(object):
         for i in range(min(len(root_chain), len(tip_chain))):
             if root_chain[i] != tip_chain[i]:
                 break
-        else: # if not break
+        else:  # if not break
             i += 1
         connection = tip_chain[i - 1]
         root_chain = self.get_simple_chain(connection, root_path, joints, links, fixed)
@@ -307,7 +402,7 @@ class World(object):
             parent = link.parent
 
             if joints:
-                if fixed or not self.km_model.get_data(joint).type == 'fixed': # fixme
+                if fixed or not self.km_model.get_data(joint).type == 'fixed':  # fixme
                     chain.append(joint)
             if links:
                 chain.append(parent)
@@ -359,12 +454,47 @@ class World(object):
 
     def get_fk_np(self, root_path, tip_path):
         world_joint_state = self.robot.get_joint_state_positions()
-        world_joint_state = {str(Path(identifier.joint_states + [joint_name, u'position']).to_symbol()): world_joint_state[joint_name] for joint_name in world_joint_state}
-        for object_name in self.get_object_names():
+        world_joint_state = {
+            str(Path(identifier.joint_states + [joint_name, u'position']).to_symbol()): world_joint_state[joint_name]
+            for joint_name in world_joint_state}
+        data_tree_path = [self.__prefix, u'km_model', u'data_tree', u'data_tree']
+        object_path = data_tree_path + [self._robot_name]
+        base_position_path = object_path + [u'base_pose', u'position']
+        base_orientation_path = object_path + [u'base_pose', u'orientation']
+        base_pose = {str(Path(base_position_path + [u'x']).to_symbol()): self.robot.base_pose.position.x,
+                     str(Path(base_position_path + [u'y']).to_symbol()): self.robot.base_pose.position.y,
+                     str(Path(base_position_path + [u'z']).to_symbol()): self.robot.base_pose.position.z,
+                     str(Path(base_orientation_path + [u'x']).to_symbol()): self.robot.base_pose.orientation.x,
+                     str(Path(base_orientation_path + [u'y']).to_symbol()): self.robot.base_pose.orientation.y,
+                     str(Path(base_orientation_path + [u'z']).to_symbol()): self.robot.base_pose.orientation.z,
+                     str(Path(base_orientation_path + [u'w']).to_symbol()): self.robot.base_pose.orientation.w}
+        world_joint_state.update(base_pose)
+        for object_name in itertools.chain(self.get_object_names(), self.get_attached_object_names()):
             object_joint_state = self.get_object(object_name).get_joint_state_positions()
-            object_joint_state = {str(Path(identifier.world + [object_name, joint_name, u'position']).to_symbol()): object_joint_state[joint_name] for joint_name in object_joint_state}
+            object_joint_state = {
+                str(Path(identifier.world + [object_name, joint_name, u'position']).to_symbol()): object_joint_state[
+                    joint_name] for joint_name in object_joint_state}
+            object_path = data_tree_path + [object_name]
+            base_position_path = object_path + [u'base_pose', u'position']
+            base_orientation_path = object_path + [u'base_pose', u'orientation']
+            base_pose = {
+                str(Path(base_position_path + [u'x']).to_symbol()): self.get_object(object_name).base_pose.position.x,
+                str(Path(base_position_path + [u'y']).to_symbol()): self.get_object(object_name).base_pose.position.y,
+                str(Path(base_position_path + [u'z']).to_symbol()): self.get_object(object_name).base_pose.position.z,
+                str(Path(base_orientation_path + [u'x']).to_symbol()): self.get_object(
+                    object_name).base_pose.orientation.x,
+                str(Path(base_orientation_path + [u'y']).to_symbol()): self.get_object(
+                    object_name).base_pose.orientation.y,
+                str(Path(base_orientation_path + [u'z']).to_symbol()): self.get_object(
+                    object_name).base_pose.orientation.z,
+                str(Path(base_orientation_path + [u'w']).to_symbol()): self.get_object(
+                    object_name).base_pose.orientation.w}
+            world_joint_state.update(base_pose)
             world_joint_state.update(object_joint_state)
         return self._fks[root_path, tip_path](**world_joint_state)
+
+    def get_attached_object_names(self):
+        return [path[-1] for path in self.attached_objects]
 
     def init_fast_fks(self, *args, **kwargs):
         def f(key):
@@ -399,10 +529,10 @@ class World(object):
         :type link_name: str
         :rtype: Path
         """
-        return Path(object_name)+('links', link_name)
+        return Path(object_name) + ('links', link_name)
 
     def get_joint_path(self, object_name, link_name):
-        return Path(object_name)+('joints', link_name)
+        return Path(object_name) + ('joints', link_name)
 
     def attach_existing_obj_to_robot(self, name, link):
         """
@@ -410,7 +540,6 @@ class World(object):
         :type name: name
         """
         object_root = self.get_object(name).get_root()
-
 
         joint_path = self.get_joint_path(self._robot_name, name)
         parent_path = self.get_link_path(self._robot_name, link)
@@ -646,9 +775,22 @@ class World(object):
             i += 1
         return collision_goals
 
+    def get_controlled_robot_links(self):
+        return self.get_controlled_object_links(self._robot_name)
+
+    def get_controlled_object_links(self, object_name):
+        obj = self.get_object(object_name)
+        symbols = set()
+        for link in obj.links.values():
+            symbols |= gm.free_symbols(link.to_parent)
+        links = set()
+        for link_path in self.km_model.get_active_geometry_raw(symbols):
+            links.add(Path(link_path)[-1])
+        return links
+
     def robot_related_stuff(self, collision_goals):
         i = 0
-        controlled_robot_links = self.robot.get_controlled_links()
+        controlled_robot_links = self.get_controlled_robot_links()
         while i < len(collision_goals):
             collision_entry = collision_goals[i]
             if self.is_avoid_all_self_collision(collision_entry):
@@ -755,6 +897,11 @@ class World(object):
                and self.all_link_bs(collision_entry)
 
     def reset_cache(self, *args, **kwargs):
+        states = {}
+        for key, value in self.km_model.data_tree.data_tree.items():
+            if isinstance(value, Robot):
+                states[key] = self.get_object(key).dump_state()
+
         self.km_model.clean_structure()
         self.km_model.dispatch_events()
         for method_name in dir(self):
@@ -762,3 +909,6 @@ class World(object):
                 getattr(self, method_name).memo.clear()
             except:
                 pass
+        for object_name, state in states.items():
+            if self.km_model.has_data(object_name):
+                self.get_object(object_name).load_state(state)

@@ -75,7 +75,7 @@ def test_folder(request):
 
 def trajectory_rollout(controller, goal, time_limit=10, frequency=100, precision=0.0025):
     current_js = OrderedDict()
-    for joint_name in controller.robot.joint_states_input.joint_map:
+    for joint_name in controller.world.joint_states_input.joint_map:
         current_js[joint_name] = 0.0
     state = OrderedDict()
     state.update(current_js)
