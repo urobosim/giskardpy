@@ -116,8 +116,8 @@ class Robot(Backend):
         # self.reinitialize()
 
     def update_self_collision_matrix(self, added_links=None, removed_links=None):
-        pass
-        # super(Robot, self).update_self_collision_matrix(added_links, removed_links)
+        # pass
+        super(Robot, self).update_self_collision_matrix(added_links, removed_links)
 
 
     def get_to_parent_frame(self, link_name):
