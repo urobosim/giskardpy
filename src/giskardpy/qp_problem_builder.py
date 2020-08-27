@@ -128,7 +128,6 @@ class QProblemBuilder(object):
 
     def set_lbA(self, lbA):
         self.big_ass_M[:self.s, self.j + self.s] = lbA
-        print(lbA)
 
     def set_ubA(self, ubA):
         self.big_ass_M[:self.s, self.j + self.s + 1] = ubA
