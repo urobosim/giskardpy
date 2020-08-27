@@ -102,7 +102,7 @@ def initialize_god_map():
                                                                             identifier.default_joint_acceleration_angular_limit,
                                                                             god_map)
 
-    world = World(identifier.world, blackboard.god_map.get_data(identifier.data_folder))
+    world = World(god_map, identifier.world, blackboard.god_map.get_data(identifier.data_folder))
     god_map.safe_set_data(identifier.world, world)
 
 

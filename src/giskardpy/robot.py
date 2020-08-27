@@ -115,10 +115,6 @@ class Robot(Backend):
     #     self.set_joint_acceleration_limit_symbols(linear_acceleration_limit, angular_acceleration_limit)
         # self.reinitialize()
 
-    def update_self_collision_matrix(self, added_links=None, removed_links=None):
-        pass
-        # super(Robot, self).update_self_collision_matrix(added_links, removed_links)
-
 
     def get_to_parent_frame(self, link_name):
         return self.links[link_name].to_parent

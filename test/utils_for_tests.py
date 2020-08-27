@@ -682,9 +682,7 @@ class GiskardTestWrapper(object):
         collision_matrix = self.get_world().collision_goals_to_collision_matrix(collision_goals,
                                                                                 self.get_god_map().get_data(
                                                                                     identifier.distance_thresholds))
-        symbols = self.get_world().pb_subworld.pose_generator.str_params
-        data = dict(zip(symbols, self.get_god_map().get_values(symbols)))
-        collisions = self.get_world().check_collisions(collision_matrix, data)
+        collisions = self.get_world().check_collisions(collision_matrix)
         controlled_parent_joint = self.get_robot().get_controlled_parent_joint(link)
         controlled_parent_link = self.get_robot().get_child_link_of_joint(controlled_parent_joint)
         collision_list = collisions.get_external_collisions(controlled_parent_link)

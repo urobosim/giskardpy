@@ -9,7 +9,7 @@ from time import time
 from geometry_msgs.msg import Pose, Quaternion
 from tf.transformations import euler_from_quaternion, rotation_from_matrix, quaternion_matrix
 
-from giskardpy import logging
+from giskardpy import logging, identifier
 from giskardpy.data_types import SingleJointState
 from giskardpy.tfwrapper import msg_to_kdl
 from giskardpy.urdf_object import URDFObject
@@ -110,11 +110,18 @@ class WorldObject(URDFObject):
                 self._controlled_links.update(self.get_sub_tree_link_names_with_collision(joint_name))
         return self._controlled_links
 
+    def get_god_map(self):
+        return self._world.god_map
+
     def get_self_collision_matrix(self):
         """
         :return: A list of link pairs for which we have to calculate self collisions
         """
         return self._self_collision_matrix
+
+    def get_controlled_joint_position_symbols(self):
+        return set(self.get_god_map().to_symbol(identifier.joint_states + [joint_name, u'position']) for joint_name in
+            self.controlled_joints)
 
     def calc_collision_matrix(self, link_combinations=None, d=0.05, d2=0.0, num_rnd_tries=2000):
         """
@@ -131,6 +138,7 @@ class WorldObject(URDFObject):
         """
         # TODO computational expansive because of too many collision checks
         logging.loginfo(u'calculating self collision matrix')
+        self._world.reset_pb_subworld()
         t = time()
         np.random.seed(1337)
         always = set()
@@ -142,19 +150,25 @@ class WorldObject(URDFObject):
         always = always.difference({tuple(x) for x in self.ignored_pairs})
         rest = link_combinations.difference(always)
         self.joint_state = self.get_zero_joint_state()
+        self._world.sync_bullet_world()
         always = always.union(self.check_collisions(rest, d))
         rest = rest.difference(always)
 
         # find meaningful self-collisions
         self.joint_state = self.get_min_joint_state()
+        self._world.sync_bullet_world()
+
         sometimes = self.check_collisions(rest, d2)
         rest = rest.difference(sometimes)
         self.joint_state = self.get_max_joint_state()
+        self._world.sync_bullet_world()
+
         sometimes2 = self.check_collisions(rest, d2)
         rest = rest.difference(sometimes2)
         sometimes = sometimes.union(sometimes2)
         for i in range(num_rnd_tries):
             self.joint_state = self.get_rnd_joint_state()
+            self._world.sync_bullet_world()
             sometimes2 = self.check_collisions(rest, d2)
             if len(sometimes2) > 0:
                 rest = rest.difference(sometimes2)
@@ -181,7 +195,7 @@ class WorldObject(URDFObject):
         return in_collision
 
     def in_collision(self, link_a, link_b, distance):
-        return self.are_linked(link_a, link_b)
+        return len(self._world.getClosestPoints(self.get_name(), self.get_name(), distance, link_a, link_b)) > 0
 
     def get_zero_joint_state(self):
         # FIXME 0 might not be a valid joint value

@@ -28,7 +28,8 @@ from kineverse.urdf_fix import urdf_filler
 class World(object):
     world_frame = u'map'
 
-    def __init__(self, prefix=tuple(), path_to_data_folder=u''):
+    def __init__(self, god_map, prefix=tuple(), path_to_data_folder=u''):
+        self.god_map = god_map
         self._fks = {}
         self.__prefix = '/'.join(prefix)
         self._objects_names = []
@@ -86,10 +87,15 @@ class World(object):
                         result.append(c)
         return result
 
-    def check_collisions(self, cut_off_distances, data):
+    def sync_bullet_world(self):
+        symbols = self.pb_subworld.pose_generator.str_params
+        data = dict(zip(symbols, self.god_map.get_values(symbols)))
+
         pb.batch_set_transforms(self.pb_subworld.collision_objects, self.pb_subworld.pose_generator(**data))
         self.pb_subworld._state.update(data)
 
+    def check_collisions(self, cut_off_distances):
+        self.sync_bullet_world()
         collisions = Collisions(self)
         robot_name = self.robot.get_name()
         for (robot_link, body_b, link_b), distance in cut_off_distances.items():
@@ -348,6 +354,9 @@ class World(object):
 
     def reset_pb_subworld(self):
         self.pb_subworld = self.km_model.get_active_geometry(self.km_model._symbol_co_map.keys())
+        symbols = self.pb_subworld.free_symbols
+        for symbol in symbols:
+            self.god_map.register_symbol(symbol)
 
     @memoize
     def get_split_chain(self, root_path, tip_path, joints=True, links=True, fixed=True):
