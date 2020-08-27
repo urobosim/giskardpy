@@ -3,6 +3,7 @@ from collections import defaultdict
 from itertools import product
 
 import giskardpy
+from kineverse.model.paths import Path
 
 giskardpy.WORLD_IMPLEMENTATION = None
 
@@ -267,6 +268,31 @@ class TestWorld(object):
         assert len(world_with_pr2.get_objects()) == 0
         return world_with_pr2
 
+    def test_attach_existing_obj_to_robot1(self, function_setup):
+        obj_name = u'box'
+        world_with_pr2 = self.make_world_with_pr2()
+        world_with_pr2.add_object(make_world_body_box(name=obj_name))
+        world_with_pr2.attach_existing_obj_to_robot(u'box', u'l_gripper_tool_frame')
+        assert world_with_pr2.robot.get_link(u'box')
+        assert world_with_pr2.robot.get_joint(u'box')
+        assert u'box' in world_with_pr2.robot.get_link_names()
+        assert u'box' in world_with_pr2.robot.get_joint_names()
+        assert world_with_pr2.robot.get_parent_link_of_joint(u'box') == u'l_gripper_tool_frame'
+        assert world_with_pr2.robot.get_parent_link_of_link(u'box') == u'l_gripper_tool_frame'
+        assert world_with_pr2.robot.get_movable_parent_joint(u'box') == u'l_wrist_roll_joint'
+        assert world_with_pr2.robot.get_child_links_of_link(u'box') == []
+        assert world_with_pr2.robot.get_parent_joint_of_link(u'box') == u'box'
+        assert world_with_pr2.robot.get_parent_joint_of_joint(u'box') == u'l_gripper_tool_joint'
+        assert world_with_pr2.robot.get_child_joints_of_link(u'box') == []
+        assert world_with_pr2.robot.get_parent_path_of_joint(u'box') == Path([u'robot', u'links', u'l_gripper_tool_frame'])
+        try:
+            world_with_pr2.robot.get_child_link_of_joint(u'box')
+            assert False
+        except:
+            pass
+        assert world_with_pr2.robot.get_child_path_of_joint(u'box') == Path([u'box', u'links', u'box'])
+        return world_with_pr2
+
     def test_attach_existing_obj_to_robot2(self, function_setup):
         obj_name = u'box'
         world_with_pr2 = self.make_world_with_pr2()
@@ -283,19 +309,22 @@ class TestWorld(object):
         tip = u'r_gripper_tool_frame'
         world = self.make_world_with_pr2()
         world.add_object(make_world_body_box(name=obj_name))
-
         p = Pose()
         p.orientation.w = 1
         pre_pose = world.get_fk_pose(world.get_link_path(world._robot_name, tip),
                                      world.get_link_path(obj_name, obj_name)).pose
         world.attach_existing_obj_to_robot(obj_name, tip)
         assert obj_name not in world.get_object_names()
-        compare_poses(world.get_robot_fk_pose(tip, obj_name).pose, pre_pose)
+        compare_poses(world.robot.get_fk_pose(tip, obj_name).pose, pre_pose)
 
         world.detach(obj_name)
+        assert obj_name not in world.robot.attached_objects
         assert obj_name in world.get_object_names()
-        compare_poses(world.get_robot_fk_pose(tip, obj_name).pose, pre_pose)
+        post_pose = world.get_fk_pose(world.get_link_path(world._robot_name, tip),
+                                     world.get_link_path(obj_name, obj_name)).pose
+        compare_poses(post_pose, pre_pose)
         return world
+
 
     def test_hard_reset1(self, function_setup):
         world_with_pr2 = self.make_world_with_pr2()
@@ -1020,7 +1049,7 @@ class TestWorld(object):
 
         collision_matrix = world_with_pr2.collision_goals_to_collision_matrix(ces, min_dist)
 
-        assert collision_matrix == {(u'base_link', u'pr2', u'r_wrist_flex_link'): 0.05}
+        assert collision_matrix == {(u'base_link', u'robot', u'r_wrist_flex_link'): 0.05}
 
         return world_with_pr2
 

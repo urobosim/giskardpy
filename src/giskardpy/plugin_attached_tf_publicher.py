@@ -7,6 +7,7 @@ from tf2_msgs.msg import TFMessage
 from giskardpy import logging
 from giskardpy.plugin import GiskardBehavior
 from giskardpy.utils import normalize_quaternion_msg
+from kineverse.model.paths import Path
 
 
 class TFPlugin(GiskardBehavior):
@@ -19,19 +20,18 @@ class TFPlugin(GiskardBehavior):
         self.original_links = set(self.get_robot().get_link_names())
         self.tf_pub = rospy.Publisher(u'/tf', TFMessage, queue_size=10)
 
-    def initialise(self):
-        self.attached_links = set(self.get_robot().get_link_names()) - self.original_links
-
     def update(self):
         try:
-            if self.attached_links:
+            if self.get_world().attached_objects:
                 tf_msg = TFMessage()
-                for link_name in self.attached_links:
-                    fk = self.get_robot().get_fk_pose(self.get_robot().get_parent_link_of_link(link_name), link_name)
+                for object_name in self.get_robot().attached_objects:
+                    object_link = self.get_world().get_object(object_name).get_root()
+                    robot_link = self.get_robot().get_parent_link_of_link(object_link)
+                    fk = self.get_robot().get_fk_pose(robot_link, object_link)
                     tf = TransformStamped()
                     tf.header = fk.header
                     tf.header.stamp = rospy.get_rostime()
-                    tf.child_frame_id = link_name
+                    tf.child_frame_id = object_link
                     tf.transform.translation.x = fk.pose.position.x
                     tf.transform.translation.y = fk.pose.position.y
                     tf.transform.translation.z = fk.pose.position.z

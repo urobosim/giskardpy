@@ -301,3 +301,25 @@ class WorldObject(URDFObject):
     # def reset(self):
     #     super(WorldObject, self).reset()
     #     self.update_self_collision_matrix()
+
+
+    def get_fk_expression(self, root_link, tip_link):
+        """
+        :type root_link: str
+        :type tip_link: str
+        :return: 4d matrix describing the transformation from root_link to tip_link
+        :rtype: spw.Matrix
+        """
+        root_path = self.get_link_path(root_link)
+        tip_path = self.get_link_path(tip_link)
+        return self._world.get_fk_expression(root_path, tip_path)
+
+    def get_fk_pose(self, root_link, tip_link):
+        root_path = self.get_link_path(root_link)
+        tip_path = self.get_link_path(tip_link)
+        return self._world.get_fk_pose(root_path, tip_path)
+
+    def get_fk_np(self, root_link, tip_link):
+        root_path = self.get_link_path(root_link)
+        tip_path = self.get_link_path(tip_link)
+        return self._world.get_fk_np(root_path, tip_path)

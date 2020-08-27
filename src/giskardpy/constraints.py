@@ -146,7 +146,7 @@ class Constraint(object):
         :type tip: str
         :return: root_T_tip
         """
-        return self.get_world().get_robot_fk_expression(root, tip)
+        return self.get_robot().get_fk_expression(root, tip)
 
         # km = self.get_god_map().get_data(identifier.km_world) # type: GeometryModel
         # try:

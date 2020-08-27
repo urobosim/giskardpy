@@ -59,7 +59,7 @@ class World(object):
         self.remove_robot()
 
     def getClosestPoints(self, body_a, body_b, distance, link_a, link_b=None):
-        obj_a = self.pb_suboworld.named_objects[str(self.get_link_path(body_a, link_a))]
+        obj_a = self.pb_subworld.named_objects[str(self.get_link_path(body_a, link_a))]
         if link_b is None:
             link_bs = self.get_object(body_b).links.keys()
         else:
@@ -68,10 +68,10 @@ class World(object):
         obj_bs = {}
         for link_b in link_bs:
             link_b_path = str(self.get_link_path(body_b, link_b))
-            if link_b_path in self.pb_suboworld.named_objects:
-                obj_bs[self.pb_suboworld.named_objects[link_b_path]] = link_b
+            if link_b_path in self.pb_subworld.named_objects:
+                obj_bs[self.pb_subworld.named_objects[link_b_path]] = link_b
         input = {obj_a: distance}
-        query_result = self.pb_suboworld.closest_distances(input)
+        query_result = self.pb_subworld.closest_distances(input)
         map_T_a = obj_a.transform
         for o, contacts in query_result.items():
             for contact in contacts:  # type: ClosestPair
@@ -87,8 +87,8 @@ class World(object):
         return result
 
     def check_collisions(self, cut_off_distances, data):
-        pb.batch_set_transforms(self.pb_suboworld.collision_objects, self.pb_suboworld.pose_generator(**data))
-        self.pb_suboworld._state.update(data)
+        pb.batch_set_transforms(self.pb_subworld.collision_objects, self.pb_subworld.pose_generator(**data))
+        self.pb_subworld._state.update(data)
 
         collisions = Collisions(self)
         robot_name = self.robot.get_name()
@@ -172,9 +172,10 @@ class World(object):
                               limit_prefix=Path(
                                   [self.__prefix, u'km_model', u'data_tree', u'data_tree', name, u'limits']),
                               robot_class=Robot,
-                              root_transform=root_pose)
+                              root_transform=root_pose,
+                              name_override=name)
         obj = self.km_model.get_data(name)
-        obj.init2(limit_map=limit_map, **kwargs)
+        obj.init2(world=self, limit_map=limit_map, **kwargs)
 
         self.km_model.register_on_model_changed(Path(name), obj.reset_cache)
         self.km_model.register_on_model_changed(Path(name), self.init_fast_fks)
@@ -346,7 +347,7 @@ class World(object):
         # self.km_model.dispatch_events()
 
     def reset_pb_subworld(self):
-        self.pb_suboworld = self.km_model.get_active_geometry(self.km_model._symbol_co_map.keys())
+        self.pb_subworld = self.km_model.get_active_geometry(self.km_model._symbol_co_map.keys())
 
     @memoize
     def get_split_chain(self, root_path, tip_path, joints=True, links=True, fixed=True):
@@ -426,26 +427,11 @@ class World(object):
         # FIXME there is some reference fuckup going on, but i don't know where; deepcopy is just a quick fix
         return deepcopy(fk)
 
-    def get_robot_fk_expression(self, root_link, tip_link):
-        """
-        :type root_link: str
-        :type tip_link: str
-        :return: 4d matrix describing the transformation from root_link to tip_link
-        :rtype: spw.Matrix
-        """
-        root_path = self.get_link_path(self._robot_name, root_link)
-        if root_path in self.attached_objects:
-            root_path = self.attached_objects[root_path]
-        tip_path = self.get_link_path(self._robot_name, tip_link)
-        if tip_path in self.attached_objects:
-            tip_path = self.attached_objects[tip_path]
-        return self.get_fk_expression(root_path, tip_path)
-
     def get_fk_pose(self, root_path, tip_path):
         # try:
         homo_m = self.get_fk_np(root_path, tip_path)
         p = PoseStamped()
-        p.header.frame_id = root_path
+        p.header.frame_id = root_path[-1]
         p.pose = homo_matrix_to_pose(homo_m)
         # except Exception as e:
         #     traceback.print_exc()
@@ -505,31 +491,17 @@ class World(object):
 
         self._fks = KeyDefaultDict(f)
 
-    def get_robot_fk_pose(self, root_link, tip_link):
-        root_path = self.get_link_path(self._robot_name, root_link)
-        if root_path in self.attached_objects:
-            root_path = self.attached_objects[root_path]
-        tip_path = self.get_link_path(self._robot_name, tip_link)
-        if tip_path in self.attached_objects:
-            tip_path = self.attached_objects[tip_path]
-        return self.get_fk_pose(root_path, tip_path)
-
-    def get_robot_fk_np(self, root_link, tip_link):
-        root_path = self.get_link_path(self._robot_name, root_link)
-        if root_path in self.attached_objects:
-            root_path = self.attached_objects[root_path]
-        tip_path = self.get_link_path(self._robot_name, tip_link)
-        if tip_path in self.attached_objects:
-            tip_path = self.attached_objects[tip_path]
-        return self.get_fk_np(root_path, tip_path)
-
     def get_link_path(self, object_name, link_name):
         """
         :type object_name: str
         :type link_name: str
         :rtype: Path
         """
-        return Path(object_name) + ('links', link_name)
+        path = Path(object_name) + ('links', link_name)
+        if object_name == self._robot_name:
+            if path in self.attached_objects:
+                return self.attached_objects[path]
+        return path
 
     def get_joint_path(self, object_name, link_name):
         return Path(object_name) + ('joints', link_name)
@@ -557,6 +529,11 @@ class World(object):
 
         self.km_model.apply_operation('connect {} {}'.format(parent_path, child_path),
                                       CreateURDFFrameConnection(joint_path, parent_path, child_path))
+        self.km_model.apply_operation('attach {} to {}'.format(child_path, parent_path),
+                                      ExecFunction(Path([self._robot_name, 'attached_objects']),
+                                                   lambda attached_objects, new_object: attached_objects.union({new_object}),
+                                                   Path([self._robot_name, 'attached_objects']),
+                                                   str(name)))
         self.reset_cache()
         self.get_object(name).base_pose = Pose(orientation=Quaternion(w=1))
         # self.km_model.clean_structure()
@@ -576,7 +553,7 @@ class World(object):
         parent_path = o.get_parent_path_of_joint(joint_name)
         child_path = o.get_child_path_of_joint(joint_name)
         try:
-            # if joint_name not in self.robot.get_joint_names():
+            self.km_model.remove_operation('attach {} to {}'.format(child_path, parent_path))
             self.km_model.remove_operation('connect {} {}'.format(parent_path, child_path))
             self.km_model.remove_operation('create {}'.format(joint_path))
         except Exception as e:

@@ -1,17 +1,12 @@
 from __future__ import division
-from itertools import chain
 
-import numpy as np
-import urdf_parser_py.urdf as up
-from geometry_msgs.msg import Pose, Vector3, Quaternion
+from geometry_msgs.msg import Pose, Quaternion
 from std_msgs.msg import ColorRGBA
-from tf.transformations import euler_from_quaternion, quaternion_from_euler
+from tf.transformations import quaternion_from_euler
 from visualization_msgs.msg import Marker
 
-from giskardpy.exceptions import DuplicateNameException, UnknownBodyException
-from giskardpy.utils import cube_volume, cube_surface, sphere_volume, cylinder_volume, cylinder_surface, \
-    memoize
 import kineverse.gradients.gradient_math as gm
+from giskardpy.utils import cube_volume, cube_surface, sphere_volume, cylinder_volume, memoize
 from kineverse.model.geometry_model import ArticulatedObject, GEOM_TYPE_MESH, GEOM_TYPE_BOX, GEOM_TYPE_CYLINDER, \
     GEOM_TYPE_SPHERE
 from kineverse.model.paths import Path
@@ -48,7 +43,19 @@ LIMITED_JOINTS = [PRISMATIC_JOINT, REVOLUTE_JOINT]
 
 class URDFObject(ArticulatedObject):
 
-    def init2(self, limit_map=None, *args, **kwargs):
+    def __init__(self, name):
+        super(URDFObject, self).__init__(name)
+        self.attached_objects = set()
+
+    def init2(self, world=None, limit_map=None, *args, **kwargs):
+        """
+        :type world: giskardpy.world.World
+        :type limit_map:  dict
+        :type args: list
+        :type kwargs: dict
+        :return:
+        """
+        self._world = world
         self._link_to_marker = {}
         if limit_map is not None:
             self._limits = limit_map
@@ -69,9 +76,6 @@ class URDFObject(ArticulatedObject):
         """
         return self.name
 
-    def get_urdf_robot(self):
-        return self._urdf_robot
-
     # JOINT FUNCTIONS
 
     @memoize
@@ -79,7 +83,8 @@ class URDFObject(ArticulatedObject):
         """
         :rtype: list
         """
-        return self.joints.keys()
+        return sum([self._world.get_object(object_name).get_joint_names() for object_name in self.attached_objects],
+                   [joint_name for joint_name in self.joints.keys()])
 
     @memoize
     def get_split_chain(self, root, tip, joints=True, links=True, fixed=True):
@@ -298,21 +303,12 @@ class URDFObject(ArticulatedObject):
     # LINK FUNCTIONS
 
     @memoize
-    def get_link_names_from_chain(self, root_link, tip_link):
-        """
-        :type root_link: str
-        :type tip_link: str
-        :return: list of all links in chain excluding root_link, including tip_link
-        :rtype: list
-        """
-        return self._urdf_robot.get_chain(root_link, tip_link, False, True, False)
-
-    @memoize
     def get_link_names(self):
         """
         :rtype: dict
         """
-        return self.links.keys()
+        return sum([self._world.get_object(object_name).get_link_names() for object_name in self.attached_objects],
+                   [link_name for link_name in self.links.keys()])
 
     @memoize
     def get_sub_tree_link_names_with_collision(self, root_joint):
@@ -367,8 +363,10 @@ class URDFObject(ArticulatedObject):
     def get_joint(self, joint_name):
         try:
             return self.joints[joint_name]
-        except:
-            pass
+        except KeyError:
+            return self.check_attachments(self.get_joint,
+                                          u'joint {} not present in {}'.format(joint_name, self.get_name()),
+                                          joint_name=joint_name)
 
     @memoize
     def get_link(self, link_name):
@@ -377,7 +375,12 @@ class URDFObject(ArticulatedObject):
         :return:
         :rtype: kineverse.model.geometry_model.RigidBody
         """
-        return self.links[link_name]
+        try:
+            return self.links[link_name]
+        except KeyError:
+            return self.check_attachments(self.get_link,
+                                          u'link {} not present in {}'.format(link_name, self.get_name()),
+                                          link_name=link_name)
 
     def split_at_link(self, link_name):
         pass
@@ -404,25 +407,26 @@ class URDFObject(ArticulatedObject):
                                     geo[0].scale[1],
                                     geo[0].scale[2]) > surface_threshold
             if geo[0].type == u'sphere':
-                return sphere_volume(geo[0].scale[0]/2) > volume_threshold or \
-                       sphere_volume(geo[0].scale[0]/2) > surface_threshold
+                return sphere_volume(geo[0].scale[0] / 2) > volume_threshold or \
+                       sphere_volume(geo[0].scale[0] / 2) > surface_threshold
             if geo[0].type == u'cylinder':
-                return cylinder_volume(geo[0].scale[0]/2,
+                return cylinder_volume(geo[0].scale[0] / 2,
                                        geo[0].scale[2]) > volume_threshold or \
-                       cylinder_volume(geo[0].scale[0]/2,
+                       cylinder_volume(geo[0].scale[0] / 2,
                                        geo[0].scale[2]) > surface_threshold
             if geo[0].type == u'mesh':
                 return True
         return False
 
-    def get_urdf_str(self):
-        return self._urdf_robot.to_xml_string()
-
     @memoize
     def get_root(self):
         for link_name in self.get_link_names():
-            parent = self.get_parent_link_of_link(link_name)
+            try:
+                parent = self.get_parent_link_of_link(link_name)
+            except KeyError:
+                return link_name
             if parent not in self.get_link_names():
+                # TODO is this dead code?
                 return link_name
 
     @memoize
@@ -561,15 +565,13 @@ class URDFObject(ArticulatedObject):
 
     @memoize
     def get_parent_link_of_link(self, link_name):
-        if link_name in self.get_link_names():
-            link = self.get_link(link_name)
-            parent = Path(link.parent)[-1]
-            if parent in self.links:
-                return parent
+        link = self.get_link(link_name)
+        parent = Path(link.parent)[-1]
+        if parent in self.links:
+            return parent
 
     @memoize
     def get_movable_parent_joint(self, link_name):
-        # TODO add tests
         joint = self.get_parent_joint_of_link(link_name)
         while self.is_joint_fixed(joint):
             joint = self.get_parent_joint_of_joint(joint)
@@ -606,9 +608,8 @@ class URDFObject(ArticulatedObject):
         return self.get_parent_path_of_joint(joint_name)[-1]
 
     def get_parent_path_of_joint(self, joint_name):
-        if joint_name in self.get_joint_names():
-            joint = self.get_joint(joint_name)
-            return Path(joint.parent)
+        joint = self.get_joint(joint_name)
+        return Path(joint.parent)
 
     @memoize
     def get_child_link_of_joint(self, joint_name):
@@ -616,9 +617,17 @@ class URDFObject(ArticulatedObject):
 
     @memoize
     def get_child_path_of_joint(self, joint_name):
-        if joint_name in self.get_joint_names():
-            joint = self.get_joint(joint_name)
-            return Path(joint.child)
+        joint = self.get_joint(joint_name)
+        return Path(joint.child)
+
+    def check_attachments(self, f, error_msg, **kwargs):
+        for object_name in self.attached_objects:
+            try:
+                obj = self._world.get_object(object_name)
+                return getattr(obj, f.im_func.func_name)(**kwargs)
+            except KeyError:
+                pass
+        raise KeyError(error_msg)
 
     @memoize
     def are_linked(self, link_a, link_b):
@@ -627,20 +636,13 @@ class URDFObject(ArticulatedObject):
 
     @memoize
     def get_controllable_joints(self):
+        # TODO test me pls
         return [joint_name for joint_name in self.get_joint_names() if self.is_joint_controllable(joint_name)]
 
-    def __eq__(self, o):
-        """
-        :type o: URDFObject
-        :rtype: bool
-        """
-        if isinstance(o, URDFObject):
-            return o.get_urdf_str() == self.get_urdf_str()
-        return False
 
     @memoize
     def has_link_visuals(self, link_name):
-        visual = self.links[link_name].geometry
+        visual = self.get_link(link_name).geometry
         return visual is not None
 
     def get_leaves(self):
@@ -697,7 +699,7 @@ class URDFObject(ArticulatedObject):
     def link_as_marker(self, link_name):
         if link_name not in self._link_to_marker:
             marker = Marker()
-            geometry = self.links[link_name].geometry.values()[0]
+            geometry = self.get_link(link_name).geometry.values()[0]
 
             if geometry.type == GEOM_TYPE_MESH:
                 marker.type = Marker.MESH_RESOURCE
@@ -741,3 +743,35 @@ class URDFObject(ArticulatedObject):
             marker.scale.z *= 0.99
             self._link_to_marker[link_name] = marker
         return self._link_to_marker[link_name]
+
+    def get_link_path(self, link_name):
+        """
+        :type object_name: str
+        :type link_name: str
+        :rtype: Path
+        """
+        if link_name in self.links:
+            path = Path(self.get_name()) + ('links', link_name)
+            return path
+        if link_name in self.attached_objects:
+            obj = self._world.get_object(link_name)
+            return obj.get_link_path(obj.get_root())
+        for object_name in self.attached_objects:
+            try:
+                obj = self._world.get_object(object_name)
+                return obj.get_link_path(link_name)
+            except KeyError:
+                pass
+        raise KeyError(u'link {} is not present in object {}'.format(link_name, self.get_name()))
+
+    def get_joint_path(self, joint_name):
+        if joint_name in self.joints:
+            path = Path(self.get_name()) + ('joints', joint_name)
+            return path
+        for object_name in self.attached_objects:
+            try:
+                obj = self._world.get_object(object_name)
+                return obj.get_joint_path(obj.get_root())
+            except KeyError:
+                pass
+        raise KeyError(u'joint {} is not present in object {}'.format(joint_name, self.get_name()))

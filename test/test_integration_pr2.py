@@ -1023,8 +1023,14 @@ class TestCartGoals(object):
 
 class TestCollisionAvoidanceGoals(object):
     def test_open_drawer(self, kitchen_setup):
-        self.open_drawer(kitchen_setup, kitchen_setup.l_tip, u'iai_kitchen/sink_area_left_middle_drawer_handle',
-                         u'sink_area_left_middle_drawer_main_joint')
+        try:
+            self.open_drawer(kitchen_setup, kitchen_setup.l_tip, u'iai_kitchen/sink_area_left_middle_drawer_handle',
+                             u'sink_area_left_middle_drawer_main_joint')
+        except:
+            pass
+        kitchen_setup.km_visualizer.begin_draw_cycle(u'kitchen')
+        kitchen_setup.km_visualizer.draw_world(u'kitchen', kitchen_setup.get_world().pb_subworld)
+        kitchen_setup.km_visualizer.render(u'kitchen')
 
     def test_add_box(self, zero_pose):
         """
@@ -1094,6 +1100,13 @@ class TestCollisionAvoidanceGoals(object):
         :type zero_pose: PR2
         """
         pocky = u'pocky'
+        zero_pose.attach_box(pocky, [0.1, 0.02, 0.02], zero_pose.r_tip, [0.05, 0, 0])
+
+    def test_attach_box_http(self, zero_pose):
+        """
+        :type zero_pose: PR2
+        """
+        pocky = u'http://pocky'
         zero_pose.attach_box(pocky, [0.1, 0.02, 0.02], zero_pose.r_tip, [0.05, 0, 0])
 
     def test_attach_box_as_eef(self, zero_pose):

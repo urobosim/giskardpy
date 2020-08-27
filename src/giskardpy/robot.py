@@ -18,15 +18,15 @@ else:
     Backend = WorldObject
 
 class Robot(Backend):
-    def init2(self, base_pose=None, controlled_joints=None, path_to_data_folder=u'', *args, **kwargs):
-        """
-        :param urdf:
-        :type urdf: str
-        :param joints_to_symbols_map: maps urdfs joint names to symbols
-        :type joints_to_symbols_map: dict
-        :param joint_vel_limit: all velocity limits which are undefined or higher than this will be set to this
-        :type joint_vel_limit: Symbol
-        """
+    # def init2(self, base_pose=None, controlled_joints=None, path_to_data_folder=u'', *args, **kwargs):
+    #     """
+    #     :param urdf:
+    #     :type urdf: str
+    #     :param joints_to_symbols_map: maps urdfs joint names to symbols
+    #     :type joints_to_symbols_map: dict
+    #     :param joint_vel_limit: all velocity limits which are undefined or higher than this will be set to this
+    #     :type joint_vel_limit: Symbol
+    #     """
         # self._fk_expressions = {}
         # self._fks = {}
         # self._evaluated_fks = {}
@@ -38,7 +38,7 @@ class Robot(Backend):
         # self._joint_acc_linear_limit = defaultdict(lambda: 100)  # no acceleration limit per default
         # self._joint_acc_angular_limit = defaultdict(lambda: 100)  # no acceleration limit per default
         # self._joint_weights = defaultdict(lambda: 0)
-        super(Robot, self).init2(base_pose, controlled_joints, path_to_data_folder, *args, **kwargs)
+        # super(Robot, self).init2(base_pose, controlled_joints, path_to_data_folder, *args, **kwargs)
         # self.reinitialize()
 
     # @property
@@ -116,8 +116,8 @@ class Robot(Backend):
         # self.reinitialize()
 
     def update_self_collision_matrix(self, added_links=None, removed_links=None):
-        # pass
-        super(Robot, self).update_self_collision_matrix(added_links, removed_links)
+        pass
+        # super(Robot, self).update_self_collision_matrix(added_links, removed_links)
 
 
     def get_to_parent_frame(self, link_name):
@@ -239,3 +239,4 @@ class Robot(Backend):
                 getattr(self, method_name).memo.clear()
             except:
                 pass
+

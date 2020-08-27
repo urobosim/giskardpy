@@ -40,7 +40,7 @@ class GiskardWrapper(object):
         rospy.sleep(.3)
 
     def get_robot_name(self):
-        return self.robot_urdf.name
+        return u'robot'
 
     def get_root(self):
         return self.robot_urdf.get_root()
