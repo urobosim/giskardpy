@@ -1093,14 +1093,14 @@ class TestCollisionAvoidanceGoals(object):
         """
         :type zero_pose: PR2
         """
-        pocky = u'http://muh#pocky'
+        pocky = u'pocky'
         zero_pose.attach_box(pocky, [0.1, 0.02, 0.02], zero_pose.r_tip, [0.05, 0, 0])
 
     def test_attach_box_as_eef(self, zero_pose):
         """
         :type zero_pose: PR2
         """
-        pocky = u'http://muh#pocky'
+        pocky = u'pocky'
         zero_pose.attach_box(pocky, [0.1, 0.02, 0.02], zero_pose.r_tip, [0.05, 0, 0], [1, 0, 0, 0])
         p = PoseStamped()
         p.header.frame_id = zero_pose.r_tip
@@ -1121,7 +1121,7 @@ class TestCollisionAvoidanceGoals(object):
         """
         :type zero_pose: PR2
         """
-        pocky = u'http://muh#pocky'
+        pocky = u'pocky'
         zero_pose.attach_box(pocky, [0.1, 0.02, 0.02], zero_pose.r_tip, [0.05, 0, 0])
         zero_pose.detach_object(pocky)
         zero_pose.remove_object(pocky)
@@ -1130,7 +1130,7 @@ class TestCollisionAvoidanceGoals(object):
         """
         :type zero_pose: PR2
         """
-        pocky = u'http://muh#pocky'
+        pocky = u'pocky'
         zero_pose.attach_box(pocky, [0.1, 0.02, 0.02], zero_pose.r_tip, [0.05, 0, 0])
         zero_pose.remove_object(pocky)
 
@@ -1153,7 +1153,7 @@ class TestCollisionAvoidanceGoals(object):
         """
         :type zero_pose: PR2
         """
-        pocky = u'http://muh#pocky'
+        pocky = u'pocky'
         old_p = PoseStamped()
         old_p.header.frame_id = zero_pose.r_tip
         old_p.pose.position = Point(0.05, 0, 0)
@@ -1177,7 +1177,7 @@ class TestCollisionAvoidanceGoals(object):
         zero_pose.detach_object(pocky)
 
     def test_attach_detach_twice(self, zero_pose):
-        pocky = u'http://muh#pocky'
+        pocky = u'pocky'
         zero_pose.attach_box(pocky, [0.1, 0.02, 0.02], zero_pose.r_tip, [0.05, 0, 0], [1, 0, 0, 0])
         p = PoseStamped()
         p.header.frame_id = zero_pose.r_tip
@@ -1209,7 +1209,7 @@ class TestCollisionAvoidanceGoals(object):
         """
         :type zero_pose: PR2
         """
-        pocky = u'http://muh#pocky'
+        pocky = u'pocky'
         zero_pose.attach_box(pocky, [0.1, 0.02, 0.02], u'', [0.05, 0, 0],
                              expected_response=UpdateWorldResponse.MISSING_BODY_ERROR)
 
@@ -1918,7 +1918,7 @@ class TestCollisionAvoidanceGoals(object):
         """
         :type box_setup: PR2
         """
-        pocky = u'http://muh#pocky'
+        pocky = u'pocky'
         box_setup.attach_box(pocky, [0.1, 0.02, 0.02], box_setup.r_tip, [0.05, 0, 0])
 
         ces = []
