@@ -43,6 +43,7 @@ class CollisionChecker(GiskardBehavior):
                                                                                      self.get_god_map().get_data(
                                                                                          identifier.distance_thresholds))
         self.get_world().reset_pb_subworld()
+        self.get_world().query = None
         super(CollisionChecker, self).initialise()
 
     def update(self):

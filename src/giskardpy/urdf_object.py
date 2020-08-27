@@ -764,6 +764,18 @@ class URDFObject(ArticulatedObject):
                 pass
         raise KeyError(u'link {} is not present in object {}'.format(link_name, self.get_name()))
 
+    @memoize
+    def get_link_path_str(self, link_name):
+        return str(self.get_link_path(link_name))
+
+    @memoize
+    def get_link_paths(self):
+        return {self.get_link_path(link_name) for link_name in self.get_link_names()}
+
+    @memoize
+    def get_link_path_strs(self):
+        return {str(self.get_link_path(link_name)) for link_name in self.get_link_names()}
+
     def get_joint_path(self, joint_name):
         if joint_name in self.joints:
             path = Path(self.get_name()) + ('joints', joint_name)

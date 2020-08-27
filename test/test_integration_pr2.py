@@ -1032,15 +1032,15 @@ class TestCollisionAvoidanceGoals(object):
         kitchen_setup.km_visualizer.draw_world(u'kitchen', kitchen_setup.get_world().pb_subworld)
         kitchen_setup.km_visualizer.render(u'kitchen')
 
-    def test_open_drawer2(self, kitchen_setup):
-        try:
-            self.open_drawer(kitchen_setup, kitchen_setup.l_tip, u'iai_kitchen/sink_area_trash_drawer_handle',
-                             u'sink_area_trash_drawer_main_joint')
-        except:
-            pass
-        kitchen_setup.km_visualizer.begin_draw_cycle(u'kitchen')
-        kitchen_setup.km_visualizer.draw_world(u'kitchen', kitchen_setup.get_world().pb_subworld)
-        kitchen_setup.km_visualizer.render(u'kitchen')
+    # def test_open_drawer2(self, kitchen_setup):
+    #     try:
+    #         self.open_drawer(kitchen_setup, kitchen_setup.l_tip, u'iai_kitchen/sink_area_trash_drawer_handle',
+    #                          u'sink_area_trash_drawer_main_joint')
+    #     except:
+    #         pass
+    #     kitchen_setup.km_visualizer.begin_draw_cycle(u'kitchen')
+    #     kitchen_setup.km_visualizer.draw_world(u'kitchen', kitchen_setup.get_world().pb_subworld)
+    #     kitchen_setup.km_visualizer.render(u'kitchen')
 
     def test_add_box(self, zero_pose):
         """

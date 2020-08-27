@@ -257,6 +257,7 @@ class WorldObject(URDFObject):
         self.update_self_collision_matrix(added_links=set(combinations(self.get_link_names_with_collision(), 2)))
 
     def update_self_collision_matrix(self, added_links=None, removed_links=None):
+        return
         if not self.load_self_collision_matrix(self.path_to_data_folder):
             if added_links is None:
                 added_links = set()

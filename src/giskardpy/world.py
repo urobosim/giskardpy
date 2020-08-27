@@ -1,13 +1,15 @@
 import itertools
+from collections import defaultdict
 from copy import deepcopy
-import kineverse.gradients.gradient_math as gm
+
+import betterpybullet as pb
 import urdf_parser_py.urdf as up
 from betterpybullet import ClosestPair
-from betterpybullet import CollisionObject
 from betterpybullet import ContactPoint
 from geometry_msgs.msg import PoseStamped, Pose, Quaternion
 from giskard_msgs.msg import CollisionEntry, WorldBody
-import betterpybullet as pb
+
+import kineverse.gradients.gradient_math as gm
 from giskardpy import cas_wrapper as w
 from giskardpy import identifier
 from giskardpy import logging
@@ -39,6 +41,7 @@ class World(object):
         if path_to_data_folder is None:
             path_to_data_folder = u''
         self._path_to_data_folder = path_to_data_folder
+        self.query = None
 
     # General ----------------------------------------------------------------------------------------------------------
 
@@ -58,6 +61,13 @@ class World(object):
         """
         self.soft_reset()
         self.remove_robot()
+
+    def sync_bullet_world(self):
+        symbols = self.pb_subworld.pose_generator.str_params
+        data = dict(zip(symbols, self.god_map.get_values(symbols)))
+
+        pb.batch_set_transforms(self.pb_subworld.collision_objects, self.pb_subworld.pose_generator(**data))
+        self.pb_subworld._state.update(data)
 
     def getClosestPoints(self, body_a, body_b, distance, link_a, link_b=None):
         obj_a = self.pb_subworld.named_objects[str(self.get_link_path(body_a, link_a))]
@@ -87,58 +97,69 @@ class World(object):
                         result.append(c)
         return result
 
-    def sync_bullet_world(self):
-        symbols = self.pb_subworld.pose_generator.str_params
-        data = dict(zip(symbols, self.god_map.get_values(symbols)))
+    def init_asdf(self, cut_off_distances):
+        self.query = defaultdict(float)
+        self.reverse_map_a = {}
+        self.reverse_map_b = {}
+        self.relevant_links = defaultdict(set)
 
-        pb.batch_set_transforms(self.pb_subworld.collision_objects, self.pb_subworld.pose_generator(**data))
-        self.pb_subworld._state.update(data)
+        for (robot_link, body_b, link_b), distance in cut_off_distances.items():
+            obj_a = self.pb_subworld.named_objects[str(self.robot.get_link_path(robot_link))]
+            self.reverse_map_a[obj_a] = robot_link
+            self.query[obj_a] = max(self.query[obj_a], distance * 3)
+            if link_b == CollisionEntry.ALL:
+                obj_bs = set()
+                for path_str in self.get_object(body_b).get_link_path_strs():
+                    if path_str in self.pb_subworld.named_objects:
+                        obj_b = self.pb_subworld.named_objects[path_str]
+                        obj_bs.add(obj_b)
+                        self.reverse_map_b[obj_b] = (body_b, link_b)
+                self.relevant_links[obj_a] |= obj_bs
+            else:
+                path_str = self.get_object(body_b).get_link_path(link_b)
+                if path_str in self.pb_subworld.named_objects:
+                    obj_b = self.pb_subworld.named_objects[path_str]
+                    self.reverse_map_b[obj_b] = (body_b, link_b)
+                    self.relevant_links[obj_a].add(obj_b)
 
+    # @profile
     def check_collisions(self, cut_off_distances):
         self.sync_bullet_world()
         collisions = Collisions(self)
-        robot_name = self.robot.get_name()
-        for (robot_link, body_b, link_b), distance in cut_off_distances.items():
-            # if robot_name == body_b:
-            #     object_id = self.robot.get_pybullet_id()
-            #     link_b_id = self.robot.get_pybullet_link_id(link_b)
-            # else:
-            #     object_id = self.__get_pybullet_object_id(body_b)
-            #     if link_b != CollisionEntry.ALL:
-            #         link_b_id = self.get_object(body_b).get_pybullet_link_id(link_b)
+        # robot_name = self.robot.get_name()
+        if self.query is None:
+            self.init_asdf(cut_off_distances)
 
-            # robot_link_id = self.robot.get_pybullet_link_id(robot_link)
-            if body_b == robot_name or link_b != CollisionEntry.ALL:
-                for collision in self.getClosestPoints(self._robot_name, body_b,
-                                                       distance * 3,
-                                                       robot_link, link_b):
-                    collisions.add(collision)
-            else:
-                for collision in self.getClosestPoints(self._robot_name, body_b,
-                                                       distance * 3,
-                                                       robot_link):
-                    collisions.add(collision)
-            # if len(contacts) > 0:
-            #     try:
-            #         body_b_object = self.get_object(body_b)
-            #     except KeyError:
-            #         body_b_object = self.robot
-            #     for contact in contacts:  # type: ContactInfo
-            #         # if link_b == CollisionEntry.ALL:
-            #         #     link_b = body_b_object.pybullet_link_id_to_name(contact.link_index_b)
-            #         # if self.__should_flip_collision(contact.position_on_a, robot_link):
-            #         #     flipped_normal = [-contact.contact_normal_on_b[0],
-            #         #                       -contact.contact_normal_on_b[1],
-            #         #                       -contact.contact_normal_on_b[2]]
-            #         #     collision = Collision(robot_link, body_b, link_b,
-            #         #                           contact.position_on_b, contact.position_on_a,
-            #         #                           flipped_normal, contact.contact_distance)
-            #         #     collisions.add(collision)
-            #         # else:
-            #             # collision = Collision(robot_link, body_b, link_b,
-            #             #                       contact.position_on_a, contact.position_on_b,
-            #             #                       contact.contact_normal_on_b, contact.contact_distance)
-            #             collisions.add(collision)
+        # obj_a -> [ClosestPair]
+        query_result = self.pb_subworld.closest_distances(self.query)
+        for obj_a, contacts in query_result.items():
+            relevant_bs = self.relevant_links[obj_a]
+            link_a = self.reverse_map_a[obj_a]
+            map_T_a = obj_a.transform
+            for contact in contacts:  # type: ClosestPair
+                if contact.obj_b in relevant_bs:
+                    map_T_b = contact.obj_b.transform
+                    body_b, link_b = self.reverse_map_b[contact.obj_b]
+                    for p in contact.points:  # type: ContactPoint
+                        c = Collision(link_a, body_b, link_b, p.point_a, p.point_b, p.normal_world_b,
+                                      p.distance)
+                        c.set_position_on_a_in_map(map_T_a * p.point_a)
+                        c.set_position_on_b_in_map(map_T_b * p.point_b)
+                        c.set_contact_normal_in_b(map_T_b.inv() * p.normal_world_b)
+                        collisions.add(c)
+
+
+        # for (robot_link, body_b, link_b), distance in cut_off_distances.items():
+        #     if body_b == robot_name or link_b != CollisionEntry.ALL:
+        #         for collision in self.getClosestPoints(self._robot_name, body_b,
+        #                                                distance * 3,
+        #                                                robot_link, link_b):
+        #             collisions.add(collision)
+        #     else:
+        #         for collision in self.getClosestPoints(self._robot_name, body_b,
+        #                                                distance * 3,
+        #                                                robot_link):
+        #             collisions.add(collision)
         return collisions
 
     # Objects ----------------------------------------------------------------------------------------------------------
@@ -540,7 +561,8 @@ class World(object):
                                       CreateURDFFrameConnection(joint_path, parent_path, child_path))
         self.km_model.apply_operation('attach {} to {}'.format(child_path, parent_path),
                                       ExecFunction(Path([self._robot_name, 'attached_objects']),
-                                                   lambda attached_objects, new_object: attached_objects.union({new_object}),
+                                                   lambda attached_objects, new_object: attached_objects.union(
+                                                       {new_object}),
                                                    Path([self._robot_name, 'attached_objects']),
                                                    str(name)))
         self.reset_cache()
