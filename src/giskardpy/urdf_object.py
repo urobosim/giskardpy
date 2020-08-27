@@ -51,9 +51,9 @@ class URDFObject(ArticulatedObject):
     def init2(self, limit_map=None, *args, **kwargs):
         self._link_to_marker = {}
         if limit_map is not None:
-            self.limits = limit_map
+            self._limits = limit_map
         else:
-            self.limits = {}
+            self._limits = {}
 
     def reset_cache(self, *args, **kwargs):
         for method_name in dir(self):
@@ -183,7 +183,7 @@ class URDFObject(ArticulatedObject):
         """
         # joint = self.get_joint(joint_name)
         try:
-            return (self.limits[joint_name][u'position'][u'lower'], self.limits[joint_name][u'position'][u'upper'])
+            return (self._limits[joint_name][u'position'][u'lower'], self._limits[joint_name][u'position'][u'upper'])
         except KeyError:
             return (None, None)
 
@@ -192,7 +192,7 @@ class URDFObject(ArticulatedObject):
 
     @memoize
     def get_joint_velocity_limit(self, joint_name):
-        return self.limits[joint_name][u'velocity']
+        return self._limits[joint_name][u'velocity']
 
     @memoize
     def get_joint_axis(self, joint_name):

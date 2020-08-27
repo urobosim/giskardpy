@@ -78,7 +78,7 @@ class WorldObject(URDFObject):
                                        value.orientation.w])
         self._base_pose = value
         self._base_pose.orientation = Quaternion(*orientation_vector / np.linalg.norm(orientation_vector))
-        self.root_T_map = msg_to_kdl(self._base_pose).Inverse()
+        self._root_T_map = msg_to_kdl(self._base_pose).Inverse()
 
     @property
     def controlled_joints(self):

@@ -141,7 +141,7 @@ class Collisions(object):
         :type world: giskardpy.world.World
         """
         self.world = world
-        self.root_T_map = to_np(self.world.robot.root_T_map)
+        self.root_T_map = to_np(self.world.robot._root_T_map)
         self.robot_root = self.world.robot.get_root()
 
         def default_f():
