@@ -5,7 +5,7 @@ import urdf_parser_py.urdf as up
 from betterpybullet import ClosestPair
 from betterpybullet import CollisionObject
 from betterpybullet import ContactPoint
-from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import PoseStamped, Pose, Quaternion
 from giskard_msgs.msg import CollisionEntry, WorldBody
 import betterpybullet as pb
 from giskardpy import cas_wrapper as w
@@ -558,6 +558,7 @@ class World(object):
         self.km_model.apply_operation('connect {} {}'.format(parent_path, child_path),
                                       CreateURDFFrameConnection(joint_path, parent_path, child_path))
         self.reset_cache()
+        self.get_object(name).base_pose = Pose(orientation=Quaternion(w=1))
         # self.km_model.clean_structure()
         # self.km_model.dispatch_events()
         self._objects_names.remove(name)
