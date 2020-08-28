@@ -106,7 +106,7 @@ class WorldUpdatePlugin(GiskardBehavior):
         return res
 
     def get_attached_objects(self, req):
-        attached_objects = [x[-1] for x in self.get_world().attached_objects]
+        attached_objects = self.get_robot().attached_objects
         attachment_points = [self.get_robot().get_parent_link_of_joint(object) for object in attached_objects] # FIXME this feel fragile
         res = GetAttachedObjectsResponse()
         res.object_names = attached_objects

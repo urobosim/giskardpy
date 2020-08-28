@@ -1111,6 +1111,7 @@ class TestCollisionAvoidanceGoals(object):
         """
         pocky = u'pocky'
         zero_pose.attach_box(pocky, [0.1, 0.02, 0.02], zero_pose.r_tip, [0.05, 0, 0])
+        zero_pose.detach_object(pocky)
 
     def test_attach_box_http(self, zero_pose):
         """
@@ -1169,7 +1170,7 @@ class TestCollisionAvoidanceGoals(object):
         p.pose.orientation = Quaternion(0., 0., 0.47942554, 0.87758256)
         zero_pose.add_box(pocky, [0.1, 0.02, 0.02], pose=p)
         zero_pose.attach_existing(pocky, frame_id=tip)
-        relative_pose = zero_pose.get_world().get_robot_fk_pose(tip, pocky).pose
+        relative_pose = zero_pose.get_robot().get_fk_pose(tip, pocky).pose
         compare_poses(relative_pose, p.pose)
 
     def test_attach_existing_box2(self, zero_pose):
@@ -1205,11 +1206,11 @@ class TestCollisionAvoidanceGoals(object):
         p = PoseStamped()
         p.header.frame_id = zero_pose.r_tip
         p.pose.orientation.w = 1
-        zero_pose.set_cart_goal(p, pocky)
-        p = tf.transform_pose(zero_pose.default_root, p)
-        zero_pose.send_and_check_goal()
-        p2 = zero_pose.get_robot().get_fk_pose(zero_pose.default_root, pocky)
-        compare_poses(p2.pose, p.pose)
+        # zero_pose.set_cart_goal(p, pocky)
+        # p = tf.transform_pose(zero_pose.default_root, p)
+        # zero_pose.send_and_check_goal()
+        # p2 = zero_pose.get_robot().get_fk_pose(zero_pose.default_root, pocky)
+        # compare_poses(p2.pose, p.pose)
 
         zero_pose.clear_world()
 

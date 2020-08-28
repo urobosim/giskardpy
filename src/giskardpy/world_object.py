@@ -13,12 +13,13 @@ from giskardpy import logging, identifier
 from giskardpy.data_types import SingleJointState
 from giskardpy.tfwrapper import msg_to_kdl
 from giskardpy.urdf_object import URDFObject
+from kineverse.model.paths import Path
 
 
 class WorldObject(URDFObject):
     def init2(self, base_pose=None, controlled_joints=None, path_to_data_folder=u'',
                  calc_self_collision_matrix=True, ignored_pairs=None, added_pairs=None, *args, **kwargs):
-        self.path_to_data_folder = path_to_data_folder + u'collision_matrix/'
+        self._path_to_data_folder = path_to_data_folder + u'collision_matrix/'
         self.controlled_joints = controlled_joints
         if not ignored_pairs:
             self.ignored_pairs = set()
@@ -195,7 +196,7 @@ class WorldObject(URDFObject):
         return in_collision
 
     def in_collision(self, link_a, link_b, distance):
-        return len(self._world.getClosestPoints(self.get_name(), self.get_name(), distance, link_a, link_b)) > 0
+        return self._world.in_collision(self.get_name(), link_a, self.get_name(), link_b, distance)
 
     def get_zero_joint_state(self):
         # FIXME 0 might not be a valid joint value
@@ -256,9 +257,13 @@ class WorldObject(URDFObject):
     def init_self_collision_matrix(self):
         self.update_self_collision_matrix(added_links=set(combinations(self.get_link_names_with_collision(), 2)))
 
+    def get_hash(self):
+        history = self._world.km_model.get_history_of(Path(self.get_name()))
+        return hashlib.md5(str([x.tag for x in history])).hexdigest()
+
     def update_self_collision_matrix(self, added_links=None, removed_links=None):
-        return
-        if not self.load_self_collision_matrix(self.path_to_data_folder):
+        # return
+        if not self.load_self_collision_matrix(self._path_to_data_folder):
             if added_links is None:
                 added_links = set()
             if removed_links is None:
@@ -266,36 +271,34 @@ class WorldObject(URDFObject):
             self._self_collision_matrix = {x for x in self._self_collision_matrix if x[0] not in removed_links and
                                            x[1] not in removed_links}
             self._self_collision_matrix.update(self.calc_collision_matrix(added_links))
-            self.safe_self_collision_matrix(self.path_to_data_folder)
+            self.safe_self_collision_matrix(self._path_to_data_folder)
 
     def load_self_collision_matrix(self, path):
         """
         :rtype: bool
         """
-        # urdf_hash = hashlib.md5(self.get_urdf_str()).hexdigest()
-        # path = u'{}/{}/{}'.format(path, self.get_name(), urdf_hash)
-        # if os.path.isfile(path):
-        #     with open(path) as f:
-        #         self._self_collision_matrix = pickle.load(f)
-        #         logging.loginfo(u'loaded self collision matrix {}'.format(path))
-        #         return True
+        path = u'{}/{}/{}'.format(path, self.get_name(), self.get_hash())
+        if os.path.isfile(path):
+            with open(path) as f:
+                self._self_collision_matrix = pickle.load(f)
+                logging.loginfo(u'loaded self collision matrix {}'.format(path))
+                return True
         return False
 
     def safe_self_collision_matrix(self, path):
-        pass
-        # urdf_hash = hashlib.md5(self.get_urdf_str()).hexdigest()
-        # path = u'{}/{}/{}'.format(path, self.get_name(), urdf_hash)
-        # if not os.path.exists(os.path.dirname(path)):
-        #     try:
-        #         dir_name = os.path.dirname(path)
-        #         if dir_name != u'':
-        #             os.makedirs(dir_name)
-        #     except OSError as exc:  # Guard against race condition
-        #         if exc.errno != errno.EEXIST:
-        #             raise
-        # with open(path, u'w') as file:
-        #     logging.loginfo(u'saved self collision matrix {}'.format(path))
-        #     pickle.dump(self._self_collision_matrix, file)
+        # pass
+        path = u'{}/{}/{}'.format(path, self.get_name(), self.get_hash())
+        if not os.path.exists(os.path.dirname(path)):
+            try:
+                dir_name = os.path.dirname(path)
+                if dir_name != u'':
+                    os.makedirs(dir_name)
+            except OSError as exc:  # Guard against race condition
+                if exc.errno != errno.EEXIST:
+                    raise
+        with open(path, u'w') as file:
+            logging.loginfo(u'saved self collision matrix {}'.format(path))
+            pickle.dump(self._self_collision_matrix, file)
 
     def as_marker_msg(self, ns=u'', id=1):
         m = super(WorldObject, self).as_marker_msg(ns, id)

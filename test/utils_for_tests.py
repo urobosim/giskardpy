@@ -509,7 +509,7 @@ class GiskardTestWrapper(object):
         assert self.wrapper.clear_world().error_codes == UpdateWorldResponse.SUCCESS
         assert len(self.get_world().get_object_names()) == 0
         assert len(self.wrapper.get_object_names().object_names) == 0
-        # assert len(self.get_robot().get_attached_objects()) == 0
+        assert len(self.get_robot().attached_objects) == 0
         # assert self.get_world().has_object(u'plane')
 
     def remove_object(self, name, expected_response=UpdateWorldResponse.SUCCESS):

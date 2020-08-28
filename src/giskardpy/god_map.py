@@ -1,6 +1,6 @@
 import copy
 from copy import copy
-from multiprocessing import Lock
+from multiprocessing import Lock, RLock
 import kineverse.gradients.common_math as cm
 from giskardpy import cas_wrapper as w
 
@@ -73,7 +73,7 @@ class GodMap(object):
         self.expr_to_key = {}
         self.default_value = 0
         self.last_expr_values = {}
-        self.lock = Lock()
+        self.lock = RLock()
 
     def __copy__(self):
         god_map_copy = GodMap()

@@ -1,6 +1,7 @@
 import itertools
 from collections import defaultdict
 from copy import deepcopy
+from itertools import product
 
 import betterpybullet as pb
 import urdf_parser_py.urdf as up
@@ -62,7 +63,6 @@ class World(object):
         self.soft_reset()
         self.remove_robot()
 
-    @profile
     def sync_bullet_world(self):
         symbols = self.pb_subworld.pose_generator.str_params
         data = dict(zip(symbols, self.god_map.get_values(symbols)))
@@ -70,7 +70,14 @@ class World(object):
         pb.batch_set_transforms(self.pb_subworld.collision_objects, self.pb_subworld.pose_generator(**data))
         self.pb_subworld._state.update(data)
 
+    def in_collision(self, body_a, link_a, body_b, link_b, distance):
+        obj_a = self.pb_subworld.named_objects[str(self.get_link_path(body_a, link_a))]
+        obj_b = self.pb_subworld.named_objects[str(self.get_link_path(body_b, link_b))]
+        result = self.pb_subworld.world.get_distance(obj_a, obj_b, distance)
+        return len(result) > 0 and result[0].distance < distance
+
     def getClosestPoints(self, body_a, body_b, distance, link_a, link_b=None):
+
         obj_a = self.pb_subworld.named_objects[str(self.get_link_path(body_a, link_a))]
         if link_b is None:
             link_bs = self.get_object(body_b).links.keys()
@@ -119,7 +126,7 @@ class World(object):
                         self.flat_collision_matrix.append((robot_link, body_b, link_b, obj_a, obj_b, distance))
                 self.relevant_links[obj_a] |= obj_bs
             else:
-                path_str = self.get_object(body_b).get_link_path(link_b)
+                path_str = self.get_object(body_b).get_link_path_str(link_b)
                 if path_str in self.pb_subworld.named_objects:
                     obj_b = self.pb_subworld.named_objects[path_str]
                     self.reverse_map_b[obj_b] = (body_b, link_b)
@@ -152,35 +159,6 @@ class World(object):
                     c.set_contact_normal_in_b(map_T_b.inv() * p.normal_world_b)
                     collisions.add(c)
 
-        # obj_a -> [ClosestPair]
-        # query_result = self.pb_subworld.closest_distances(self.query)
-        # for obj_a, contacts in query_result.items():
-        #     relevant_bs = self.relevant_links[obj_a]
-        #     link_a = self.reverse_map_a[obj_a]
-        #     map_T_a = obj_a.transform
-        #     for contact in contacts:  # type: ClosestPair
-        #         if contact.obj_b in relevant_bs:
-        #             map_T_b = contact.obj_b.transform
-        #             body_b, link_b = self.reverse_map_b[contact.obj_b]
-        #             for p in contact.points:  # type: ContactPoint
-        #                 c = Collision(link_a, body_b, link_b, p.point_a, p.point_b, p.normal_world_b,
-        #                               p.distance)
-        #                 c.set_position_on_a_in_map(map_T_a * p.point_a)
-        #                 c.set_position_on_b_in_map(map_T_b * p.point_b)
-        #                 c.set_contact_normal_in_b(map_T_b.inv() * p.normal_world_b)
-        #                 collisions.add(c)
-
-        # for (robot_link, body_b, link_b), distance in cut_off_distances.items():
-        #     if body_b == robot_name or link_b != CollisionEntry.ALL:
-        #         for collision in self.getClosestPoints(self._robot_name, body_b,
-        #                                                distance * 3,
-        #                                                robot_link, link_b):
-        #             collisions.add(collision)
-        #     else:
-        #         for collision in self.getClosestPoints(self._robot_name, body_b,
-        #                                                distance * 3,
-        #                                                robot_link):
-        #             collisions.add(collision)
         return collisions
 
     # Objects ----------------------------------------------------------------------------------------------------------
@@ -334,7 +312,9 @@ class World(object):
             self.km_model.remove_operation(tagged_operation.tag)
 
     def remove_all_objects(self):
-        for object_name in self._objects_names:
+        for attach_object_name in self.robot.attached_objects:
+            self.detach(attach_object_name)
+        for object_name in self.get_object_names():
             # I'm not using remove object, because has object ignores hidden objects in pybullet world
             self.__remove_object(object_name)
             logging.loginfo(u'<-- removed object {} from world'.format(object_name))
@@ -562,7 +542,8 @@ class World(object):
         :param name: name of the existing object
         :type name: name
         """
-        object_root = self.get_object(name).get_root()
+        object_ = self.get_object(name)
+        object_root = object_.get_root()
 
         joint_path = self.get_joint_path(self._robot_name, name)
         parent_path = self.get_link_path(self._robot_name, link)
@@ -593,6 +574,8 @@ class World(object):
         self._objects_names.remove(name)
         self.attached_objects[self.get_link_path(self._robot_name, name)] = child_path
 
+        self.robot.update_self_collision_matrix(added_links=set(product(self.robot.get_links_with_collision(),
+                                                                  object_.get_links_with_collision())))
         logging.loginfo(u'--> attached object {} on link {}'.format(name, link))
 
     def detach(self, joint_name, from_obj=None):
@@ -615,10 +598,10 @@ class World(object):
         # self.km_model.clean_structure()
         # self.km_model.dispatch_events()
 
-        try:
-            del self.attached_objects[self.get_link_path(from_obj, o.get_name())]
-        except KeyError:
-            pass
+        # try:
+        #     o.attached_objects.remove(self.get_link_path(from_obj, o.get_name()))
+        # except KeyError:
+        #     pass
 
         self._objects_names.append(str(child_path[:-2]))
         # fixme remove pr2 arm
