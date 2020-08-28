@@ -1,3 +1,4 @@
+from copy import deepcopy
 from multiprocessing import Lock
 
 import rospy
@@ -38,7 +39,7 @@ class CollisionChecker(GiskardBehavior):
         return SetBoolResponse()
 
     def initialise(self):
-        collision_goals = self.get_god_map().get_data(identifier.collision_goal_identifier)
+        collision_goals = deepcopy(self.get_god_map().get_data(identifier.collision_goal_identifier))
         self.collision_matrix = self.get_world().collision_goals_to_collision_matrix(collision_goals,
                                                                                      self.get_god_map().get_data(
                                                                                          identifier.distance_thresholds))

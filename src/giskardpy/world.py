@@ -10,7 +10,6 @@ from betterpybullet import ContactPoint
 from geometry_msgs.msg import PoseStamped, Pose, Quaternion
 from giskard_msgs.msg import CollisionEntry, WorldBody
 
-import kineverse.gradients.gradient_math as gm
 from giskardpy import cas_wrapper as w
 from giskardpy import identifier
 from giskardpy import logging
@@ -178,13 +177,11 @@ class World(object):
         if self.km_model.has_data(name):
             raise DuplicateNameException(u'Something with name \'{}\' already exists'.format(name))
 
-        root_pose = PoseStampedInput(lambda path: Path(path).to_symbol(),
-                                     translation_prefix=Path(
-                                         [self.__prefix, u'km_model', u'data_tree', u'data_tree', name, u'base_pose',
-                                          u'position']),
-                                     rotation_prefix=Path(
-                                         [self.__prefix, u'km_model', u'data_tree', u'data_tree', name, u'base_pose',
-                                          u'orientation'])).get_frame()
+        root_pose = PoseStampedInput(self.god_map.to_symbol,
+                                     translation_prefix=[self.__prefix, u'km_model', u'data_tree', u'data_tree', name, u'base_pose',
+                                          u'position'],
+                                     rotation_prefix=[self.__prefix, u'km_model', u'data_tree', u'data_tree', name, u'base_pose',
+                                          u'orientation']).get_frame()
 
         limit_map = load_urdf(ks=self.km_model,
                               prefix=Path(str(name)),
@@ -543,7 +540,7 @@ class World(object):
             from_obj = self._robot_name
         elif from_obj != self._robot_name:
             raise UnsupportedOptionException(u'only detach from robot supported')
-        o = self.get_object(from_obj) # type:
+        o = self.get_object(from_obj)
         joint_path = self.get_joint_path(from_obj, joint_name)
         parent_path = o.get_parent_path_of_joint(joint_name)
         child_path = o.get_child_path_of_joint(joint_name)
@@ -561,8 +558,11 @@ class World(object):
 
         self.reset_cache()
         if child_name != self._robot_name:
+            o = self.get_object(from_obj)
             child_obj = self.get_object(child_name)
             child_obj.base_pose = o_in_w
+            logging.loginfo(u'<-- detached {} from link {}'.format(joint_name, parent_path[-1]))
+            o.update_self_collision_matrix(removed_links=[child_obj.get_link_names()])
 
         self._objects_names.append(str(child_path[:-2]))
         # fixme remove pr2 arm
@@ -736,22 +736,10 @@ class World(object):
             i += 1
         return collision_goals
 
-    def get_controlled_robot_links(self):
-        return self.get_controlled_object_links(self._robot_name)
-
-    def get_controlled_object_links(self, object_name):
-        obj = self.get_object(object_name)
-        symbols = set()
-        for link in obj.links.values():
-            symbols |= gm.free_symbols(link.to_parent)
-        links = set()
-        for link_path in self.km_model.get_active_geometry_raw(symbols):
-            links.add(Path(link_path)[-1])
-        return links
-
     def robot_related_stuff(self, collision_goals):
         i = 0
-        controlled_robot_links = self.get_controlled_robot_links()
+        # FIXME detached objects get returned by get controlled links
+        controlled_robot_links = self.robot.get_controlled_links()
         while i < len(collision_goals):
             collision_entry = collision_goals[i]
             if self.is_avoid_all_self_collision(collision_entry):

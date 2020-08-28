@@ -129,7 +129,7 @@ class WorldObject(URDFObject):
     # @memoize
     def get_joint_position_symbols(self):
         return set(self.get_god_map().to_symbol(identifier.joint_states + [joint_name, u'position']) for joint_name in
-            self.joint_state.keys())
+            self.get_controllable_joints())
 
     def calc_collision_matrix(self, link_combinations=None, d=0.05, d2=0.0, num_rnd_tries=2000):
         """

@@ -1123,11 +1123,11 @@ class TestCollisionAvoidanceGoals(object):
         p = PoseStamped()
         p.header.frame_id = zero_pose.r_tip
         p.pose.orientation.w = 1
-        zero_pose.set_cart_goal(p, pocky, zero_pose.default_root)
-        p = tf.transform_pose(zero_pose.default_root, p)
-        zero_pose.send_and_check_goal()
-        p2 = zero_pose.get_robot().get_fk_pose(zero_pose.default_root, pocky)
-        compare_poses(p2.pose, p.pose)
+        # zero_pose.set_cart_goal(p, pocky, zero_pose.default_root)
+        # p = tf.transform_pose(zero_pose.default_root, p)
+        # zero_pose.send_and_check_goal()
+        # p2 = zero_pose.get_robot().get_fk_pose(zero_pose.default_root, pocky)
+        # compare_poses(p2.pose, p.pose)
         zero_pose.detach_object(pocky)
         p = PoseStamped()
         p.header.frame_id = zero_pose.r_tip
@@ -1200,11 +1200,11 @@ class TestCollisionAvoidanceGoals(object):
         p = PoseStamped()
         p.header.frame_id = zero_pose.r_tip
         p.pose.orientation.w = 1
-        # zero_pose.set_cart_goal(p, pocky)
-        # p = tf.transform_pose(zero_pose.default_root, p)
-        # zero_pose.send_and_check_goal()
-        # p2 = zero_pose.get_robot().get_fk_pose(zero_pose.default_root, pocky)
-        # compare_poses(p2.pose, p.pose)
+        zero_pose.set_cart_goal(p, pocky)
+        p = tf.transform_pose(zero_pose.default_root, p)
+        zero_pose.send_and_check_goal()
+        p2 = zero_pose.get_robot().get_fk_pose(zero_pose.default_root, pocky)
+        compare_poses(p2.pose, p.pose)
 
         zero_pose.clear_world()
 

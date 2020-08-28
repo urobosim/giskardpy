@@ -128,6 +128,7 @@ def initialize_god_map():
     #                                  joint_velocity_linear_limit_symbols, joint_velocity_angular_limit_symbols,
     #                                  joint_acceleration_linear_limit_symbols, joint_acceleration_angular_limit_symbols)
     world.robot.init_self_collision_matrix()
+    god_map.register_symbols(world.robot.get_joint_position_symbols())
     return god_map
 
 # def init_km(god_map):

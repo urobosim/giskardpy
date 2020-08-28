@@ -264,9 +264,7 @@ class GoalToConstraints(GetGoal):
                 weight = weight * (1. / (upper)) ** 2
                 joint_constraints[joint_name] = JointConstraint(lower, upper, weight)
 
-        symbols.update(self.robot.get_joint_position_symbols())
-        for symbol in symbols:
-            self.get_god_map().register_symbol(symbol)
+        self.get_god_map().register_symbols(symbols)
 
         self.get_god_map().safe_set_data(identifier.joint_constraint_identifier, joint_constraints)
         self.soft_constraints.update(hard_constraints)

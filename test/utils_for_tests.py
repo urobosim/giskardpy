@@ -282,7 +282,7 @@ class GiskardTestWrapper(object):
         return self.get_robot().controlled_joints
 
     def get_controllable_links(self):
-        return self.get_world().get_controlled_robot_links()
+        return self.get_robot().get_controlled_links()
 
     def get_current_joint_state(self):
         """
@@ -628,8 +628,8 @@ class GiskardTestWrapper(object):
             assert not self.get_world().has_object(name)
             assert not name in self.wrapper.get_object_names().object_names
             assert name in self.wrapper.get_attached_objects().object_names, 'object {} was not attached'
-            # assert scm.difference(self.get_robot().get_self_collision_matrix()) == set()
-            # assert len(scm) < len(self.get_robot().get_self_collision_matrix())
+            assert scm.difference(self.get_robot().get_self_collision_matrix()) == set()
+            assert len(scm) < len(self.get_robot().get_self_collision_matrix())
             compare_poses(expected_pose.pose, lookup_pose(frame_id, name).pose)
         self.loop_once()
 

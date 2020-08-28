@@ -11,6 +11,8 @@ from giskardpy.pybullet_world_object import PyBulletWorldObject
 from giskardpy.utils import KeyDefaultDict, \
     homo_matrix_to_pose, memoize
 from giskardpy.world_object import WorldObject
+import kineverse.gradients.gradient_math as gm
+from kineverse.model.paths import Path
 
 if WORLD_IMPLEMENTATION == u'pybullet':
     Backend = PyBulletWorldObject
@@ -228,6 +230,16 @@ class Robot(Backend):
             raise KeyError(u'no controlled joint in chain between {} and {}'.format(link_a, link_b))
         return new_link_a, new_link_b
 
+
+    def get_controlled_links(self):
+        symbols = set()
+        for link_name in self.get_link_names():
+            link = self.get_link(link_name)
+            symbols |= gm.free_symbols(link.to_parent)
+        links = set()
+        for link_path in self._world.km_model.get_active_geometry_raw(symbols):
+            links.add(Path(link_path)[-1])
+        return links
 
     def reset_cache(self, *args, **kwargs):
         for method_name in dir(self):
