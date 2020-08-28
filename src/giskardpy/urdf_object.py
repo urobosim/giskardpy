@@ -365,7 +365,7 @@ class URDFObject(ArticulatedObject):
             return self.joints[joint_name]
         except KeyError:
             return self.check_attachments(self.get_joint,
-                                          u'joint {} not present in {}'.format(joint_name, self.get_name()),
+                                          u'joint "{}" not present in "{}"'.format(joint_name, self.get_name()),
                                           joint_name=joint_name)
 
     @memoize
@@ -379,7 +379,7 @@ class URDFObject(ArticulatedObject):
             return self.links[link_name]
         except KeyError:
             return self.check_attachments(self.get_link,
-                                          u'link {} not present in {}'.format(link_name, self.get_name()),
+                                          u'link "{}" not present in "{}"'.format(link_name, self.get_name()),
                                           link_name=link_name)
 
     def split_at_link(self, link_name):

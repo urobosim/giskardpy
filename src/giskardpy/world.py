@@ -583,10 +583,15 @@ class World(object):
             from_obj = self._robot_name
         elif from_obj != self._robot_name:
             raise UnsupportedOptionException(u'only detach from robot supported')
-        o = self.get_object(from_obj)
+        o = self.get_object(from_obj) # type:
         joint_path = self.get_joint_path(from_obj, joint_name)
         parent_path = o.get_parent_path_of_joint(joint_name)
         child_path = o.get_child_path_of_joint(joint_name)
+
+        child_name = child_path[0]
+        if child_name != self._robot_name:
+            child_obj = self.get_object(child_name)
+            o_in_w = self.get_fk_pose(Path(self.world_frame), Path(child_obj.get_link_path(child_obj.get_root()))).pose
         try:
             self.km_model.remove_operation('attach {} to {}'.format(child_path, parent_path))
             self.km_model.remove_operation('connect {} {}'.format(parent_path, child_path))
@@ -595,30 +600,13 @@ class World(object):
             raise UnknownBodyException(u'can\'t detach: {}\n{}'.format(joint_name, e))
 
         self.reset_cache()
-        # self.km_model.clean_structure()
-        # self.km_model.dispatch_events()
-
-        # try:
-        #     o.attached_objects.remove(self.get_link_path(from_obj, o.get_name()))
-        # except KeyError:
-        #     pass
+        if child_name != self._robot_name:
+            child_obj = self.get_object(child_name)
+            child_obj.base_pose = o_in_w
 
         self._objects_names.append(str(child_path[:-2]))
         # fixme remove pr2 arm
 
-        # if from_obj is None or self.robot.get_name() == from_obj:
-        # this only works because attached simple objects have joint names equal to their name
-        # p = self.robot.get_fk_pose(self.robot.get_root(), joint_name)
-        # p_map = kdl_to_pose(self.robot.root_T_map.Inverse() * msg_to_kdl(p))
-        #
-        # parent_link = self.robot.get_parent_link_of_joint(joint_name)
-        # cut_off_obj = self.robot.detach_sub_tree(joint_name)
-        # logging.loginfo(u'<-- detached {} from link {}'.format(joint_name, parent_link))
-        # else:
-
-        # wo = WorldObject.from_urdf_object(cut_off_obj)  # type: WorldObject
-        # wo.base_pose = p_map
-        # self.add_object(wo)
 
     def get_robot_collision_matrix(self, min_dist):
         robot_name = self.robot.get_name()
