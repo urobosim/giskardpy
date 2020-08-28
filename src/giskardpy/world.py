@@ -62,6 +62,7 @@ class World(object):
         self.soft_reset()
         self.remove_robot()
 
+    @profile
     def sync_bullet_world(self):
         symbols = self.pb_subworld.pose_generator.str_params
         data = dict(zip(symbols, self.god_map.get_values(symbols)))
@@ -102,6 +103,7 @@ class World(object):
         self.reverse_map_a = {}
         self.reverse_map_b = {}
         self.relevant_links = defaultdict(set)
+        self.flat_collision_matrix = []  # (robot_link, obj_b, link_b, pb_a, pb_b, distance)
 
         for (robot_link, body_b, link_b), distance in cut_off_distances.items():
             obj_a = self.pb_subworld.named_objects[str(self.robot.get_link_path(robot_link))]
@@ -114,6 +116,7 @@ class World(object):
                         obj_b = self.pb_subworld.named_objects[path_str]
                         obj_bs.add(obj_b)
                         self.reverse_map_b[obj_b] = (body_b, link_b)
+                        self.flat_collision_matrix.append((robot_link, body_b, link_b, obj_a, obj_b, distance))
                 self.relevant_links[obj_a] |= obj_bs
             else:
                 path_str = self.get_object(body_b).get_link_path(link_b)
@@ -121,8 +124,13 @@ class World(object):
                     obj_b = self.pb_subworld.named_objects[path_str]
                     self.reverse_map_b[obj_b] = (body_b, link_b)
                     self.relevant_links[obj_a].add(obj_b)
+                    self.flat_collision_matrix.append((robot_link, body_b, link_b, obj_a, obj_b, distance))
+        
+        for key in self.relevant_links.keys():
+            self.relevant_links[key] = list(self.relevant_links[key])
 
-    # @profile
+
+    @profile
     def check_collisions(self, cut_off_distances):
         self.sync_bullet_world()
         collisions = Collisions(self)
@@ -130,24 +138,37 @@ class World(object):
         if self.query is None:
             self.init_asdf(cut_off_distances)
 
-        # obj_a -> [ClosestPair]
-        query_result = self.pb_subworld.closest_distances(self.query)
-        for obj_a, contacts in query_result.items():
-            relevant_bs = self.relevant_links[obj_a]
-            link_a = self.reverse_map_a[obj_a]
+        for obj_a, objs in self.relevant_links.items():
             map_T_a = obj_a.transform
-            for contact in contacts:  # type: ClosestPair
-                if contact.obj_b in relevant_bs:
-                    map_T_b = contact.obj_b.transform
-                    body_b, link_b = self.reverse_map_b[contact.obj_b]
-                    for p in contact.points:  # type: ContactPoint
-                        c = Collision(link_a, body_b, link_b, p.point_a, p.point_b, p.normal_world_b,
-                                      p.distance)
-                        c.set_position_on_a_in_map(map_T_a * p.point_a)
-                        c.set_position_on_b_in_map(map_T_b * p.point_b)
-                        c.set_contact_normal_in_b(map_T_b.inv() * p.normal_world_b)
-                        collisions.add(c)
+            link_a = self.reverse_map_a[obj_a]
+            for contact in self.pb_subworld.world.get_closest_filtered(obj_a, objs, self.query[obj_a]):  # type: ClosestPair
+                map_T_b = contact.obj_b.transform
+                body_b, link_b = self.reverse_map_b[contact.obj_b]
+                for p in contact.points:  # type: ContactPoint
+                    c = Collision(link_a, body_b, link_b, p.point_a, p.point_b, p.normal_world_b,
+                                  p.distance)
+                    c.set_position_on_a_in_map(map_T_a * p.point_a)
+                    c.set_position_on_b_in_map(map_T_b * p.point_b)
+                    c.set_contact_normal_in_b(map_T_b.inv() * p.normal_world_b)
+                    collisions.add(c)
 
+        # obj_a -> [ClosestPair]
+        # query_result = self.pb_subworld.closest_distances(self.query)
+        # for obj_a, contacts in query_result.items():
+        #     relevant_bs = self.relevant_links[obj_a]
+        #     link_a = self.reverse_map_a[obj_a]
+        #     map_T_a = obj_a.transform
+        #     for contact in contacts:  # type: ClosestPair
+        #         if contact.obj_b in relevant_bs:
+        #             map_T_b = contact.obj_b.transform
+        #             body_b, link_b = self.reverse_map_b[contact.obj_b]
+        #             for p in contact.points:  # type: ContactPoint
+        #                 c = Collision(link_a, body_b, link_b, p.point_a, p.point_b, p.normal_world_b,
+        #                               p.distance)
+        #                 c.set_position_on_a_in_map(map_T_a * p.point_a)
+        #                 c.set_position_on_b_in_map(map_T_b * p.point_b)
+        #                 c.set_contact_normal_in_b(map_T_b.inv() * p.normal_world_b)
+        #                 collisions.add(c)
 
         # for (robot_link, body_b, link_b), distance in cut_off_distances.items():
         #     if body_b == robot_name or link_b != CollisionEntry.ALL:
