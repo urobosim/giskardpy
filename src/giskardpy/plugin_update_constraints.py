@@ -208,7 +208,7 @@ class GoalToConstraints(GetGoal):
 
         joint_constraints = OrderedDict()
         to_remove = set()
-        symbols = []
+        symbols = set()
         # symbols.extend(all_joint_position_symbols)
 
         for k, c in sorted(constraints.items()):
@@ -220,8 +220,8 @@ class GoalToConstraints(GetGoal):
                 lower_limit = c.lower
                 upper_limit = c.upper
 
-                symbols.extend(w.free_symbols(lower_limit))
-                symbols.extend(w.free_symbols(upper_limit))
+                symbols.update(w.free_symbols(lower_limit))
+                symbols.update(w.free_symbols(upper_limit))
 
                 sample_period = self.get_god_map().to_symbol(identifier.sample_period)
 
@@ -239,9 +239,9 @@ class GoalToConstraints(GetGoal):
         hard_constraints = OrderedDict()
         for k, c in sorted(constraints.items()):
             if k not in to_remove:
-                symbols.extend(w.free_symbols(c.lower))
-                symbols.extend(w.free_symbols(c.upper))
-                symbols.extend(w.free_symbols(c.expr))
+                symbols.update(w.free_symbols(c.lower))
+                symbols.update(w.free_symbols(c.upper))
+                symbols.update(w.free_symbols(c.expr))
                 hard_constraints[k] = SoftConstraint(lbA=c.lower,
                                                      ubA=c.upper,
                                                      weight=1,
@@ -264,6 +264,7 @@ class GoalToConstraints(GetGoal):
                 weight = weight * (1. / (upper)) ** 2
                 joint_constraints[joint_name] = JointConstraint(lower, upper, weight)
 
+        symbols.update(self.robot.get_joint_position_symbols())
         for symbol in symbols:
             self.get_god_map().register_symbol(symbol)
 

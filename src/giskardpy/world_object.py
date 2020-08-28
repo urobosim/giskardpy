@@ -13,6 +13,7 @@ from giskardpy import logging, identifier
 from giskardpy.data_types import SingleJointState
 from giskardpy.tfwrapper import msg_to_kdl
 from giskardpy.urdf_object import URDFObject
+from giskardpy.utils import memoize
 from kineverse.model.paths import Path
 
 
@@ -120,9 +121,15 @@ class WorldObject(URDFObject):
         """
         return self._self_collision_matrix
 
+    # @memoize
     def get_controlled_joint_position_symbols(self):
         return set(self.get_god_map().to_symbol(identifier.joint_states + [joint_name, u'position']) for joint_name in
             self.controlled_joints)
+
+    # @memoize
+    def get_joint_position_symbols(self):
+        return set(self.get_god_map().to_symbol(identifier.joint_states + [joint_name, u'position']) for joint_name in
+            self.joint_state.keys())
 
     def calc_collision_matrix(self, link_combinations=None, d=0.05, d2=0.0, num_rnd_tries=2000):
         """

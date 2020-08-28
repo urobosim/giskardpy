@@ -65,10 +65,8 @@ class World(object):
 
     def sync_bullet_world(self):
         symbols = self.pb_subworld.pose_generator.str_params
-        data = dict(zip(symbols, self.god_map.get_values(symbols)))
-
-        pb.batch_set_transforms(self.pb_subworld.collision_objects, self.pb_subworld.pose_generator(**data))
-        self.pb_subworld._state.update(data)
+        data = self.god_map.get_values(symbols)
+        pb.batch_set_transforms(self.pb_subworld.collision_objects, self.pb_subworld.pose_generator.call2(data))
 
     def in_collision(self, body_a, link_a, body_b, link_b, distance):
         obj_a = self.pb_subworld.named_objects[str(self.get_link_path(body_a, link_a))]
@@ -141,7 +139,6 @@ class World(object):
     def check_collisions(self, cut_off_distances):
         self.sync_bullet_world()
         collisions = Collisions(self)
-        # robot_name = self.robot.get_name()
         if self.query is None:
             self.init_asdf(cut_off_distances)
 
@@ -470,45 +467,8 @@ class World(object):
         return p
 
     def get_fk_np(self, root_path, tip_path):
-        world_joint_state = self.robot.get_joint_state_positions()
-        world_joint_state = {
-            str(Path(identifier.joint_states + [joint_name, u'position']).to_symbol()): world_joint_state[joint_name]
-            for joint_name in world_joint_state}
-        data_tree_path = [self.__prefix, u'km_model', u'data_tree', u'data_tree']
-        object_path = data_tree_path + [self._robot_name]
-        base_position_path = object_path + [u'base_pose', u'position']
-        base_orientation_path = object_path + [u'base_pose', u'orientation']
-        base_pose = {str(Path(base_position_path + [u'x']).to_symbol()): self.robot.base_pose.position.x,
-                     str(Path(base_position_path + [u'y']).to_symbol()): self.robot.base_pose.position.y,
-                     str(Path(base_position_path + [u'z']).to_symbol()): self.robot.base_pose.position.z,
-                     str(Path(base_orientation_path + [u'x']).to_symbol()): self.robot.base_pose.orientation.x,
-                     str(Path(base_orientation_path + [u'y']).to_symbol()): self.robot.base_pose.orientation.y,
-                     str(Path(base_orientation_path + [u'z']).to_symbol()): self.robot.base_pose.orientation.z,
-                     str(Path(base_orientation_path + [u'w']).to_symbol()): self.robot.base_pose.orientation.w}
-        world_joint_state.update(base_pose)
-        for object_name in itertools.chain(self.get_object_names(), self.get_attached_object_names()):
-            object_joint_state = self.get_object(object_name).get_joint_state_positions()
-            object_joint_state = {
-                str(Path(identifier.world + [object_name, joint_name, u'position']).to_symbol()): object_joint_state[
-                    joint_name] for joint_name in object_joint_state}
-            object_path = data_tree_path + [object_name]
-            base_position_path = object_path + [u'base_pose', u'position']
-            base_orientation_path = object_path + [u'base_pose', u'orientation']
-            base_pose = {
-                str(Path(base_position_path + [u'x']).to_symbol()): self.get_object(object_name).base_pose.position.x,
-                str(Path(base_position_path + [u'y']).to_symbol()): self.get_object(object_name).base_pose.position.y,
-                str(Path(base_position_path + [u'z']).to_symbol()): self.get_object(object_name).base_pose.position.z,
-                str(Path(base_orientation_path + [u'x']).to_symbol()): self.get_object(
-                    object_name).base_pose.orientation.x,
-                str(Path(base_orientation_path + [u'y']).to_symbol()): self.get_object(
-                    object_name).base_pose.orientation.y,
-                str(Path(base_orientation_path + [u'z']).to_symbol()): self.get_object(
-                    object_name).base_pose.orientation.z,
-                str(Path(base_orientation_path + [u'w']).to_symbol()): self.get_object(
-                    object_name).base_pose.orientation.w}
-            world_joint_state.update(base_pose)
-            world_joint_state.update(object_joint_state)
-        return self._fks[root_path, tip_path](**world_joint_state)
+        data = self.god_map.get_values(self._fks[root_path, tip_path].str_params)
+        return self._fks[root_path, tip_path].call2(data)
 
     def get_attached_object_names(self):
         return [path[-1] for path in self.attached_objects]

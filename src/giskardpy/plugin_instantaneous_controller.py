@@ -53,6 +53,7 @@ class ControllerPlugin(GiskardBehavior):
         self.qp_data[identifier.bA_keys[-1]], \
         self.qp_data[identifier.xdot_keys[-1]] = self.controller.get_qpdata_key_map()
 
+    @profile
     def update(self):
         last_cmd = self.get_god_map().get_data(identifier.cmd)
         self.get_god_map().safe_set_data(identifier.last_cmd, last_cmd)

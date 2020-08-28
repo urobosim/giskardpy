@@ -30,7 +30,6 @@ def get_member(identifier, member):
         pass
 
 
-
 def get_data(identifier, data, default_value=0.0):
     """
     :param identifier: Identifier in the form of ['pose', 'position', 'x'],
