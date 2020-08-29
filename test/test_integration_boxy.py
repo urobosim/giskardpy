@@ -66,7 +66,6 @@ better_js = {
 
 folder_name = u'tmp_data/'
 
-
 @pytest.fixture(scope=u'module')
 def ros(request):
     try:
@@ -82,11 +81,21 @@ def ros(request):
     launch.start()
 
     rospy.set_param('/joint_trajectory_splitter/state_topics',
-                    ['/whole_body_controller/base/state',
-                     '/whole_body_controller/body/state'])
+                    [
+                        '/whole_body_controller/base/state',
+                        '/whole_body_controller/torso/state',
+                        '/whole_body_controller/neck/state',
+                        '/whole_body_controller/left_arm/state',
+                        '/whole_body_controller/right_arm/state',
+                    ])
     rospy.set_param('/joint_trajectory_splitter/client_topics',
-                    ['/whole_body_controller/base/follow_joint_trajectory',
-                     '/whole_body_controller/body/follow_joint_trajectory'])
+                    [
+                        '/whole_body_controller/base/follow_joint_trajectory',
+                        '/whole_body_controller/torso/follow_joint_trajectory',
+                        '/whole_body_controller/neck/follow_joint_trajectory',
+                        '/whole_body_controller/left_arm/follow_joint_trajectory',
+                        '/whole_body_controller/right_arm/follow_joint_trajectory',
+                    ])
     node = roslaunch.core.Node('giskardpy', 'joint_trajectory_splitter.py', name='joint_trajectory_splitter')
     joint_trajectory_splitter = launch.launch(node)
 
@@ -181,6 +190,7 @@ class TestJointGoals(object):
 
 class TestConstraints(object):
   def test_pointing(self, better_pose):
+        #fixme
         tip = u'head_mount_kinect2_rgb_optical_frame'
         goal_point = lookup_point(u'map', better_pose.r_tip)
         better_pose.wrapper.pointing(tip, goal_point)
