@@ -783,7 +783,7 @@ class TestCartGoals(object):
         zero_pose.check_cart_goal(zero_pose.l_tip, l_goal)
 
     def test_wiggle1(self, kitchen_setup):
-        #fixme
+        #fixme also broken on master
         tray_pose = PoseStamped()
         tray_pose.header.frame_id = u'iai_kitchen/sink_area_surface'
         tray_pose.pose.position = Point(0.1, -0.4, 0.07)
@@ -979,7 +979,7 @@ class TestCartGoals(object):
         """
         :type zero_pose: PR2
         """
-        # fixme
+        # fixme also broken on master
         zero_pose.set_joint_goal(pocky_pose)
         zero_pose.add_waypoint()
         zero_pose.set_joint_goal(pick_up_pose)
