@@ -118,7 +118,7 @@ class World(object):
                 for path_str in self.get_object(body_b).get_link_path_strs():
                     if path_str in self.pb_subworld.named_objects:
                         obj_b = self.pb_subworld.named_objects[path_str]
-                        obj_bs.add(obj_b)
+                        obj_bs.add((obj_b, distance))
                         self.reverse_map_b[obj_b] = (body_b, link_b)
                         self.flat_collision_matrix.append((robot_link, body_b, link_b, obj_a, obj_b, distance))
                 self.relevant_links[obj_a] |= obj_bs
@@ -127,24 +127,26 @@ class World(object):
                 if path_str in self.pb_subworld.named_objects:
                     obj_b = self.pb_subworld.named_objects[path_str]
                     self.reverse_map_b[obj_b] = (body_b, link_b)
-                    self.relevant_links[obj_a].add(obj_b)
+                    self.relevant_links[obj_a].add((obj_b, distance))
                     self.flat_collision_matrix.append((robot_link, body_b, link_b, obj_a, obj_b, distance))
         
         for key in self.relevant_links.keys():
             self.relevant_links[key] = list(self.relevant_links[key])
 
+        print('init_asdf produced {} queries'.format(len(self.relevant_links)))
 
     @profile
     def check_collisions(self, cut_off_distances):
-        self.sync_bullet_world()
+        # self.sync_bullet_world()
+        return Collisions(self)
         collisions = Collisions(self)
         if self.query is None:
             self.init_asdf(cut_off_distances)
 
-        for obj_a, objs in self.relevant_links.items():
+        for obj_a, contacts in self.pb_subworld.world.get_closest_filtered_POD_batch(self.relevant_links).items():
             map_T_a = obj_a.transform
             link_a = self.reverse_map_a[obj_a]
-            for contact in self.pb_subworld.world.get_closest_filtered(obj_a, objs, self.query[obj_a]):  # type: ClosestPair
+            for contact in contacts:  # type: ClosestPair
                 map_T_b = contact.obj_b.transform
                 body_b, link_b = self.reverse_map_b[contact.obj_b]
                 for p in contact.points:  # type: ContactPoint
@@ -463,6 +465,7 @@ class World(object):
         #     pass
         return p
 
+    @profile
     def get_fk_np(self, root_path, tip_path):
         data = self.god_map.get_values(self._fks[root_path, tip_path].str_params)
         return self._fks[root_path, tip_path].call2(data)
@@ -566,7 +569,6 @@ class World(object):
 
         self._objects_names.append(str(child_path[:-2]))
         # fixme remove pr2 arm
-
 
     def get_robot_collision_matrix(self, min_dist):
         robot_name = self.robot.get_name()
