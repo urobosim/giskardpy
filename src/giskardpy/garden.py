@@ -175,7 +175,7 @@ def grow_tree():
     planning_3.add_plugin(KinSimPlugin(u'kin sim'))
     planning_3.add_plugin(LogTrajPlugin(u'log'))
     planning_3.add_plugin(GoalReachedPlugin(u'goal reached'))
-    # planning_3.add_plugin(WiggleCancel(u'wiggle', final_detection=False))
+    planning_3.add_plugin(WiggleCancel(u'wiggle', final_detection=False))
     planning_3.add_plugin(TimePlugin(u'time'))
     # planning_3.add_plugin(MaxTrajLength(u'traj length check'))
     # ----------------------------------------------
@@ -207,10 +207,9 @@ def grow_tree():
     process_move_goal.add_child(planning_1)
     process_move_goal.add_child(SetCmd(u'set move goal', action_server_name))
     # ----------------------------------------------
-    #
-    # post_processing = failure_is_success(Sequence)(u'post processing')
-    # post_processing.add_child(WiggleCancel(u'wiggle_cancel_final_detection', final_detection=True))
-    # post_processing.add_child(PostProcessing(u'post_processing'))
+    post_processing = failure_is_success(Sequence)(u'post processing')
+    post_processing.add_child(WiggleCancel(u'wiggle_cancel_final_detection', final_detection=True))
+    post_processing.add_child(PostProcessing(u'post_processing'))
     # ----------------------------------------------
     # ----------------------------------------------
     root = Sequence(u'root')
