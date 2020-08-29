@@ -137,8 +137,7 @@ class World(object):
 
     @profile
     def check_collisions(self, cut_off_distances):
-        # self.sync_bullet_world()
-        return Collisions(self)
+        self.sync_bullet_world()
         collisions = Collisions(self)
         if self.query is None:
             self.init_asdf(cut_off_distances)
