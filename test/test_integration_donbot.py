@@ -253,7 +253,8 @@ class TestJointGoals(object):
         """
         :type zero_pose: Donbot
         """
-        # zero_pose.allow_self_collision()
+        #fixme
+        #zero_pose.allow_self_collision()
         goal = MoveActionGoal()
         move_cmd = MoveCmd()
         joint_goal1 = JointConstraint()
@@ -308,6 +309,7 @@ class TestJointGoals(object):
         """
         :type zero_pose: Donbot
         """
+        #fixme
         js = {
             u'odom_x_joint': 1,
             u'odom_y_joint': 1,
@@ -497,6 +499,7 @@ class TestCollisionAvoidanceGoals(object):
         """
         :type zero_pose: PR2
         """
+        #fixme
         pocky = u'http://muh#pocky'
         better_pose.attach_box(pocky, [0.1, 0.02, 0.02], better_pose.gripper_tip, [0.05, 0, 0])
 
@@ -504,6 +507,7 @@ class TestCollisionAvoidanceGoals(object):
         """
         :type zero_pose: Donbot
         """
+        # fixme
         box = u'box'
         p = PoseStamped()
         p.header.frame_id = u'map'
@@ -551,6 +555,7 @@ class TestCollisionAvoidanceGoals(object):
         """
         :type box_setup: PR2
         """
+        # fixme
         better_pose.attach_box(size=[0.05, 0.05, 0.2],
                                frame_id=better_pose.gripper_tip,
                                position=[0, 0, 0.08],
@@ -571,6 +576,7 @@ class TestCollisionAvoidanceGoals(object):
         """
         :type box_setup: PR2
         """
+        # fixme
         better_pose.attach_box(size=[0.05, 0.05, 0.2],
                                frame_id=better_pose.gripper_tip,
                                position=[0, 0, 0.08],
@@ -604,6 +610,7 @@ class TestCollisionAvoidanceGoals(object):
         """
         :type box_setup: PR2
         """
+        # fixme
         better_pose.attach_cylinder(height=0.3,
                                     radius=0.025,
                                     frame_id=better_pose.gripper_tip,
@@ -645,6 +652,7 @@ class TestCollisionAvoidanceGoals(object):
         """
         :type shelf_setup: Donbot
         """
+        # fixme
         box = u'box'
         box_pose = PoseStamped()
         box_pose.header.frame_id = u'map'
@@ -702,6 +710,7 @@ class TestCollisionAvoidanceGoals(object):
         """
         :type zero_pose: Donbot
         """
+        # fixme
         goal_js = {
             u'ur5_shoulder_lift_joint': .5,
         }
@@ -718,6 +727,7 @@ class TestCollisionAvoidanceGoals(object):
         """
         :type zero_pose: Donbot
         """
+        # fixme
         goal_js = {
             u'ur5_shoulder_lift_joint': .5,
         }
@@ -733,6 +743,7 @@ class TestCollisionAvoidanceGoals(object):
         zero_pose.set_and_check_cart_goal(arm_goal, zero_pose.gripper_tip, zero_pose.default_root)
 
     def test_avoid_self_collision2(self, self_collision_pose):
+        # fixme
         self_collision_pose.send_and_check_goal()
         map_T_root = lookup_pose(u'map', u'base_footprint')
         expected_pose = Pose()
@@ -743,6 +754,7 @@ class TestCollisionAvoidanceGoals(object):
         """
         :type box_setup: PR2
         """
+        # fixme
         ce = CollisionEntry()
         ce.type = CollisionEntry.AVOID_COLLISION
         ce.body_b = u'asdf'

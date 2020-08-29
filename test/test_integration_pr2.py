@@ -446,6 +446,7 @@ class TestConstraints(object):
         assert pocky_pose_setup.get_god_map().unsafe_get_data(identifier.joint_cost + [u'torso_lift_joint']) == 0.01
 
     def test_pointing(self, kitchen_setup):
+        # fixme
         base_goal = PoseStamped()
         base_goal.header.frame_id = u'base_footprint'
         base_goal.pose.position.y = -1
@@ -673,6 +674,7 @@ class TestCartGoals(object):
         """
         :type zero_pose: PR2
         """
+        # fixme
         js = {
             u'r_elbow_flex_joint': -1.58118094489,
             u'r_forearm_roll_joint': -0.904933033043,
@@ -781,7 +783,7 @@ class TestCartGoals(object):
         zero_pose.check_cart_goal(zero_pose.l_tip, l_goal)
 
     def test_wiggle1(self, kitchen_setup):
-        #fixme
+        #fixme also broken on master
         tray_pose = PoseStamped()
         tray_pose.header.frame_id = u'iai_kitchen/sink_area_surface'
         tray_pose.pose.position = Point(0.1, -0.4, 0.07)
@@ -977,6 +979,7 @@ class TestCartGoals(object):
         """
         :type zero_pose: PR2
         """
+        # fixme also broken on master
         zero_pose.set_joint_goal(pocky_pose)
         zero_pose.add_waypoint()
         zero_pose.set_joint_goal(pick_up_pose)
@@ -1111,6 +1114,7 @@ class TestCollisionAvoidanceGoals(object):
         """
         :type zero_pose: PR2
         """
+        # fixme
         pocky = u'http://pocky'
         zero_pose.attach_box(pocky, [0.1, 0.02, 0.02], zero_pose.r_tip, [0.05, 0, 0])
 
@@ -1118,6 +1122,7 @@ class TestCollisionAvoidanceGoals(object):
         """
         :type zero_pose: PR2
         """
+        # fixme
         pocky = u'pocky'
         zero_pose.attach_box(pocky, [0.1, 0.02, 0.02], zero_pose.r_tip, [0.05, 0, 0], [1, 0, 0, 0])
         p = PoseStamped()
@@ -1150,6 +1155,7 @@ class TestCollisionAvoidanceGoals(object):
         """
         pocky = u'pocky'
         zero_pose.attach_box(pocky, [0.1, 0.02, 0.02], zero_pose.r_tip, [0.05, 0, 0])
+        zero_pose.detach_object(pocky)
         zero_pose.remove_object(pocky)
 
     def test_attach_existing_box(self, zero_pose):
@@ -1227,6 +1233,7 @@ class TestCollisionAvoidanceGoals(object):
         """
         :type zero_pose: PR2
         """
+        # fixme
         pocky = u'pocky'
         zero_pose.attach_box(pocky, [0.1, 0.02, 0.02], u'', [0.05, 0, 0],
                              expected_response=UpdateWorldResponse.MISSING_BODY_ERROR)
@@ -1235,6 +1242,7 @@ class TestCollisionAvoidanceGoals(object):
         """
         :type zero_pose: PR2
         """
+        # fixme
         zero_pose.detach_object(u'nil', expected_response=UpdateWorldResponse.MISSING_BODY_ERROR)
 
     def test_add_remove_object(self, zero_pose):
@@ -1269,6 +1277,7 @@ class TestCollisionAvoidanceGoals(object):
         """
         :type zero_pose: PR2
         """
+        # fixme
         req = UpdateWorldRequest(UpdateWorldRequest.ADD, WorldBody(type=WorldBody.PRIMITIVE_BODY,
                                                                    shape=SolidPrimitive(type=42)), True, PoseStamped())
         assert zero_pose.wrapper.update_world.call(req).error_codes == UpdateWorldResponse.CORRUPT_SHAPE_ERROR
@@ -1333,6 +1342,7 @@ class TestCollisionAvoidanceGoals(object):
         """
         :type zero_pose: PR2
         """
+        # fixme
         zero_pose.allow_self_collision()
         p = PoseStamped()
         p.header.frame_id = u'map'
@@ -1395,6 +1405,7 @@ class TestCollisionAvoidanceGoals(object):
         """
         :type zero_pose: PR2
         """
+        # fixme
         goal_js = {
             u'l_elbow_flex_joint': -1.43286344265,
             u'l_forearm_roll_joint': 1.26465060073,
@@ -1422,6 +1433,7 @@ class TestCollisionAvoidanceGoals(object):
         """
         :type zero_pose: PR2
         """
+        # fixme
         goal_js = {
             u'l_elbow_flex_joint': -1.43286344265,
             u'l_forearm_roll_joint': 1.26465060073,
@@ -1444,7 +1456,7 @@ class TestCollisionAvoidanceGoals(object):
         ces = []
         ces.append(CollisionEntry(type=CollisionEntry.ALLOW_COLLISION,
                                   robot_links=zero_pose.get_l_gripper_links(),
-                                  body_b=u'pr2',
+                                  body_b=u'robot',
                                   link_bs=zero_pose.get_r_forearm_links()))
         zero_pose.add_collision_entries(ces)
 
@@ -1486,6 +1498,7 @@ class TestCollisionAvoidanceGoals(object):
         """
         :type zero_pose: PR2
         """
+        # fixme
         goal_js = {
             u'l_elbow_flex_joint': -1.43286344265,
             u'l_forearm_roll_joint': 1.26465060073,
@@ -1541,6 +1554,7 @@ class TestCollisionAvoidanceGoals(object):
         """
         :type box_setup: PR2
         """
+        # fixme
         p = PoseStamped()
         p.header.frame_id = box_setup.r_tip
         p.header.stamp = rospy.get_rostime()
@@ -1650,7 +1664,6 @@ class TestCollisionAvoidanceGoals(object):
         """
         :type box_setup: PR2
         """
-        # fixme
         pocky_pose_setup.attach_box(size=[0.2, 0.05, 0.05],
                                     frame_id=pocky_pose_setup.r_tip,
                                     position=[0.08, 0, 0],
@@ -1721,6 +1734,7 @@ class TestCollisionAvoidanceGoals(object):
         """
         :type box_setup: PR2
         """
+        # fixme
         base_pose = PoseStamped()
         base_pose.header.frame_id = u'map'
         base_pose.pose.position.x = 0.8
@@ -1830,6 +1844,7 @@ class TestCollisionAvoidanceGoals(object):
         """
         :type box_setup: PR2
         """
+        # fixme
         ces = box_setup.get_allow_l_gripper(u'box')
         box_setup.add_collision_entries(ces)
         p = PoseStamped()
@@ -1876,6 +1891,7 @@ class TestCollisionAvoidanceGoals(object):
         """
         :type box_setup: PR2
         """
+        # fixme
         attached_link_name = u'pocky'
         box_setup.attach_box(attached_link_name, [0.2, 0.04, 0.04], box_setup.r_tip, [0.05, 0, 0])
         box_setup.attach_box(attached_link_name, [0.2, 0.04, 0.04], box_setup.r_tip, [0.05, 0, 0],
@@ -1936,6 +1952,7 @@ class TestCollisionAvoidanceGoals(object):
         """
         :type box_setup: PR2
         """
+        # fixme
         pocky = u'pocky'
         box_setup.attach_box(pocky, [0.1, 0.02, 0.02], box_setup.r_tip, [0.05, 0, 0])
 
@@ -2037,6 +2054,7 @@ class TestCollisionAvoidanceGoals(object):
 
     def test_attached_two_items(self, zero_pose):
         # FIXME visualization bug
+        # fixme
         box1_name = u'box1'
         box2_name = u'box2'
 
@@ -2438,6 +2456,7 @@ class TestCollisionAvoidanceGoals(object):
     #     kitchen_setup.send_and_check_goal(execute=False)
 
     def test_bowl_and_cup(self, kitchen_setup):
+        # fixme
         bowl_name = u'bowl'
         cup_name = u'cup'
 
@@ -2552,6 +2571,7 @@ class TestCollisionAvoidanceGoals(object):
     #     kitchen_setup.send_and_check_goal()
 
     def test_tray(self, kitchen_setup):
+        # fixme
         tray_name = u'tray'
 
         tray_pose = PoseStamped()

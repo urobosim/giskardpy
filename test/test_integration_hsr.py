@@ -98,6 +98,7 @@ def box_setup(zero_pose):
     zero_pose.add_box(size=[1, 1, 1], pose=p)
     return zero_pose
 
+# fixme hsr, can not get loaded
 
 class TestJointGoals(object):
     def test_move_base(self, zero_pose):
