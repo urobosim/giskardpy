@@ -123,7 +123,8 @@ class TestWorldObj(test_urdf_object.TestUrdfObject):
         assert scm == r.get_self_collision_matrix()
 
     def test_safe_load_collision_matrix2(self, test_folder, delete_test_folder):
-        r = self.cls(donbot_urdf(), path_to_data_folder=test_folder)
+        r = self.cls(donbot_urdf())
+        r.init2(path_to_data_folder=test_folder)
         r.init_self_collision_matrix()
         scm = r.get_self_collision_matrix()
 
@@ -180,7 +181,8 @@ class TestRobot(TestWorldObj):
         super(TestRobot, self).test_get_chain4(function_setup)
 
     def test_safe_load_collision_matrix(self, test_folder, delete_test_folder):
-        r = self.cls(donbot_urdf(), path_to_data_folder=test_folder)
+        r = self.cls(donbot_urdf())
+        r.init2(path_to_data_folder=test_folder)
         scm = r.get_self_collision_matrix()
         assert len(scm) == 0
 
