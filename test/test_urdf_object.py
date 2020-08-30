@@ -235,7 +235,7 @@ def pr2_urdf():
 class TestUrdfObject(object):
     def make_object_without_limits(self, urdf, cls=URDFObject, **kwargs):
         km = ArticulationModel()
-        urdf_obj = urdf_filler(up.URDF.from_xml_string(hacky_urdf_parser_fix(urdf)))  # FIXME make this to a function
+        urdf_obj = urdf_filler(up.URDF.from_xml_string(hacky_urdf_parser_fix(urdf)), fill_with_visual=False)  # FIXME make this to a function
         name = 'egal'
         limit_map = load_urdf(ks=km,
                               prefix=name,
@@ -255,7 +255,7 @@ class TestUrdfObject(object):
         :rtype: (URDFObject, dict)
         """
         km = ArticulationModel()
-        urdf_obj = urdf_filler(up.URDF.from_xml_string(hacky_urdf_parser_fix(urdf)))  # FIXME make this to a function
+        urdf_obj = urdf_filler(up.URDF.from_xml_string(hacky_urdf_parser_fix(urdf)), fill_with_visual=False)  # FIXME make this to a function
         name = 'egal'
         limit_map = load_urdf(ks=km,
                               prefix=name,

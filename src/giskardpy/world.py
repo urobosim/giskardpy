@@ -172,7 +172,7 @@ class World(object):
         """
         if isinstance(urdf, WorldBody):
             name, urdf = self.world_body_to_urdf_str(urdf)
-        urdf_obj = urdf_filler(up.URDF.from_xml_string(hacky_urdf_parser_fix(urdf)))
+        urdf_obj = urdf_filler(up.URDF.from_xml_string(hacky_urdf_parser_fix(urdf)), fill_with_visual=False)
         if name is None:
             name = urdf_obj.name
 
