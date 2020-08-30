@@ -158,25 +158,21 @@ class WorldObject(URDFObject):
         always = always.difference({tuple(x) for x in self.ignored_pairs})
         rest = link_combinations.difference(always)
         self.joint_state = self.get_zero_joint_state()
-        self._world.sync_bullet_world()
         always = always.union(self.check_collisions(rest, d))
         rest = rest.difference(always)
 
         # find meaningful self-collisions
         self.joint_state = self.get_min_joint_state()
-        self._world.sync_bullet_world()
 
         sometimes = self.check_collisions(rest, d2)
         rest = rest.difference(sometimes)
         self.joint_state = self.get_max_joint_state()
-        self._world.sync_bullet_world()
 
         sometimes2 = self.check_collisions(rest, d2)
         rest = rest.difference(sometimes2)
         sometimes = sometimes.union(sometimes2)
         for i in range(num_rnd_tries):
             self.joint_state = self.get_rnd_joint_state()
-            self._world.sync_bullet_world()
             sometimes2 = self.check_collisions(rest, d2)
             if len(sometimes2) > 0:
                 rest = rest.difference(sometimes2)
@@ -196,6 +192,7 @@ class WorldObject(URDFObject):
         return possible_collisions
 
     def check_collisions(self, link_combinations, distance):
+        self._world.sync_bullet_world()
         in_collision = set()
         for link_a, link_b in link_combinations:
             if self.in_collision(link_a, link_b, distance):
