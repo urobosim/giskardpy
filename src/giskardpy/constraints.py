@@ -15,11 +15,7 @@ from giskardpy.exceptions import GiskardException, ConstraintException
 from giskardpy.input_system import PoseStampedInput, Point3Input, Vector3Input, Vector3StampedInput, FrameInput, \
     PointStampedInput, TranslationInput
 
-from kineverse.gradients.diff_logic        import Position
-from kineverse.model.geometry_model import GeometryModel
-from kineverse.model.paths                 import PathException, Path as KPath
-from kineverse.model.frames                import Frame as KFrame
-from kineverse.operations.frame_operations import fk_a_in_b
+import kineverse.gradients.gradient_math as gm
 
 # WEIGHTS = [0] + [6 ** x for x in range(7)]
 WEIGHT_MAX = 1000
@@ -1659,3 +1655,91 @@ class Pointing(Constraint):
         # helps to make sure your constraint name is unique.
         s = super(Pointing, self).__str__()
         return u'{}/{}/{}'.format(s, self.root, self.tip)
+
+
+# Fixme: The name of this constraint is not informative. Should maybe be something like "Move1DofFixed"
+class Open1Dof(Constraint):
+    def __init__(self, god_map, tip, object_name, handle_link, root=None, goal_joint_state=None,
+                 weight=WEIGHT_ABOVE_CA):
+        super(Open1Dof, self).__init__(god_map)
+        self.constraints = []
+
+        self.root = self.get_robot().get_root() if root is None else root
+        self.tip  = tip
+        self.weight = weight
+
+        self.handle_link = handle_link
+        handle_frame_id = u'iai_kitchen/' + handle_link
+
+        self.object_name = object_name
+        env_object = self.get_world().get_object(object_name)
+        joint_name = env_object.get_movable_parent_joint(handle_link)
+        self.goal_joint_symbol = env_object.get_joint(joint_name).position
+
+        min_limit, max_limit = env_object.get_joint_limits(joint_name)
+        if goal_joint_state:
+            self.goal_joint_state = min(max_limit, goal_joint_state)
+        else:
+            self.goal_joint_state = max_limit
+
+        # Get frame of current tip pose
+        tip_T_handle = tf.to_np(tf.msg_to_kdl(tf.lookup_pose(handle_frame_id, tip)))
+
+        cart_goal_pose = gm.dot(env_object.get_fk_expression(env_object.get_root(), handle_link), gm.Matrix(tip_T_handle))
+
+        self.constraints.append(CartesianPose(god_map, root, tip, cart_goal_pose, goal_constraint=False)) # Fixme: Goal constraint?
+
+    def make_constraints(self):
+        for constraint in self.constraints:
+            self.soft_constraints.update(constraint.get_constraints())
+
+        err = self.goal_joint_state - self.goal_joint_symbol
+
+        # Fixme: This is a very short version of this
+        self.add_constraint(u'goal',
+                            lower=err,
+                            upper=err,
+                            weight=self.weight,
+                            expression=self.goal_joint_symbol,
+                            goal_constraint=True)
+
+    def __str__(self):
+        return u'{}/{}/{}'.format(super(Open1Dof, self).__str__(), self.tip, self.object_name, self.handle_link)
+
+class Close(Constraint):
+    def __init__(self, god_map, tip, object_name, handle_link, root=None, goal_joint_state=None,
+                 weight=WEIGHT_BELOW_CA):
+        super(Close, self).__init__(god_map)
+        self.constraints = []
+        environment_object = self.get_world().get_object(object_name)
+        joint_name = environment_object.get_movable_parent_joint(handle_link)
+
+        if environment_object.is_joint_revolute(joint_name) or environment_object.is_joint_prismatic(joint_name):
+            min_limit, max_limit = environment_object.get_joint_limits(joint_name)
+            if goal_joint_state:
+                goal_joint_state = max(min_limit, goal_joint_state)
+            else:
+                goal_joint_state = min_limit
+
+        if environment_object.is_joint_revolute(joint_name):
+            self.constraints.append(OpenDoor(god_map=god_map,
+                                             tip=tip,
+                                             object_name=object_name,
+                                             handle_link=handle_link,
+                                             angle_goal=goal_joint_state,
+                                             root=root,
+                                             weight=weight))
+        elif environment_object.is_joint_prismatic(joint_name):
+            self.constraints.append(OpenDrawer(god_map,
+                                               tip=tip,
+                                               object_name=object_name,
+                                               handle_link=handle_link,
+                                               distance_goal=goal_joint_state,
+                                               root=root))
+        else:
+            logwarn(u'Opening containers with joint of type "{}" not supported'.format(
+                environment_object.get_joint_type(joint_name)))
+
+    def make_constraints(self):
+        for constraint in self.constraints:
+            self.soft_constraints.update(constraint.get_constraints())

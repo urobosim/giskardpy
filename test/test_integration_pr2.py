@@ -14,6 +14,7 @@ from shape_msgs.msg import SolidPrimitive
 from tf.transformations import quaternion_from_matrix, quaternion_about_axis, rotation_matrix
 
 from giskardpy import logging, identifier
+from giskardpy.constraints import WEIGHT_ABOVE_CA
 from giskardpy.identifier import fk_pose
 from giskardpy.robot import Robot
 from giskardpy.tfwrapper import init as tf_init
@@ -503,6 +504,65 @@ class TestConstraints(object):
         expected_x = tf.lookup_point(tip, kitchen_setup.r_tip)
         np.testing.assert_almost_equal(expected_x.point.y, 0, 2)
         np.testing.assert_almost_equal(expected_x.point.z, 0, 2)
+
+    def test_open_fridge(self, kitchen_setup):
+        """
+        :type kitchen_setup: PR2
+        """
+        handle_frame_id = u'iai_kitchen/iai_fridge_door_handle'
+        handle_name = u'iai_fridge_door_handle'
+        bar_axis = Vector3Stamped()
+        bar_axis.header.frame_id = handle_frame_id
+        bar_axis.vector.z = 1
+
+        bar_center = PointStamped()
+        bar_center.header.frame_id = handle_frame_id
+
+        tip_grasp_axis = Vector3Stamped()
+        tip_grasp_axis.header.frame_id = kitchen_setup.r_tip
+        tip_grasp_axis.vector.z = 1
+
+        kitchen_setup.add_json_goal(u'GraspBar',
+                                    root=kitchen_setup.default_root,
+                                    tip=kitchen_setup.r_tip,
+                                    tip_grasp_axis=tip_grasp_axis,
+                                    bar_center=bar_center,
+                                    bar_axis=bar_axis,
+                                    bar_length=.4)
+        x_gripper = Vector3Stamped()
+        x_gripper.header.frame_id = kitchen_setup.r_tip
+        x_gripper.vector.x = 1
+
+        x_goal = Vector3Stamped()
+        x_goal.header.frame_id = handle_frame_id
+        x_goal.vector.x = -1
+        kitchen_setup.align_planes(kitchen_setup.r_tip, x_gripper, root_normal=x_goal)
+        # kitchen_setup.allow_all_collisions()
+        # kitchen_setup.add_json_goal(u'AvoidJointLimits', percentage=10)
+        kitchen_setup.send_and_check_goal()
+
+        kitchen_setup.add_json_goal(u'Open1Dof',
+                                    tip=kitchen_setup.r_tip,
+                                    object_name=u'kitchen',
+                                    handle_link=handle_name,
+                                    goal_joint_state=1.5)
+        kitchen_setup.allow_all_collisions()
+        # kitchen_setup.add_json_goal(u'AvoidJointLimits')
+        kitchen_setup.send_and_check_goal()
+        kitchen_setup.set_kitchen_js({u'iai_fridge_door_joint': 1.5})
+
+        kitchen_setup.add_json_goal(u'Open1Dof',
+                                    tip=kitchen_setup.r_tip,
+                                    object_name=u'kitchen',
+                                    handle_link=handle_name,
+                                    angle_goal=0)
+        kitchen_setup.allow_all_collisions()
+        kitchen_setup.send_and_check_goal()
+        kitchen_setup.set_kitchen_js({u'iai_fridge_door_joint': 0})
+
+        kitchen_setup.send_and_check_goal()
+
+        kitchen_setup.send_and_check_joint_goal(gaya_pose)
 
     def test_align_planes1(self, zero_pose):
         """
