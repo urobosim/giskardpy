@@ -98,6 +98,7 @@ def sphere_volume(radius):
     :type radius: float
     :rtype: float
     """
+    radius = float(radius)
     return (4 / 3.) * pi * radius ** 3
 
 
@@ -106,7 +107,7 @@ def sphere_surface(radius):
     :type radius: float
     :rtype: float
     """
-    return 4 * pi * radius ** 2
+    return 4 * pi * float(radius) ** 2
 
 
 def cube_volume(length, width, height):
@@ -116,7 +117,7 @@ def cube_volume(length, width, height):
     :type height: float
     :rtype: float
     """
-    return length * width * height
+    return float(length) * float(width) * float(height)
 
 
 def cube_surface(length, width, height):
@@ -126,6 +127,9 @@ def cube_surface(length, width, height):
     :type height: float
     :rtype: float
     """
+    length = float(length)
+    width = float(width)
+    height = float(height)
     return 2 * (length * width + length * height + width * height)
 
 
@@ -135,6 +139,8 @@ def cylinder_volume(r, h):
     :type h: float
     :rtype: float
     """
+    r = float(r)
+    h = float(h)
     return pi * r ** 2 * h
 
 
@@ -144,6 +150,8 @@ def cylinder_surface(r, h):
     :type h: float
     :rtype: float
     """
+    r = float(r)
+    h = float(h)
     return 2 * pi * r * (h + r)
 
 

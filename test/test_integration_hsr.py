@@ -1,4 +1,5 @@
 from copy import deepcopy
+
 import numpy as np
 import pytest
 import rospy
@@ -98,6 +99,7 @@ def box_setup(zero_pose):
     zero_pose.add_box(size=[1, 1, 1], pose=p)
     return zero_pose
 
+
 # fixme hsr, can not get loaded
 
 class TestJointGoals(object):
@@ -122,6 +124,40 @@ class TestCartGoals(object):
 
 
 class TestCollisionAvoidanceGoals(object):
+
+    def test_self_collision_matrix(self, zero_pose):
+        cm = zero_pose.get_robot().get_self_collision_matrix()
+        expected = {
+            ('arm_roll_link', 'base_link'),
+            ('arm_roll_link', 'head_rgbd_sensor_link'),
+            ('arm_roll_link', 'head_tilt_link'),
+            ('base_link', 'hand_palm_link'),
+            ('base_link', 'hand_r_distal_link'),
+            ('base_link', 'hand_r_spring_proximal_link'),
+            ('base_link', 'head_tilt_link'),
+            ('hand_l_distal_link', 'base_link'),
+            ('hand_l_distal_link', 'head_tilt_link'),
+            ('hand_l_distal_link', 'torso_lift_link'),
+            ('hand_l_spring_proximal_link', 'base_link'),
+            ('hand_l_spring_proximal_link', 'head_tilt_link'),
+            ('hand_l_spring_proximal_link', 'torso_lift_link'),
+            ('hand_palm_link', 'head_rgbd_sensor_link'),
+            ('hand_palm_link', 'head_tilt_link'),
+            ('hand_r_distal_link', 'head_rgbd_sensor_link'),
+            ('head_pan_link', 'hand_r_distal_link'),
+            ('head_pan_link', 'hand_r_spring_proximal_link'),
+            ('head_rgbd_sensor_link', 'arm_flex_link'),
+            ('head_rgbd_sensor_link', 'hand_r_spring_proximal_link'),
+            ('head_rgbd_sensor_link', 'wrist_flex_link'),
+            ('head_tilt_link', 'arm_flex_link'),
+            ('head_tilt_link', 'hand_r_distal_link'),
+            ('head_tilt_link', 'hand_r_spring_proximal_link'),
+            ('head_tilt_link', 'wrist_flex_link'),
+            ('wrist_roll_link', 'base_link'),
+            ('wrist_roll_link', 'head_pan_link'),
+            ('wrist_roll_link', 'head_rgbd_sensor_link')
+        }
+        assert cm.difference(expected) == set()
 
     def test_self_collision_avoidance(self, zero_pose):
         """
@@ -186,7 +222,7 @@ class TestCollisionAvoidanceGoals(object):
         """
         :type box_setup: HSR
         """
-        js = {u'arm_flex_joint': -np.pi/2}
+        js = {u'arm_flex_joint': -np.pi / 2}
         zero_pose.send_and_check_joint_goal(js)
 
         p = PoseStamped()
@@ -199,4 +235,3 @@ class TestCollisionAvoidanceGoals(object):
 
         js = {u'arm_flex_joint': 0}
         zero_pose.send_and_check_joint_goal(js)
-
