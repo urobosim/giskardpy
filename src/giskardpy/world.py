@@ -16,6 +16,7 @@ from giskardpy import logging
 from giskardpy.data_types import Collisions, Collision
 from giskardpy.exceptions import RobotExistsException, DuplicateNameException, PhysicsWorldException, \
     UnknownBodyException, UnsupportedOptionException, CorruptShapeException
+from giskardpy.god_map import GodMap
 from giskardpy.input_system import PoseStampedInput
 from giskardpy.robot import Robot
 from giskardpy.urdf_object import URDFObject, hacky_urdf_parser_fix
@@ -31,7 +32,7 @@ class World(object):
     world_frame = u'map'
 
     def __init__(self, god_map, prefix=tuple(), path_to_data_folder=u''):
-        self.god_map = god_map
+        self.god_map = god_map # type: GodMap
         self._fks = {}
         self.__prefix = '/'.join(prefix)
         self._objects_names = []
@@ -196,7 +197,8 @@ class World(object):
                               root_transform=root_pose,
                               name_override=name)
         obj = self.km_model.get_data(name)
-        obj.init2(world=self, limit_map=limit_map, **kwargs)
+        obj.init2(world=self, limit_map=limit_map,
+                  path_to_data_folder=self.god_map.get_data(identifier.data_folder), **kwargs)
 
         self.km_model.register_on_model_changed(Path(name), obj.reset_cache)
         self.km_model.register_on_model_changed(Path(name), self.init_fast_fks)

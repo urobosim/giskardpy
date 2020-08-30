@@ -115,7 +115,6 @@ def initialize_god_map():
                     controlled_joints=controlled_joints,
                     ignored_pairs=god_map.get_data(identifier.ignored_self_collisions),
                     added_pairs=god_map.get_data(identifier.added_self_collisions))
-
     # joint_position_symbols = JointStatesInput(blackboard.god_map.to_symbol, world.robot.get_controllable_joints(),
     #                                           identifier.joint_states,
     #                                           suffix=[u'position']).joint_map
