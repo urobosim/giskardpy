@@ -3,6 +3,7 @@ from collections import defaultdict
 from itertools import product
 
 import giskardpy
+from giskardpy.god_map import GodMap
 from kineverse.model.paths import Path
 
 giskardpy.WORLD_IMPLEMENTATION = None
@@ -75,6 +76,12 @@ def delete_test_folder(request):
 
     return folder_name
 
+def default_god_map():
+    god_map = GodMap()
+    for x in range(1, len(identifier.data_folder)):
+        god_map.safe_set_data(identifier.data_folder[:x], {})
+    god_map.safe_set_data(identifier.data_folder, u'tmp_data/')
+    return god_map
 
 def allow_all_entry():
     ce = CollisionEntry()
@@ -107,34 +114,34 @@ class TestWorldObj(test_urdf_object.TestUrdfObject):
     def test_get_parent_joint_of_joint(self, function_setup):
         super(TestWorldObj, self).test_get_parent_joint_of_joint(function_setup)
 
-    # def test_safe_load_collision_matrix(self, test_folder, delete_test_folder):
-    #     r = self.cls(donbot_urdf(), path_to_data_folder=test_folder)
-    #     r.init_self_collision_matrix()
-    #     scm = r.get_self_collision_matrix()
-    #     r.safe_self_collision_matrix(test_folder)
-    #     r.load_self_collision_matrix(test_folder)
-    #     assert scm == r.get_self_collision_matrix()
-    #
-    # def test_safe_load_collision_matrix2(self, test_folder, delete_test_folder):
-    #     r = self.cls(donbot_urdf(), path_to_data_folder=test_folder)
-    #     r.init_self_collision_matrix()
-    #     scm = r.get_self_collision_matrix()
-    #
-    #     box = self.cls.from_world_body(make_world_body_box())
-    #     p = Pose()
-    #     p.position = Point(0, 0, 0)
-    #     p.orientation = Quaternion(0, 0, 0, 1)
-    #     r.attach_urdf_object(box, u'gripper_tool_frame', p)
-    #     r.update_self_collision_matrix()
-    #     scm_with_obj = r.get_self_collision_matrix()
-    #
-    #     r.detach_sub_tree(box.get_name())
-    #     r.load_self_collision_matrix(test_folder)
-    #     assert scm == r.get_self_collision_matrix()
-    #
-    #     r.attach_urdf_object(box, u'gripper_tool_frame', p)
-    #     r.load_self_collision_matrix(test_folder)
-    #     assert scm_with_obj == r.get_self_collision_matrix()
+    def test_safe_load_collision_matrix(self, test_folder, delete_test_folder):
+        r = self.cls(donbot_urdf(), path_to_data_folder=test_folder)
+        r.init_self_collision_matrix()
+        scm = r.get_self_collision_matrix()
+        r.safe_self_collision_matrix(test_folder)
+        r.load_self_collision_matrix(test_folder)
+        assert scm == r.get_self_collision_matrix()
+
+    def test_safe_load_collision_matrix2(self, test_folder, delete_test_folder):
+        r = self.cls(donbot_urdf(), path_to_data_folder=test_folder)
+        r.init_self_collision_matrix()
+        scm = r.get_self_collision_matrix()
+
+        box = self.cls.from_world_body(make_world_body_box())
+        p = Pose()
+        p.position = Point(0, 0, 0)
+        p.orientation = Quaternion(0, 0, 0, 1)
+        r.attach_urdf_object(box, u'gripper_tool_frame', p)
+        r.update_self_collision_matrix()
+        scm_with_obj = r.get_self_collision_matrix()
+
+        r.detach_sub_tree(box.get_name())
+        r.load_self_collision_matrix(test_folder)
+        assert scm == r.get_self_collision_matrix()
+
+        r.attach_urdf_object(box, u'gripper_tool_frame', p)
+        r.load_self_collision_matrix(test_folder)
+        assert scm_with_obj == r.get_self_collision_matrix()
 
     def test_base_pose1(self, function_setup):
         parsed_pr2 = self.make_object_without_limits(pr2_urdf())
@@ -172,10 +179,10 @@ class TestRobot(TestWorldObj):
     def test_get_chain4(self, function_setup):
         super(TestRobot, self).test_get_chain4(function_setup)
 
-    # def test_safe_load_collision_matrix(self, test_folder, delete_test_folder):
-    #     r = self.cls(donbot_urdf(), path_to_data_folder=test_folder)
-    #     scm = r.get_self_collision_matrix()
-    #     assert len(scm) == 0
+    def test_safe_load_collision_matrix(self, test_folder, delete_test_folder):
+        r = self.cls(donbot_urdf(), path_to_data_folder=test_folder)
+        scm = r.get_self_collision_matrix()
+        assert len(scm) == 0
 
 
 class TestWorld(object):
@@ -183,14 +190,14 @@ class TestWorld(object):
     world_cls = World
 
     def make_world_with_robot(self, urdf, path_to_data_folder):
-
-        w = self.world_cls(prefix=identifier.world, path_to_data_folder=path_to_data_folder)
+        w = self.world_cls(god_map=default_god_map(), prefix=identifier.world, path_to_data_folder=path_to_data_folder)
         # r = self.cls(urdf)
         w.add_robot(robot_urdf=urdf,
                     base_pose=None,
                     controlled_joints=None,
                     ignored_pairs=[],
                     added_pairs=[])
+        w.god_map.register_symbols(w.robot.get_joint_position_symbols())
         if path_to_data_folder is not None:
             w.robot.init_self_collision_matrix()
         return w
@@ -214,7 +221,7 @@ class TestWorld(object):
         return self.make_world_with_robot(donbot_urdf(), path_to_data_folder)
 
     def test_add_robot(self, function_setup):
-        empty_world = self.world_cls()
+        empty_world = self.world_cls(god_map=default_god_map())
         assert len(empty_world.get_objects()) == 0
         assert not empty_world.has_robot()
         # extracting the urdf turns integers into floats
@@ -228,7 +235,8 @@ class TestWorld(object):
         return empty_world
 
     def test_add_object(self, function_setup):
-        empty_world = self.world_cls()
+        god_map = GodMap()
+        empty_world = self.world_cls(god_map=default_god_map())
         name = u'muh'
         box_msg = make_world_body_box(name)
         empty_world.add_object(urdf=box_msg, name=name)
@@ -242,7 +250,8 @@ class TestWorld(object):
         return empty_world
 
     def test_add_object_twice(self, function_setup):
-        empty_world = self.world_cls()
+        god_map = GodMap()
+        empty_world = self.world_cls(god_map=default_god_map())
         name = u'muh'
         box = make_world_body_box(name)
         empty_world.add_object(box, name)
@@ -640,7 +649,7 @@ class TestWorld(object):
         ce.link_bs = [CollisionEntry.ALL]
         ces.append(ce)
         new_ces = world_with_donbot.verify_collision_entries(ces, min_dist)
-        assert len(new_ces) == 1 + len(world_with_donbot.get_controlled_robot_links()) * 2
+        assert len(new_ces) == 1 + len(world_with_donbot.robot.get_controlled_links()) * 2
         for ce in new_ces[1:]:
             assert ce.body_b != CollisionEntry.ALL
             assert CollisionEntry.ALL not in ce.robot_links
@@ -650,11 +659,11 @@ class TestWorld(object):
                 assert CollisionEntry.ALL not in ce.link_bs
             assert len(ce.link_bs) == 1
         i = 0
-        for i in range(len(world_with_donbot.get_controlled_robot_links()) + 1):
+        for i in range(len(world_with_donbot.robot.get_controlled_links()) + 1):
             ce = new_ces[i]
             assert ce.type == CollisionEntry.AVOID_COLLISION
         i += 1
-        for j in range(len(world_with_donbot.get_controlled_robot_links())):
+        for j in range(len(world_with_donbot.robot.get_controlled_links())):
             ce = new_ces[i + j]
             assert ce.type == CollisionEntry.ALLOW_COLLISION
 
@@ -679,7 +688,7 @@ class TestWorld(object):
         ce.link_bs = [name]
         ces.append(ce)
         new_ces = world_with_donbot.verify_collision_entries(ces, min_dist)
-        assert len(new_ces) == len(world_with_donbot.get_controlled_robot_links()) * 2 + 1
+        assert len(new_ces) == len(world_with_donbot.robot.get_controlled_links()) * 2 + 1
         for ce in new_ces[1:]:
             assert ce.body_b != CollisionEntry.ALL
             assert CollisionEntry.ALL not in ce.robot_links
@@ -687,11 +696,11 @@ class TestWorld(object):
             assert len(ce.link_bs) == 1
         i = 0
         for i in range(1 +
-                       len(world_with_donbot.get_controlled_robot_links())):
+                       len(world_with_donbot.robot.get_controlled_links())):
             ce = new_ces[i]
             assert ce.type == CollisionEntry.AVOID_COLLISION
         i += 1
-        for j in range(len(world_with_donbot.get_controlled_robot_links())):
+        for j in range(len(world_with_donbot.robot.get_controlled_links())):
             ce = new_ces[i + j]
             assert ce.type == CollisionEntry.ALLOW_COLLISION
 
@@ -719,7 +728,7 @@ class TestWorld(object):
         ce.link_bs = [name]
         ces.append(ce)
         new_ces = world_with_donbot.verify_collision_entries(ces, min_dist)
-        assert len(new_ces) == len(world_with_donbot.get_controlled_robot_links()) * 3 + 1
+        assert len(new_ces) == len(world_with_donbot.robot.get_controlled_links()) * 3 + 1
         for ce in new_ces[1:]:
             assert ce.body_b != CollisionEntry.ALL
             assert CollisionEntry.ALL not in ce.robot_links
@@ -729,11 +738,11 @@ class TestWorld(object):
                 assert CollisionEntry.ALL not in ce.link_bs
             assert len(ce.link_bs) == 1
         i = -1
-        for i in range(1 + len(world_with_donbot.get_controlled_robot_links()) * 2):
+        for i in range(1 + len(world_with_donbot.robot.get_controlled_links()) * 2):
             ce = new_ces[i]
             assert ce.type == CollisionEntry.AVOID_COLLISION
         i += 1
-        for j in range(len(world_with_donbot.get_controlled_robot_links())):
+        for j in range(len(world_with_donbot.robot.get_controlled_links())):
             ce = new_ces[i + j]
             assert ce.type == CollisionEntry.ALLOW_COLLISION
 
@@ -807,7 +816,7 @@ class TestWorld(object):
         box = make_world_body_box(name)
         world_with_donbot.add_object(box)
         collision_matrix = world_with_donbot.collision_goals_to_collision_matrix([], min_dist)
-        assert len(collision_matrix) == len(base_collision_matrix) + len(world_with_donbot.get_controlled_robot_links())
+        assert len(collision_matrix) == len(base_collision_matrix) + len(world_with_donbot.robot.get_controlled_links())
         robot_link_names = world_with_donbot.robot.get_link_names()
         for (robot_link, body_b, body_b_link), dist in collision_matrix.items():
             assert dist == min_dist[robot_link][u'zero_weight_distance']
@@ -831,7 +840,7 @@ class TestWorld(object):
         ces = []
         ces.append(avoid_all_entry(min_dist))
         collision_matrix = world_with_donbot.collision_goals_to_collision_matrix(ces, min_dist)
-        assert len(collision_matrix) == len(base_collision_matrix) + len(world_with_donbot.get_controlled_robot_links())
+        assert len(collision_matrix) == len(base_collision_matrix) + len(world_with_donbot.robot.get_controlled_links())
         robot_link_names = world_with_donbot.robot.get_link_names()
         for (robot_link, body_b, body_b_link), dist in collision_matrix.items():
             assert dist == min_dist[robot_link][u'zero_weight_distance']
@@ -870,7 +879,7 @@ class TestWorld(object):
         # FIXME min dist is kinda outdated so this test is hacked to succeed
         world_with_donbot = self.make_world_with_donbot(test_folder)
         name = u'muh'
-        robot_link_names = list(world_with_donbot.get_controlled_robot_links())
+        robot_link_names = list(world_with_donbot.robot.get_controlled_links())
 
         box = make_world_body_box(name)
         world_with_donbot.add_object(box)
@@ -902,7 +911,7 @@ class TestWorld(object):
         """
         world_with_donbot = self.make_world_with_donbot(test_folder)
         name = u'muh'
-        robot_link_names = list(world_with_donbot.get_controlled_robot_links())
+        robot_link_names = list(world_with_donbot.robot.get_controlled_links())
         min_dist = defaultdict(lambda: {u'zero_weight_distance': 0.1})
 
         box = make_world_body_box(name)
@@ -936,7 +945,7 @@ class TestWorld(object):
         world_with_donbot = self.make_world_with_donbot(test_folder)
         name = u'muh'
         name2 = u'muh2'
-        robot_link_names = list(world_with_donbot.get_controlled_robot_links())
+        robot_link_names = list(world_with_donbot.robot.get_controlled_links())
         min_dist = defaultdict(lambda: {u'zero_weight_distance': 0.05})
 
         box = make_world_body_box(name)
@@ -969,7 +978,7 @@ class TestWorld(object):
         world_with_donbot = self.make_world_with_donbot(test_folder)
         name = u'muh'
         name2 = u'muh2'
-        robot_link_names = list(world_with_donbot.get_controlled_robot_links())
+        robot_link_names = list(world_with_donbot.robot.get_controlled_links())
         allowed_link = robot_link_names[0]
         min_dist = defaultdict(lambda: {u'zero_weight_distance': 0.05})
 
@@ -1061,24 +1070,20 @@ class TestWorld(object):
         base_pose.position.x = 10
         base_pose.orientation.w = 1
         w.set_object_pose('pr22', base_pose)
-        robot_links = w.get_controlled_robot_links()
+        robot_links = w.robot.get_controlled_links()
         cut_off_distances = {(link1, 'pr22', link2): 0.1 for link1, link2 in product(robot_links, repeat=2)}
         w.reset_pb_subworld()
         assert len(w.check_collisions(cut_off_distances).all_collisions) == 0
 
     def test_check_collisions2(self, test_folder):
         w = self.make_world_with_pr2()
-        pr22 = self.cls(pr2_urdf())
-        pr22.set_name('pr22')
-        w.add_object(pr22)
+        w.add_object(pr2_urdf(), name='pr22')
         base_pose = Pose()
         base_pose.position.x = 0.05
         base_pose.orientation.w = 1
         w.set_object_pose('pr22', base_pose)
 
-        pr23 = self.cls(pr2_urdf())
-        pr23.set_name('pr23')
-        w.add_object(pr23)
+        w.add_object(pr2_urdf(), name='pr23')
         base_pose = Pose()
         base_pose.position.y = 0.05
         base_pose.orientation.w = 1
@@ -1092,16 +1097,14 @@ class TestWorld(object):
 
     def test_check_collisions3(self, test_folder):
         w = self.make_world_with_pr2()
-        pr22 = self.cls(pr2_urdf())
-        pr22.set_name('pr22')
-        w.add_object(pr22)
+        w.add_object(pr2_urdf(), name='pr22')
         base_pose = Pose()
         base_pose.position.x = 1.5
         base_pose.orientation.w = 1
         w.set_object_pose('pr22', base_pose)
         min_dist = defaultdict(lambda: {u'zero_weight_distance': 0.1})
         cut_off_distances = w.collision_goals_to_collision_matrix([], min_dist)
-        robot_links = pr22.get_link_names()
+        robot_links = w.get_object('pr22').get_link_names()
         cut_off_distances.update({(link1, 'pr22', link2): 0.1 for link1, link2 in product(robot_links, repeat=2)})
 
         for i in range(160):
