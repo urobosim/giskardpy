@@ -23,13 +23,13 @@ class WorldObject(URDFObject):
         self._path_to_data_folder = path_to_data_folder + u'collision_matrix/'
         self.controlled_joints = controlled_joints
         if not ignored_pairs:
-            self.ignored_pairs = set()
+            self._ignored_pairs = set()
         else:
-            self.ignored_pairs = {tuple(x) for x in ignored_pairs}
+            self._ignored_pairs = {tuple(x) for x in ignored_pairs}
         if not added_pairs:
-            self.added_pairs = set()
+            self._added_pairs = set()
         else:
-            self.added_pairs = {tuple(x) for x in added_pairs}
+            self._added_pairs = {tuple(x) for x in added_pairs}
         self._calc_self_collision_matrix = calc_self_collision_matrix
         if base_pose is None:
             p = Pose()
@@ -155,7 +155,7 @@ class WorldObject(URDFObject):
         for link_a, link_b in link_combinations:
             if self.are_linked(link_a, link_b) or link_a == link_b:
                 always.add((link_a, link_b))
-        always = always.difference({tuple(x) for x in self.ignored_pairs})
+        always = always.difference({tuple(x) for x in self._ignored_pairs})
         rest = link_combinations.difference(always)
         self.joint_state = self.get_zero_joint_state()
         always = always.union(self.check_collisions(rest, d))
@@ -177,7 +177,7 @@ class WorldObject(URDFObject):
             if len(sometimes2) > 0:
                 rest = rest.difference(sometimes2)
                 sometimes = sometimes.union(sometimes2)
-        sometimes = sometimes.union(self.added_pairs)
+        sometimes = sometimes.union(self._added_pairs)
         logging.loginfo(u'calculated self collision matrix in {:.3f}s'.format(time() - t))
         return sometimes
 
