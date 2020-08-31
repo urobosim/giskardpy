@@ -692,7 +692,7 @@ class GiskardTestWrapper(object):
                 collision_list.update(self_collisions)
         return collision_list
 
-    def check_cpi_geq(self, links, body_b, distance_threshold, check_distance=0.1):
+    def check_cpi_geq(self, links, body_b, distance_threshold, check_distance=0.2):
         for link in links:
             collisions = self.get_world().get_closest_distances(self.get_robot().get_name(), link, body_b,
                                                                 check_distance)
@@ -701,7 +701,7 @@ class GiskardTestWrapper(object):
                                                     collisions.values()[0],
                                                     distance_threshold)
 
-    def check_cpi_leq(self, links, body_b, distance_threshold, check_distance=0.1):
+    def check_cpi_leq(self, links, body_b, distance_threshold, check_distance=0.2):
         for link in links:
             collisions = self.get_world().get_closest_distances(self.get_robot().get_name(), link, body_b,
                                                                 check_distance)
