@@ -199,13 +199,15 @@ class World(object):
                               root_transform=root_pose,
                               limit_symbols=True,
                               name_override=name)
-        obj = self.km_model.get_data(name)
+        obj = self.km_model.get_data(name) # type: Robot
         obj.init2(world=self, limit_map=limit_map,
                   path_to_data_folder=self.god_map.get_data(identifier.data_folder), **kwargs)
 
         self.km_model.register_on_model_changed(Path(name), obj.reset_cache)
         self.km_model.register_on_model_changed(Path(name), self.init_fast_fks)
         self.reset_cache()
+        obj.get_joint_position_symbols() # FIXME used to call to_symbol
+
         return name
 
     def world_body_to_urdf_str(self, world_body):
