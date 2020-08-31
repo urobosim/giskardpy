@@ -278,7 +278,7 @@ class GoalToConstraints(GetGoal):
         for constraint in itertools.chain(cmd.constraints, cmd.joint_constraints, cmd.cartesian_constraints):
             if constraint.type not in allowed_constraint_names():
                 # TODO test me
-                raise InsolvableException(u'unknown constraint')
+                raise InsolvableException(u'unknown constraint "{}"'.format(constraint.type))
             try:
                 C = eval(u'giskardpy.constraints.{}'.format(constraint.type))
             except NameError as e:
