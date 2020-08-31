@@ -20,7 +20,7 @@ from giskardpy.god_map import GodMap
 from giskardpy.input_system import PoseStampedInput
 from giskardpy.robot import Robot
 from giskardpy.urdf_object import URDFObject, hacky_urdf_parser_fix
-from giskardpy.utils import KeyDefaultDict, memoize, homo_matrix_to_pose
+from giskardpy.utils import KeyDefaultDict, memoize, homo_matrix_to_pose, suppress_stderr
 from kineverse.model.geometry_model import GeometryModel
 from kineverse.model.paths import Path
 from kineverse.operations.basic_operations import ExecFunction
@@ -174,7 +174,8 @@ class World(object):
         """
         if isinstance(urdf, WorldBody):
             name, urdf = self.world_body_to_urdf_str(urdf)
-        urdf_obj = urdf_filler(up.URDF.from_xml_string(hacky_urdf_parser_fix(urdf)), fill_with_visual=False)
+        with suppress_stderr():
+            urdf_obj = urdf_filler(up.URDF.from_xml_string(hacky_urdf_parser_fix(urdf)), fill_with_visual=False)
         if name is None:
             name = urdf_obj.name
 

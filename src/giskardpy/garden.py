@@ -176,7 +176,7 @@ def grow_tree():
     planning_3.add_plugin(KinSimPlugin(u'kin sim'))
     planning_3.add_plugin(LogTrajPlugin(u'log'))
     planning_3.add_plugin(GoalReachedPlugin(u'goal reached'))
-    # planning_3.add_plugin(WiggleCancel(u'wiggle', final_detection=False))
+    planning_3.add_plugin(WiggleCancel(u'wiggle', final_detection=False))
     planning_3.add_plugin(TimePlugin(u'time'))
     # planning_3.add_plugin(MaxTrajLength(u'traj length check'))
     # ----------------------------------------------

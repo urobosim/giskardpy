@@ -255,6 +255,8 @@ class GoalToConstraints(GetGoal):
                 weight = weight * (1. / (upper)) ** 2
                 joint_constraints[joint_name] = JointConstraint(lower, upper, weight)
 
+        joint_constraints = OrderedDict((key, value) for key, value in sorted(joint_constraints.items()))
+
         self.get_god_map().register_symbols(symbols)
 
         self.get_god_map().safe_set_data(identifier.joint_constraint_identifier, joint_constraints)
