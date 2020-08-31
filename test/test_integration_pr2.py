@@ -2516,7 +2516,6 @@ class TestCollisionAvoidanceGoals(object):
     #     kitchen_setup.send_and_check_goal(execute=False)
 
     def test_bowl_and_cup(self, kitchen_setup):
-        # fixme
         bowl_name = u'bowl'
         cup_name = u'cup'
 

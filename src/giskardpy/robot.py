@@ -63,9 +63,6 @@ class Robot(Backend):
         # self._evaluated_fks.clear()
         # self.get_fk_np.memo.clear()
 
-    def set_limit_map(self, limit_map):
-        self.limit_map = limit_map
-
     @memoize
     def get_controlled_parent_joint(self, link_name):
         joint = self.get_parent_joint_of_link(link_name)

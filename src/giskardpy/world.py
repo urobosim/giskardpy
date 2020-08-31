@@ -192,9 +192,10 @@ class World(object):
                               joint_prefix=Path(
                                   [self.__prefix, u'km_model', u'data_tree', u'data_tree', name, u'joint_state']),
                               limit_prefix=Path(
-                                  [self.__prefix, u'km_model', u'data_tree', u'data_tree', name, u'limits']),
+                                  [self.__prefix, u'km_model', u'data_tree', u'data_tree', name, u'joint_limits']),
                               robot_class=Robot,
                               root_transform=root_pose,
+                              limit_symbols=True,
                               name_override=name)
         obj = self.km_model.get_data(name)
         obj.init2(world=self, limit_map=limit_map,
