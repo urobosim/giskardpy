@@ -5,7 +5,6 @@ from collections import OrderedDict
 
 import numpy as np
 from geometry_msgs.msg import Vector3Stamped, Vector3
-from rospy_message_converter.message_converter import convert_dictionary_to_ros_message
 
 import giskardpy.identifier as identifier
 import giskardpy.tfwrapper as tf
@@ -14,8 +13,7 @@ from giskardpy.data_types import SoftConstraint
 from giskardpy.exceptions import GiskardException, ConstraintException
 from giskardpy.input_system import PoseStampedInput, Point3Input, Vector3Input, Vector3StampedInput, FrameInput, \
     PointStampedInput, TranslationInput
-
-import kineverse.gradients.gradient_math as gm
+from rospy_message_converter.message_converter import convert_dictionary_to_ros_message
 
 # WEIGHTS = [0] + [6 ** x for x in range(7)]
 WEIGHT_MAX = 1000
@@ -73,11 +71,11 @@ class Constraint(object):
         """
         return self.get_god_map().unsafe_get_data(identifier.robot)
 
-    def get_input_joint_position(self, joint_name):
+    def get_input_joint_position(self, joint_name, object_name=u'robot'):
         """
-        returns a symbol that referes to the given joint
+        returns a symbol that refers to the given joint
         """
-        return self.get_god_map().to_symbol(identifier.joint_states + [joint_name, u'position'])
+        return self.get_world().get_object(object_name).get_joint_position_symbol(joint_name)
 
     def get_joint_position_symbols(self):
         """
@@ -144,35 +142,21 @@ class Constraint(object):
         """
         return self.get_robot().get_fk_expression(root, tip)
 
-        # km = self.get_god_map().get_data(identifier.km_world) # type: GeometryModel
-        # try:
-        #     root_frame = km.get_data(root)
-        # except PathException as e:
-        #     raise Exception('Undefined root frame "{}"'.format(root))
-        #
-        # if not isinstance(root_frame, KFrame):
-        #     raise Exception('Path "{}" does not name a frame'.format(root))
-        #
-        # try:
-        #     tip_frame = km.get_data(tip)
-        # except PathException as e:
-        #     raise Exception('Undefined tip frame "{}"'.format(tip))
-        #
-        # if not isinstance(tip_frame, KFrame):
-        #     raise Exception('Path "{}" does not name a frame'.format(tip))
+    def get_world_fk(self, root_path, tip_path):
+        return self.get_world().get_fk_expression(root_path, tip_path)
 
-        # return fk_a_in_b(self.get_world(), root_frame, tip_frame)
 
-        # fk = w.eye(4)
-        # root_chain, _, tip_chain = self.get_robot().get_split_chain(root, tip, joints=False)
-        # for link_name in root_chain:
-        #     child_T_parent = km.get_data('robot/links/'+link_name).to_parent
-        #     fk = w.dot(fk, w.inverse_frame(child_T_parent))
-        # for link_name in tip_chain:
-        #     # FIXME kineverse can't handle unicode
-        #     child_T_parent = km.get_data('robot/links/'+str(link_name)).to_parent
-        #     fk = w.dot(fk, child_T_parent)
-        # return fk
+    def get_world_fk_evaluated(self, root_path, tip_path):
+        """
+        Return the homogeneous transformation matrix root_T_tip. This Matrix refers to the evaluated current transform.
+        It is not dependent on the joint state.
+        :type root: str
+        :type tip: str
+        :return: root_T_tip
+        """
+        return FrameInput(self.get_god_map().to_symbol,
+                          prefix=identifier.world + [u'get_fk_np',
+                                                     (root_path, tip_path)]).get_frame()
 
     def get_fk_evaluated(self, root, tip):
         """
@@ -550,7 +534,8 @@ class JointPositionPrismatic(Constraint):
         weight = self.get_input_float(self.weight)
 
         max_velocity = w.Min(self.get_input_float(self.max_velocity),
-                             self.get_robot().get_joint_velocity_limit(self.joint_name)) # FIXME used the expression here in the old version
+                             self.get_robot().get_joint_velocity_limit(
+                                 self.joint_name))  # FIXME used the expression here in the old version
         max_acceleration = self.get_input_float(self.max_acceleration)
 
         err = joint_goal - current_joint
@@ -771,7 +756,7 @@ class SimpleCartesianPosition(BasicCartesianConstraint):
         r_P_g = w.position_of(self.get_goal_pose())
 
         self.add_simple_minimize_position_constraint(r_P_g, self.root, self.tip,
-                                               self.goal_constraint)
+                                                     self.goal_constraint)
 
 
 # class CartesianPositionX(BasicCartesianConstraint):
@@ -816,7 +801,8 @@ class SimpleCartesianPosition(BasicCartesianConstraint):
 
 
 class CartesianOrientation(BasicCartesianConstraint):
-    def __init__(self, god_map, root_link, tip_link, goal, max_velocity=0.5, max_acceleration=0.5, goal_constraint=True):
+    def __init__(self, god_map, root_link, tip_link, goal, max_velocity=0.5, max_acceleration=0.5,
+                 goal_constraint=True):
         super(CartesianOrientation, self).__init__(god_map, root_link, tip_link, goal, max_velocity,
                                                    max_acceleration, goal_constraint)
 
@@ -989,9 +975,11 @@ class CartesianPose(Constraint):
         super(CartesianPose, self).__init__(god_map)
         self.constraints = []
         self.constraints.append(CartesianPosition(god_map, root_link, tip_link, goal,
-                                                  translation_max_velocity, translation_max_acceleration, goal_constraint))
+                                                  translation_max_velocity, translation_max_acceleration,
+                                                  goal_constraint))
         self.constraints.append(CartesianOrientationSlerp(god_map, root_link, tip_link, goal,
-                                                          rotation_max_velocity, rotation_max_acceleration, goal_constraint))
+                                                          rotation_max_velocity, rotation_max_acceleration,
+                                                          goal_constraint))
 
     def make_constraints(self):
         for constraint in self.constraints:
@@ -1103,7 +1091,7 @@ class ExternalCollisionAvoidance(Constraint):
         #                            w.if_greater(actual_distance, 0, actual_distance, penetration_distance))
         upper_slack = w.if_greater(actual_distance, 50,
                                    1e9,
-                                   w.if_greater(actual_distance, 0, 2*slack_limit, 0))
+                                   w.if_greater(actual_distance, 0, 2 * slack_limit, 0))
         # self.add_debug_constraint('/pen', penetration_distance)
         # self.add_debug_constraint('/actual', actual_distance)
 
@@ -1232,7 +1220,6 @@ class SelfCollisionAvoidance(Constraint):
         weight = w.save_division(weight,  # divide by number of active repeller per link
                                  w.Min(number_of_self_collisions, num_repeller))
 
-
         # limit = zero_weight_distance - actual_distance
         # limit = self.limit_velocity(limit, repel_velocity)
 
@@ -1253,7 +1240,7 @@ class SelfCollisionAvoidance(Constraint):
 
         upper_slack = w.if_greater(actual_distance, 50,
                                    1e9,
-                                   w.if_greater(actual_distance, 0, 2*slack_limit, 0))
+                                   w.if_greater(actual_distance, 0, 2 * slack_limit, 0))
 
         self.add_constraint(u'/position',
                             lower=lower_limit,
@@ -1659,52 +1646,151 @@ class Pointing(Constraint):
 
 # Fixme: The name of this constraint is not informative. Should maybe be something like "Move1DofFixed"
 class Open1Dof(Constraint):
+    handle_T_tip_id = u'handle_T_tip'
+
     def __init__(self, god_map, tip, object_name, handle_link, root=None, goal_joint_state=None,
                  weight=WEIGHT_ABOVE_CA):
         super(Open1Dof, self).__init__(god_map)
         self.constraints = []
 
         self.root = self.get_robot().get_root() if root is None else root
-        self.tip  = tip
+        self.tip = tip
         self.weight = weight
 
         self.handle_link = handle_link
-        handle_frame_id = u'iai_kitchen/' + handle_link
 
         self.object_name = object_name
         env_object = self.get_world().get_object(object_name)
-        joint_name = env_object.get_movable_parent_joint(handle_link)
-        self.goal_joint_symbol = env_object.get_joint(joint_name).position
+        self.handle_link_path = env_object.get_link_path(self.handle_link)
+        self.joint_name = env_object.get_movable_parent_joint(handle_link)
 
-        min_limit, max_limit = env_object.get_joint_limits(joint_name)
-        if goal_joint_state:
-            self.goal_joint_state = min(max_limit, goal_joint_state)
+        handle_T_tip = self.get_world().get_fk_pose(env_object.get_link_path(self.handle_link),
+                                                    self.get_robot().get_link_path(self.tip))
+
+        min_limit, max_limit = env_object.get_joint_limits(self.joint_name)
+        if goal_joint_state is not None:
+            self.goal_joint_state = max(min_limit, min(max_limit, goal_joint_state))
         else:
             self.goal_joint_state = max_limit
-
-        # Get frame of current tip pose
-        tip_T_handle = tf.to_np(tf.msg_to_kdl(tf.lookup_pose(handle_frame_id, tip)))
-
-        cart_goal_pose = gm.dot(env_object.get_fk_expression(env_object.get_root(), handle_link), gm.Matrix(tip_T_handle))
-
-        self.constraints.append(CartesianPose(god_map, root, tip, cart_goal_pose, goal_constraint=False)) # Fixme: Goal constraint?
+        self.save_params_on_god_map({self.handle_T_tip_id: handle_T_tip})
 
     def make_constraints(self):
-        for constraint in self.constraints:
-            self.soft_constraints.update(constraint.get_constraints())
+        handle_T_tip_evaluated = self.get_input_PoseStamped(self.handle_T_tip_id)
+        goal_joint_symbol = self.get_input_joint_position(self.joint_name, self.object_name)
 
-        err = self.goal_joint_state - self.goal_joint_symbol
+        map_T_handle = self.get_world_fk(self.get_world().world_frame_path, self.handle_link_path)
+        map_T_tip = self.get_world_fk(self.get_world().world_frame_path, self.get_robot().get_link_path(self.tip))
+        handle_T_tip = w.dot(w.inverse_frame(map_T_handle), map_T_tip)
+
+        r_P_c = w.position_of(handle_T_tip)
+        r_P_g = w.position_of(handle_T_tip_evaluated)
+
+        r_P_error = r_P_g - r_P_c
+        max_translation_velocity = 0.1
+        trans_error = w.norm(r_P_error)
+        trans_error = w.if_less_eq(w.Abs(trans_error), 1e-3, 0, trans_error)
+
+        trans_scale = self.limit_velocity(w.norm(r_P_c),
+                                          max_translation_velocity)
+        asdf = w.save_division(r_P_error, trans_error)
+        r_P_intermediate_error = asdf * trans_scale
+
+        weight = self.normalize_error(max_translation_velocity, WEIGHT_ABOVE_CA)
+        # self.add_debug_constraint(u'/real_error/x', r_P_error[0])
+        # self.add_debug_constraint(u'/real_error/y', r_P_error[1])
+        # self.add_debug_constraint(u'/real_error/z', r_P_error[2])
+        #
+        # self.add_debug_constraint(u'/asdf/x', asdf[0])
+        # self.add_debug_constraint(u'/asdf/y', asdf[1])
+        # self.add_debug_constraint(u'/asdf/z', asdf[2])
+
+        self.add_constraint(u'/x',
+                            lower=r_P_error[0],
+                            upper=r_P_error[0],
+                            weight=weight,
+                            expression=r_P_c[0],
+                            goal_constraint=False)
+        self.add_constraint(u'/y',
+                            lower=r_P_error[1],
+                            upper=r_P_error[1],
+                            weight=weight,
+                            expression=r_P_c[1],
+                            goal_constraint=False)
+        self.add_constraint(u'/z',
+                            lower=r_P_error[2],
+                            upper=r_P_error[2],
+                            weight=weight,
+                            expression=r_P_c[2],
+                            goal_constraint=False)
+
+        # rotation goal
+        r_R_g = w.rotation_of(handle_T_tip_evaluated)
+        max_angular_velocity = 0.4
+
+        r_R_c = w.rotation_of(handle_T_tip)
+        r_R_c_evaluated = w.rotation_of(self.get_world_fk_evaluated(self.handle_link_path,
+                                                                    self.get_robot().get_link_path(self.tip)))
+
+        identity = w.rotation_matrix_from_axis_angle([0, 0, 1], 0.0001)
+        c_R_c = w.dot(w.dot(r_R_c_evaluated.T, identity), r_R_c)
+        current_axis, current_angle = w.axis_angle_from_matrix(c_R_c)
+        current_angle_axis = (current_axis * current_angle)
+
+        error_angle = w.rotation_distance(r_R_c, r_R_g)
+        error_angle = w.Abs(error_angle)
+
+        _, angle = w.axis_angle_from_matrix(r_R_c)
+        capped_angle = self.limit_velocity(error_angle, max_angular_velocity) / error_angle
+
+        r_R_c_q = w.quaternion_from_matrix(r_R_c)
+        r_R_g_q = w.quaternion_from_matrix(r_R_g)
+        r_R_g_intermediate_q = w.quaternion_slerp(r_R_c_q, r_R_g_q, capped_angle)
+        c_R_g_intermediate_q = w.quaternion_diff(r_R_c_q, r_R_g_intermediate_q)
+        intermediate_error_axis, intermediate_error_angle = w.axis_angle_from_quaternion(c_R_g_intermediate_q[0],
+                                                                                         c_R_g_intermediate_q[1],
+                                                                                         c_R_g_intermediate_q[2],
+                                                                                         c_R_g_intermediate_q[3])
+
+        c_R_g_intermediate_aa = intermediate_error_axis * intermediate_error_angle
+
+        weight = WEIGHT_ABOVE_CA
+        weight = self.normalize_error(max_angular_velocity, weight)
+
+        self.add_constraint(u'/0',
+                            lower=c_R_g_intermediate_aa[0],
+                            upper=c_R_g_intermediate_aa[0],
+                            weight=weight,
+                            expression=current_angle_axis[0],
+                            goal_constraint=False)
+        self.add_constraint(u'/1',
+                            lower=c_R_g_intermediate_aa[1],
+                            upper=c_R_g_intermediate_aa[1],
+                            weight=weight,
+                            expression=current_angle_axis[1],
+                            goal_constraint=False)
+        self.add_constraint(u'/2',
+                            lower=c_R_g_intermediate_aa[2],
+                            upper=c_R_g_intermediate_aa[2],
+                            weight=weight,
+                            expression=current_angle_axis[2],
+                            goal_constraint=False)
+
+        # joint goal for kitchen
+
+        err = self.limit_velocity(self.goal_joint_state - goal_joint_symbol, 0.1)
+        weight = self.normalize_error(0.1, self.weight)
 
         # Fixme: This is a very short version of this
-        self.add_constraint(u'goal',
+        self.add_constraint(u'/object_joint_goal',
                             lower=err,
                             upper=err,
-                            weight=self.weight,
-                            expression=self.goal_joint_symbol,
+                            weight=weight,
+                            expression=goal_joint_symbol,
                             goal_constraint=True)
 
     def __str__(self):
         return u'{}/{}/{}'.format(super(Open1Dof, self).__str__(), self.tip, self.object_name, self.handle_link)
+
 
 class Close(Constraint):
     def __init__(self, god_map, tip, object_name, handle_link, root=None, goal_joint_state=None,

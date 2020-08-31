@@ -679,6 +679,7 @@ class GiskardTestWrapper(object):
         :rtype: list
         """
         collision_goals = [CollisionEntry(type=CollisionEntry.AVOID_ALL_COLLISIONS, min_dist=distance_threshold)]
+        self.get_world().pb_subworld.closest_distances({link: distance_threshold})
         collision_matrix = self.get_world().collision_goals_to_collision_matrix(collision_goals,
                                                                                 self.get_god_map().get_data(
                                                                                     identifier.distance_thresholds))
@@ -691,20 +692,22 @@ class GiskardTestWrapper(object):
                 collision_list.update(self_collisions)
         return collision_list
 
-    def check_cpi_geq(self, links, distance_threshold):
+    def check_cpi_geq(self, links, body_b, distance_threshold, check_distance=0.1):
         for link in links:
-            collisions = self.get_external_collisions(link, distance_threshold)
-            assert collisions[0].get_contact_distance() >= distance_threshold, \
-                u'distance for {}: {} >= {}'.format(link,
-                                                    collisions[0].get_contact_distance(),
+            collisions = self.get_world().get_closest_distances(self.get_robot().get_name(), link, body_b,
+                                                                check_distance)
+            assert collisions.values()[0] >= distance_threshold, \
+                u'distance for {}: {} <= {}'.format(link,
+                                                    collisions.values()[0],
                                                     distance_threshold)
 
-    def check_cpi_leq(self, links, distance_threshold):
+    def check_cpi_leq(self, links, body_b, distance_threshold, check_distance=0.1):
         for link in links:
-            collisions = self.get_external_collisions(link, distance_threshold)
-            assert collisions[0].get_contact_distance() <= distance_threshold, \
+            collisions = self.get_world().get_closest_distances(self.get_robot().get_name(), link, body_b,
+                                                                check_distance)
+            assert collisions.values()[0] <= distance_threshold, \
                 u'distance for {}: {} <= {}'.format(link,
-                                                    collisions[0].get_contact_distance(),
+                                                    collisions.values()[0],
                                                     distance_threshold)
 
     def move_base(self, goal_pose):

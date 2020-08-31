@@ -127,6 +127,8 @@ def initialize_god_map():
     #                                  joint_velocity_linear_limit_symbols, joint_velocity_angular_limit_symbols,
     #                                  joint_acceleration_linear_limit_symbols, joint_acceleration_angular_limit_symbols)
     world.robot.init_self_collision_matrix()
+    world.robot.update_joint_velocity_limits(god_map.get_data(identifier.joint_velocity_linear_limit),
+                                             god_map.get_data(identifier.joint_velocity_angular_limit))
     god_map.register_symbols(world.robot.get_joint_position_symbols())
     return god_map
 
@@ -215,8 +217,8 @@ def grow_tree():
     root.add_child(wait_for_goal)
     root.add_child(CleanUp(u'cleanup'))
     root.add_child(process_move_goal)
-    # if god_map.get_data(identifier.enable_PlotTrajectory):
-    #     root.add_child(PlotTrajectory(u'plot trajectory', order=3))
+    if god_map.get_data(identifier.enable_PlotTrajectory):
+        root.add_child(PlotTrajectory(u'plot trajectory', order=3))
     #     root.add_child(PlotTrajectoryFFT(u'plot fft', joint_name=u'r_wrist_flex_joint'))
     # root.add_child(post_processing)
     root.add_child(move_robot)

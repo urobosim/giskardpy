@@ -62,6 +62,19 @@ class URDFObject(ArticulatedObject):
         else:
             self._limits = {}
 
+    def update_joint_velocity_limits(self, new_linear_limits, new_angular_limits):
+        for joint_name in self.joint_limits:
+            if self.is_joint_prismatic(joint_name):
+                self._limits[joint_name][u'velocity'] = min(new_linear_limits[joint_name],
+                                                            self._limits[joint_name][u'velocity'])
+            elif self.is_joint_rotational(joint_name):
+                self._limits[joint_name][u'velocity'] = min(new_angular_limits[joint_name],
+                                                            self._limits[joint_name][u'velocity'])
+
+    @property
+    def joint_limits(self):
+        return self._limits
+
     def reset_cache(self, *args, **kwargs):
         for method_name in dir(self):
             try:

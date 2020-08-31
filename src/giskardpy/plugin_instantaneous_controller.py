@@ -35,12 +35,14 @@ class ControllerPlugin(GiskardBehavior):
         self.joint_constraints = self.get_god_map().get_data(identifier.joint_constraint_identifier)
         # self.hard_constraints = self.get_god_map().get_data(identifier.hard_constraint_identifier)
 
-        self.controller = InstantaneousController(self.get_robot(),
-                                                  u'{}/{}/'.format(self.path_to_functions,
+        self.controller = InstantaneousController(u'{}/{}/'.format(self.path_to_functions,
                                                                    self.get_robot().get_name()))
 
-        joint_to_symbols_str = OrderedDict(
-            (x, self.get_god_map().to_symbol(identifier.joint_states + [x, u'position'])) for x in self.get_robot().controlled_joints)
+        # joint_to_symbols_str = OrderedDict(
+        #     (x, self.get_god_map().to_symbol(identifier.joint_states + [x, u'position'])) for x in self.get_robot().controlled_joints)
+
+        joint_position_symbols = self.get_god_map().get_data(identifier.controlled_joint_symbols)
+        joint_to_symbols_str = OrderedDict((self.get_god_map().expr_to_key[str(s)], s) for s in sorted(joint_position_symbols, key=lambda x:str(x)))
 
 
         self.controller.update_constraints(joint_to_symbols_str,

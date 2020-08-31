@@ -178,44 +178,35 @@ class GoalToConstraints(GetGoal):
 
         # self.get_god_map().safe_set_data(identifier.joint_constraint_identifier, joint_constraints)
         # self.get_god_map().safe_set_data(identifier.hard_constraint_identifier, hard_constraints)
-        self.add_robot_constraints()
+        self.add_object_constraints()
 
         return Status.SUCCESS
 
-    def add_robot_constraints(self):
-        # joint_position_symbols = set(self.get_robot().get_joint_position_symbols())
+    def add_object_constraints(self):
         world = self.get_god_map().get_data(identifier.world)
-        # FIXME the references are fucked
         # FIXME you also still have to check the soft constraints for e.g. kitchen joints
-        # joint_position_symbols = set(
-        #     sum([list(cm.free_symbols(c.expression)) for c in self.soft_constraints.values()], []))
-        joint_position_symbols = self.get_robot().get_controlled_joint_position_symbols()
-        # all_joint_position_symbols = [self.get_god_map().to_symbol(identifier.joint_states + [joint_name, u'position']) for joint_name in self.get_robot().get_controllable_joints()]
-        # joint_position_symbols = set(self.get_robot().get_joint_position_symbols())
-        # for joint_name in self.get_robot().controlled_joints:
-        #     s = self.get_god_map().to_symbol(identifier.joint_states + [joint_name, 'position'])
-        #     s = self.get_god_map().get_kineverse_symbol(s)
-        #     joint_position_symbols.add(s)
+        joint_position_symbols = set()
+        for object_name in self.get_world().get_object_names() + [self.robot.get_name()]:
+            joint_position_symbols |= set(self.get_world().get_object(object_name).get_joint_position_symbols())
+
+        constraint_symbols = set()
+        for constraint_name, constraint in self.soft_constraints.items():
+            constraint_symbols |= set(w.free_symbols(constraint.expression))
+
+        joint_position_symbols = joint_position_symbols.intersection(constraint_symbols)
+        self.get_god_map().set_data(identifier.controlled_joint_symbols, joint_position_symbols)
 
         joint_velocity_symbols = {DiffSymbol(s) for s in joint_position_symbols}
 
         constraints = world.km_model.get_constraints_by_symbols(joint_velocity_symbols.union(joint_position_symbols))
-        # joint_position_constraints = world.km_model.get_constraints_by_symbols(joint_position_symbols)
-
-        # FIXME this is a hack to get rid of the path
-        # joint_velocity_constraints = {str(erase_type(Path(k)[-1])): c for k, c in joint_velocity_constraints.items()}
-        # joint_position_constraints = {str(erase_type(Path(k)[-1])): c for k, c in joint_position_constraints.items()}
 
         joint_constraints = OrderedDict()
         to_remove = set()
         symbols = set()
-        # symbols.extend(all_joint_position_symbols)
 
         for k, c in sorted(constraints.items()):
             if cm.is_symbol(c.expr) and c.expr in joint_velocity_symbols and str(c.expr) not in joint_constraints:
                 joint_name = str(Path(erase_type(c.expr))[-1])
-                # weight = default_weight if c.expr not in weights else weights[c.expr]
-                # joint_constraints[str(c.expr)] = JointConstraint(c.lower, c.upper, weight)
                 to_remove.add(k)
                 lower_limit = c.lower
                 upper_limit = c.upper
@@ -263,6 +254,8 @@ class GoalToConstraints(GetGoal):
                 weight = self.get_god_map().get_data(identifier.joint_cost)[joint_name]
                 weight = weight * (1. / (upper)) ** 2
                 joint_constraints[joint_name] = JointConstraint(lower, upper, weight)
+
+        joint_constraints = OrderedDict((key, value) for key, value in sorted(joint_constraints.items()))
 
         self.get_god_map().register_symbols(symbols)
 

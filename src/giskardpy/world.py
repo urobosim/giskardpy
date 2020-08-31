@@ -1,4 +1,4 @@
-import itertools
+from collections import defaultdict, OrderedDict
 from collections import defaultdict
 from copy import deepcopy
 from itertools import product
@@ -20,7 +20,7 @@ from giskardpy.god_map import GodMap
 from giskardpy.input_system import PoseStampedInput
 from giskardpy.robot import Robot
 from giskardpy.urdf_object import URDFObject, hacky_urdf_parser_fix
-from giskardpy.utils import KeyDefaultDict, memoize, homo_matrix_to_pose
+from giskardpy.utils import KeyDefaultDict, memoize, homo_matrix_to_pose, suppress_stderr
 from kineverse.model.geometry_model import GeometryModel
 from kineverse.model.paths import Path
 from kineverse.operations.basic_operations import ExecFunction
@@ -30,9 +30,10 @@ from kineverse.urdf_fix import urdf_filler
 
 class World(object):
     world_frame = u'map'
+    world_frame_path = Path(world_frame)
 
     def __init__(self, god_map, prefix=tuple(), path_to_data_folder=u''):
-        self.god_map = god_map # type: GodMap
+        self.god_map = god_map  # type: GodMap
         self._fks = {}
         self.__prefix = '/'.join(prefix)
         self._objects_names = []
@@ -43,6 +44,7 @@ class World(object):
             path_to_data_folder = u''
         self._path_to_data_folder = path_to_data_folder
         self.query = None
+        self.pb_subworld = None
 
     # General ----------------------------------------------------------------------------------------------------------
 
@@ -73,6 +75,19 @@ class World(object):
         obj_b = self.pb_subworld.named_objects[str(self.get_link_path(body_b, link_b))]
         result = self.pb_subworld.world.get_distance(obj_a, obj_b, distance)
         return len(result) > 0 and result[0].distance < distance
+
+    def get_closest_distances(self, object_name, link_name, object_b, distance):
+        obj_a = self.pb_subworld.named_objects[str(self.get_link_path(object_name, link_name))]
+        world_object_b = self.get_object(object_b)
+        body_bs = [self.pb_subworld.named_objects[path_str] for path_str in world_object_b.get_link_path_strs() if
+                   path_str in self.pb_subworld.named_objects]
+        contacts = self.pb_subworld.world.get_closest_filtered(obj_a, body_bs, distance)
+        result = OrderedDict()
+        for contact in contacts:  # type: ClosestPair
+            path = Path(self.pb_subworld.object_name_map[contact.obj_b])
+            for p in contact.points:  # type: ContactPoint
+                result[path] = p.distance
+        return result
 
     def getClosestPoints(self, body_a, body_b, distance, link_a, link_b=None):
 
@@ -130,7 +145,7 @@ class World(object):
                     self.reverse_map_b[obj_b] = (body_b, link_b)
                     self.relevant_links[obj_a].add((obj_b, distance))
                     self.flat_collision_matrix.append((robot_link, body_b, link_b, obj_a, obj_b, distance))
-        
+
         for key in self.relevant_links.keys():
             self.relevant_links[key] = list(self.relevant_links[key])
 
@@ -172,7 +187,8 @@ class World(object):
         """
         if isinstance(urdf, WorldBody):
             name, urdf = self.world_body_to_urdf_str(urdf)
-        urdf_obj = urdf_filler(up.URDF.from_xml_string(hacky_urdf_parser_fix(urdf)), fill_with_visual=False)
+        with suppress_stderr():
+            urdf_obj = urdf_filler(up.URDF.from_xml_string(hacky_urdf_parser_fix(urdf)), fill_with_visual=False)
         if name is None:
             name = urdf_obj.name
 
@@ -180,10 +196,12 @@ class World(object):
             raise DuplicateNameException(u'Something with name \'{}\' already exists'.format(name))
 
         root_pose = PoseStampedInput(self.god_map.to_symbol,
-                                     translation_prefix=[self.__prefix, u'km_model', u'data_tree', u'data_tree', name, u'base_pose',
-                                          u'position'],
-                                     rotation_prefix=[self.__prefix, u'km_model', u'data_tree', u'data_tree', name, u'base_pose',
-                                          u'orientation']).get_frame()
+                                     translation_prefix=[self.__prefix, u'km_model', u'data_tree', u'data_tree', name,
+                                                         u'base_pose',
+                                                         u'position'],
+                                     rotation_prefix=[self.__prefix, u'km_model', u'data_tree', u'data_tree', name,
+                                                      u'base_pose',
+                                                      u'orientation']).get_frame()
 
         limit_map = load_urdf(ks=self.km_model,
                               prefix=Path(str(name)),
@@ -192,17 +210,20 @@ class World(object):
                               joint_prefix=Path(
                                   [self.__prefix, u'km_model', u'data_tree', u'data_tree', name, u'joint_state']),
                               limit_prefix=Path(
-                                  [self.__prefix, u'km_model', u'data_tree', u'data_tree', name, u'limits']),
+                                  [self.__prefix, u'km_model', u'data_tree', u'data_tree', name, u'joint_limits']),
                               robot_class=Robot,
                               root_transform=root_pose,
+                              limit_symbols=True,
                               name_override=name)
-        obj = self.km_model.get_data(name)
+        obj = self.km_model.get_data(name)  # type: Robot
         obj.init2(world=self, limit_map=limit_map,
                   path_to_data_folder=self.god_map.get_data(identifier.data_folder), **kwargs)
 
         self.km_model.register_on_model_changed(Path(name), obj.reset_cache)
         self.km_model.register_on_model_changed(Path(name), self.init_fast_fks)
         self.reset_cache()
+        obj.get_joint_position_symbols()  # FIXME used to call to_symbol
+
         return name
 
     def world_body_to_urdf_str(self, world_body):
@@ -536,7 +557,7 @@ class World(object):
         self.attached_objects[self.get_link_path(self._robot_name, name)] = child_path
 
         self.robot.update_self_collision_matrix(added_links=set(product(self.robot.get_links_with_collision(),
-                                                                  object_.get_links_with_collision())))
+                                                                        object_.get_links_with_collision())))
         logging.loginfo(u'--> attached object {} on link {}'.format(name, link))
 
     def detach(self, joint_name, from_obj=None):
