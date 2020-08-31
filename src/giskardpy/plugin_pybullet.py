@@ -215,6 +215,8 @@ class WorldUpdatePlugin(GiskardBehavior):
         :type req: UpdateWorldRequest
         """
         # assumes that parent has god map lock
+        if not self.robot.has_link(req.pose.header.frame_id):
+            raise UnknownBodyException(u'{} has not link {}'.format(self.robot.get_name(), req.pose.header.frame_id))
         if self.unsafe_get_world().has_object(req.body.name):
             p = PoseStamped()
             p.header.frame_id = self.map_frame

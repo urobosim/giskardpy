@@ -532,6 +532,8 @@ class World(object):
         logging.loginfo(u'--> attached object {} on link {}'.format(name, link))
 
     def detach(self, joint_name, from_obj=None):
+        if joint_name not in self.robot.get_joint_names():
+            raise UnknownBodyException(u'"{}" has not link "{}"'.format(self.robot.get_name(), joint_name))
         if from_obj is None:
             from_obj = self._robot_name
         elif from_obj != self._robot_name:

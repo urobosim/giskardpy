@@ -524,8 +524,8 @@ class GiskardTestWrapper(object):
         if expected_response == UpdateWorldResponse.SUCCESS:
             p = self.get_robot().get_fk_pose(self.get_robot().get_root(), name)
             p = transform_pose(u'map', p)
-        assert name in self.wrapper.get_attached_objects().object_names, 'there is no attached object named {}'.format(
-            name)
+            assert name in self.wrapper.get_attached_objects().object_names, 'there is no attached object named {}'.format(
+                name)
         r = self.wrapper.detach_object(name)
         assert r.error_codes == expected_response, \
             u'got: {}, expected: {}'.format(update_world_error_code(r.error_codes),
@@ -533,7 +533,7 @@ class GiskardTestWrapper(object):
         if expected_response == UpdateWorldResponse.SUCCESS:
             assert self.get_world().has_object(name)
             assert not name in self.wrapper.get_attached_objects().object_names, 'the object was not detached'
-        compare_poses(self.get_world().get_object(name).base_pose, p.pose, decimal=2)
+            compare_poses(self.get_world().get_object(name).base_pose, p.pose, decimal=2)
 
     def add_box(self, name=u'box', size=(1, 1, 1), pose=None, expected_response=UpdateWorldResponse.SUCCESS):
         r = self.wrapper.add_box(name, size, pose=pose)
