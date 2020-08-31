@@ -1757,15 +1757,14 @@ class TestCollisionAvoidanceGoals(object):
         r_goal.pose.position.z = 0.82
         r_goal.pose.orientation = Quaternion(*quaternion_about_axis(np.pi/2, [0,1,0]))
         fake_table_setup.set_and_check_cart_goal(r_goal, fake_table_setup.r_tip)
-        fake_table_setup.check_cpi_geq(fake_table_setup.get_l_gripper_links(), 0.048)
-        fake_table_setup.check_cpi_leq([u'r_gripper_l_finger_tip_link'], 0.04)
-        fake_table_setup.check_cpi_leq([u'r_gripper_r_finger_tip_link'], 0.04)
+        fake_table_setup.check_cpi_geq(fake_table_setup.get_l_gripper_links(), u'box', 0.048)
+        fake_table_setup.check_cpi_leq([u'r_gripper_l_finger_tip_link'], u'box', 0.04)
+        fake_table_setup.check_cpi_leq([u'r_gripper_r_finger_tip_link'], u'box', 0.04)
 
     def test_allow_collision(self, box_setup):
         """
         :type box_setup: PR2
         """
-        # fixme
         p = PoseStamped()
         p.header.frame_id = box_setup.r_tip
         p.header.stamp = rospy.get_rostime()
@@ -1781,8 +1780,8 @@ class TestCollisionAvoidanceGoals(object):
         box_setup.allow_self_collision()
         box_setup.set_and_check_cart_goal(p, box_setup.r_tip, box_setup.default_root)
 
-        box_setup.check_cpi_geq(box_setup.get_l_gripper_links(), 0.0)
-        box_setup.check_cpi_leq(box_setup.get_r_gripper_links(), 0.0)
+        box_setup.check_cpi_geq(box_setup.get_l_gripper_links(), u'box', 0.0)
+        box_setup.check_cpi_leq(box_setup.get_r_gripper_links(), u'box', 0.0)
 
 
     def test_avoid_collision3(self, pocky_pose_setup):
