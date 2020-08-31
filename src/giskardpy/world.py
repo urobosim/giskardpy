@@ -30,6 +30,7 @@ from kineverse.urdf_fix import urdf_filler
 
 class World(object):
     world_frame = u'map'
+    world_frame_path = Path(world_frame)
 
     def __init__(self, god_map, prefix=tuple(), path_to_data_folder=u''):
         self.god_map = god_map # type: GodMap
@@ -43,6 +44,7 @@ class World(object):
             path_to_data_folder = u''
         self._path_to_data_folder = path_to_data_folder
         self.query = None
+        self.pb_subworld = None
 
     # General ----------------------------------------------------------------------------------------------------------
 

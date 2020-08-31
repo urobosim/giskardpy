@@ -20,7 +20,7 @@ class CleanUp(GiskardBehavior):
         self.get_god_map().safe_set_data(identifier.time, 1)
         current_js = self.get_god_map().get_data(identifier.joint_states)
         trajectory = Trajectory()
-        trajectory.set(0, current_js)
+        trajectory.set(0, deepcopy(current_js))
         self.get_god_map().safe_set_data(identifier.trajectory, trajectory)
         # to reverse update godmap changes
         self.get_god_map().safe_set_data(identifier.general_options, deepcopy(self.general_options))

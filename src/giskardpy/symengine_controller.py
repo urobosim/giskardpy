@@ -14,14 +14,13 @@ class InstantaneousController(object):
     # TODO should anybody who uses this class know about constraints?
 
 
-    def __init__(self, robot, path_to_functions):
+    def __init__(self, path_to_functions):
         """
         :type robot: Robot
         :param path_to_functions: location where compiled functions are stored
         :type: str
         """
         self.path_to_functions = path_to_functions
-        self.robot = robot
         self.controlled_joints = []
         self.hard_constraints = {}
         self.joint_constraints = {}

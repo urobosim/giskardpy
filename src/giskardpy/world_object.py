@@ -1,25 +1,23 @@
 import errno
 import hashlib
-import numpy as np
 import os
 import pickle
-from itertools import product, combinations
+from itertools import combinations
 from time import time
 
+import numpy as np
 from geometry_msgs.msg import Pose, Quaternion
-from tf.transformations import euler_from_quaternion, rotation_from_matrix, quaternion_matrix
 
 from giskardpy import logging, identifier
 from giskardpy.data_types import SingleJointState
 from giskardpy.tfwrapper import msg_to_kdl
 from giskardpy.urdf_object import URDFObject
-from giskardpy.utils import memoize
 from kineverse.model.paths import Path
 
 
 class WorldObject(URDFObject):
     def init2(self, base_pose=None, controlled_joints=None, path_to_data_folder=u'',
-                 calc_self_collision_matrix=True, ignored_pairs=None, added_pairs=None, *args, **kwargs):
+              calc_self_collision_matrix=True, ignored_pairs=None, added_pairs=None, *args, **kwargs):
         self._path_to_data_folder = path_to_data_folder + u'collision_matrix/'
         self.controlled_joints = controlled_joints
         if not ignored_pairs:
@@ -51,7 +49,6 @@ class WorldObject(URDFObject):
     def load_state(self, state):
         for att_name, value in state.items():
             setattr(self, att_name, value)
-
 
     @property
     def joint_state(self):
@@ -121,15 +118,18 @@ class WorldObject(URDFObject):
         """
         return self._self_collision_matrix
 
+    def get_joint_position_symbol(self, joint_name):
+        return self.get_god_map().to_symbol(identifier.km_world + [u'data_tree', u'data_tree',
+                                                                       self.get_name(), u'joint_state', joint_name,
+                                                                       u'position'])
+
     # @memoize
     def get_controlled_joint_position_symbols(self):
-        return set(self.get_god_map().to_symbol(identifier.joint_states + [joint_name, u'position']) for joint_name in
-            self.controlled_joints)
+        return set(self.get_joint_position_symbol(joint_name) for joint_name in self.controlled_joints)
 
     # @memoize
     def get_joint_position_symbols(self):
-        return set(self.get_god_map().to_symbol(identifier.joint_states + [joint_name, u'position']) for joint_name in
-            self.get_controllable_joints())
+        return set(self.get_joint_position_symbol(joint_name) for joint_name in self.get_controllable_joints())
 
     def calc_collision_matrix(self, link_combinations=None, d=0.05, d2=0.0, num_rnd_tries=2000):
         """
@@ -323,7 +323,6 @@ class WorldObject(URDFObject):
     # def reset(self):
     #     super(WorldObject, self).reset()
     #     self.update_self_collision_matrix()
-
 
     def get_fk_expression(self, root_link, tip_link):
         """

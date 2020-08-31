@@ -511,6 +511,13 @@ class TestConstraints(object):
         """
         handle_frame_id = u'iai_kitchen/iai_fridge_door_handle'
         handle_name = u'iai_fridge_door_handle'
+
+        base_goal = PoseStamped()
+        base_goal.header.frame_id = u'map'
+        base_goal.pose.position = Point(0.3, -0.5, 0)
+        base_goal.pose.orientation.w = 1
+        kitchen_setup.teleport_base(base_goal)
+
         bar_axis = Vector3Stamped()
         bar_axis.header.frame_id = handle_frame_id
         bar_axis.vector.z = 1
@@ -537,7 +544,7 @@ class TestConstraints(object):
         x_goal.header.frame_id = handle_frame_id
         x_goal.vector.x = -1
         kitchen_setup.align_planes(kitchen_setup.r_tip, x_gripper, root_normal=x_goal)
-        # kitchen_setup.allow_all_collisions()
+        kitchen_setup.allow_all_collisions()
         # kitchen_setup.add_json_goal(u'AvoidJointLimits', percentage=10)
         kitchen_setup.send_and_check_goal()
 
@@ -555,7 +562,7 @@ class TestConstraints(object):
                                     tip=kitchen_setup.r_tip,
                                     object_name=u'kitchen',
                                     handle_link=handle_name,
-                                    angle_goal=0)
+                                    goal_joint_state=0)
         kitchen_setup.allow_all_collisions()
         kitchen_setup.send_and_check_goal()
         kitchen_setup.set_kitchen_js({u'iai_fridge_door_joint': 0})

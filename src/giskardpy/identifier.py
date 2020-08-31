@@ -33,6 +33,7 @@ weight_keys = qp_data + [u'weight_keys']
 b_keys = qp_data + [u'b_keys']
 bA_keys = qp_data + [u'bA_keys']
 xdot_keys = qp_data + [u'xdot_keys']
+controlled_joint_symbols = [u'controlled_joint_symbols']
 
 wiggle_detection_samples = [u'wiggle_detection_samples']
 post_processing = [u'post_processing']
