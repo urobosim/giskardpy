@@ -5,7 +5,7 @@ from collections import OrderedDict
 
 import numpy as np
 from geometry_msgs.msg import Vector3Stamped, Vector3
-
+from giskardpy import utils
 import giskardpy.identifier as identifier
 import giskardpy.tfwrapper as tf
 from giskardpy import cas_wrapper as w
@@ -190,14 +190,14 @@ class Constraint(object):
         """
         result = convert_dictionary_to_ros_message(u'geometry_msgs/PoseStamped', pose_stamped_json)
         result = tf.transform_pose(goal_reference_frame, result)
-        result.pose.orientation = tf.normalize(result.pose.orientation)
+        result.pose.orientation = utils.normalize(result.pose.orientation)
         return result
 
     def parse_and_transform_Vector3Stamped(self, vector3_stamped_json, goal_reference_frame, normalized=False):
         result = convert_dictionary_to_ros_message(u'geometry_msgs/Vector3Stamped', vector3_stamped_json)
         result = tf.transform_vector(goal_reference_frame, result)
         if normalized:
-            result.vector = tf.normalize(result.vector)
+            result.vector = utils.normalize(result.vector)
         return result
 
     def parse_and_transform_PointStamped(self, point_stamped_json, goal_reference_frame):

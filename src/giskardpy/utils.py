@@ -3,6 +3,8 @@ from __future__ import division
 import errno
 import os
 import pydot
+
+import PyKDL
 import pylab as plt
 import re
 import rospkg
@@ -17,20 +19,20 @@ import numpy as np
 import pkg_resources
 import rospy
 from geometry_msgs.msg import PointStamped, Point, Vector3Stamped, Vector3, Pose, PoseStamped, QuaternionStamped, \
-    Quaternion
+    Quaternion, TransformStamped, Twist, TwistStamped
 from giskard_msgs.msg import WorldBody
 from numpy import pi
 from py_trees import common, Chooser, Selector, Sequence, Behaviour
 from py_trees.composites import Parallel
 from sensor_msgs.msg import JointState
 from shape_msgs.msg import SolidPrimitive
-from tf.transformations import quaternion_multiply, quaternion_conjugate
+from tf.transformations import quaternion_multiply, quaternion_conjugate, quaternion_from_matrix
+from tf2_kdl import transform_to_kdl
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 
 from giskardpy import logging
 from giskardpy.data_types import SingleJointState
 from giskardpy.plugin import PluginBehavior
-from giskardpy.tfwrapper import kdl_to_pose, np_to_kdl
 
 r = rospkg.RosPack()
 
@@ -854,3 +856,159 @@ def trajectory_to_np(tj, joint_names):
     velocity = np.array(velocity)
     times = np.array(times)
     return names, position, velocity, times
+
+def pose_to_kdl(pose):
+    """Convert a geometry_msgs Transform message to a PyKDL Frame.
+
+    :param pose: The Transform message to convert.
+    :type pose: Pose
+    :return: The converted PyKDL frame.
+    :rtype: PyKDL.Frame
+    """
+    return PyKDL.Frame(PyKDL.Rotation.Quaternion(pose.orientation.x,
+                                                 pose.orientation.y,
+                                                 pose.orientation.z,
+                                                 pose.orientation.w),
+                       PyKDL.Vector(pose.position.x,
+                                    pose.position.y,
+                                    pose.position.z))
+
+
+def point_to_kdl(point):
+    """
+    :type point: Point
+    :rtype: PyKDL.Vector
+    """
+    return PyKDL.Vector(point.x, point.y, point.z)
+
+
+def twist_to_kdl(twist):
+    t = PyKDL.Twist()
+    t.vel[0] = twist.linear.x
+    t.vel[1] = twist.linear.y
+    t.vel[2] = twist.linear.z
+    t.rot[0] = twist.angular.x
+    t.rot[1] = twist.angular.y
+    t.rot[2] = twist.angular.z
+    return t
+
+
+def msg_to_kdl(msg):
+    if isinstance(msg, TransformStamped):
+        return transform_to_kdl(msg)
+    elif isinstance(msg, PoseStamped):
+        return pose_to_kdl(msg.pose)
+    elif isinstance(msg, Pose):
+        return pose_to_kdl(msg)
+    elif isinstance(msg, PointStamped):
+        return point_to_kdl(msg.point)
+    elif isinstance(msg, Point):
+        return point_to_kdl(msg)
+    elif isinstance(msg, Twist):
+        return twist_to_kdl(msg)
+    elif isinstance(msg, TwistStamped):
+        return twist_to_kdl(msg.twist)
+    else:
+        raise TypeError(u'can\'t convert {} to kdl'.format(type(msg)))
+
+def normalize(msg):
+    if isinstance(msg, Quaternion):
+        rotation = np.array([msg.x,
+                             msg.y,
+                             msg.z,
+                             msg.w])
+        normalized_rotation = rotation / np.linalg.norm(rotation)
+        return Quaternion(*normalized_rotation)
+    elif isinstance(msg, Vector3):
+        tmp = np.array([msg.x,
+                        msg.y,
+                        msg.z])
+        tmp = tmp / np.linalg.norm(tmp)
+        return Vector3(*tmp)
+
+
+def kdl_to_pose(frame):
+    """
+    :type frame: PyKDL.Frame
+    :rtype: Pose
+    """
+    p = Pose()
+    p.position.x = frame.p[0]
+    p.position.y = frame.p[1]
+    p.position.z = frame.p[2]
+    p.orientation = Quaternion(*frame.M.GetQuaternion())
+    return p
+
+
+def kdl_to_point(vector):
+    """
+    :ty vector: PyKDL.Vector
+    :return:
+    """
+    p = Point()
+    p.x = vector[0]
+    p.y = vector[1]
+    p.z = vector[2]
+    return p
+
+
+def kdl_to_vector(vector):
+    """
+    :ty vector: PyKDL.Vector
+    :return:
+    """
+    v = Vector3()
+    v.x = vector[0]
+    v.y = vector[1]
+    v.z = vector[2]
+    return v
+
+
+def kdl_to_quaternion(rotation_matrix):
+    return Quaternion(*quaternion_from_matrix([[rotation_matrix[0, 0], rotation_matrix[0, 1], rotation_matrix[0, 2], 0],
+                                               [rotation_matrix[1, 0], rotation_matrix[1, 1], rotation_matrix[1, 2], 0],
+                                               [rotation_matrix[2, 0], rotation_matrix[2, 1], rotation_matrix[2, 2], 0],
+                                               [0, 0, 0, 1]]))
+
+
+def np_to_kdl(matrix):
+    r = PyKDL.Rotation(matrix[0, 0], matrix[0, 1], matrix[0, 2],
+                       matrix[1, 0], matrix[1, 1], matrix[1, 2],
+                       matrix[2, 0], matrix[2, 1], matrix[2, 2])
+    p = PyKDL.Vector(matrix[0, 3],
+                     matrix[1, 3],
+                     matrix[2, 3])
+    return PyKDL.Frame(r, p)
+
+def to_np(kdl_thing):
+    if isinstance(kdl_thing, PyKDL.Wrench):
+        return np.array([kdl_thing.force[0],
+                         kdl_thing.force[1],
+                         kdl_thing.force[2],
+                         kdl_thing.torque[0],
+                         kdl_thing.torque[1],
+                         kdl_thing.torque[2]])
+    if isinstance(kdl_thing, PyKDL.Twist):
+        return np.array([kdl_thing.vel[0],
+                         kdl_thing.vel[1],
+                         kdl_thing.vel[2],
+                         kdl_thing.rot[0],
+                         kdl_thing.rot[1],
+                         kdl_thing.rot[2]])
+    if isinstance(kdl_thing, PyKDL.Vector):
+        return np.array([kdl_thing[0],
+                         kdl_thing[1],
+                         kdl_thing[2]])
+    if isinstance(kdl_thing, PyKDL.Frame):
+        return np.array([[kdl_thing.M[0,0], kdl_thing.M[0,1], kdl_thing.M[0,2], kdl_thing.p[0]],
+                         [kdl_thing.M[1,0], kdl_thing.M[1,1], kdl_thing.M[1,2], kdl_thing.p[1]],
+                         [kdl_thing.M[2,0], kdl_thing.M[2,1], kdl_thing.M[2,2], kdl_thing.p[2]],
+                         [0, 0, 0, 1]])
+
+
+def np_vector(x, y, z):
+    return np.array([x, y, z, 0])
+
+
+def np_point(x, y, z):
+    return np.array([x, y, z, 1])

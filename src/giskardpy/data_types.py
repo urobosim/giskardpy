@@ -2,7 +2,8 @@ from collections import OrderedDict, defaultdict, namedtuple
 
 import numpy as np
 from sortedcontainers import SortedKeyList
-from giskardpy.tfwrapper import to_np, np_vector, np_point
+
+from giskardpy.utils import to_np
 
 SoftConstraint = namedtuple(u'SoftConstraint', [u'lbA', u'ubA',
                                                 u'weight', u'expression', u'goal_constraint',
