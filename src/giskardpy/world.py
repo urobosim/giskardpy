@@ -89,35 +89,6 @@ class World(object):
                 result[path] = p.distance
         return result
 
-    def getClosestPoints(self, body_a, body_b, distance, link_a, link_b=None):
-
-        obj_a = self.pb_subworld.named_objects[str(self.get_link_path(body_a, link_a))]
-        if link_b is None:
-            link_bs = self.get_object(body_b).links.keys()
-        else:
-            link_bs = [link_b]
-        result = []
-        obj_bs = {}
-        for link_b in link_bs:
-            link_b_path = str(self.get_link_path(body_b, link_b))
-            if link_b_path in self.pb_subworld.named_objects:
-                obj_bs[self.pb_subworld.named_objects[link_b_path]] = link_b
-        input = {obj_a: distance}
-        query_result = self.pb_subworld.closest_distances(input)
-        map_T_a = obj_a.transform
-        for o, contacts in query_result.items():
-            for contact in contacts:  # type: ClosestPair
-                if contact.obj_b in obj_bs:
-                    map_T_b = contact.obj_b.transform
-                    for p in contact.points:  # type: ContactPoint
-                        c = Collision(link_a, body_b, obj_bs[contact.obj_b], p.point_a, p.point_b, p.normal_world_b,
-                                      p.distance)
-                        c.set_position_on_a_in_map(map_T_a * p.point_a)
-                        c.set_position_on_b_in_map(map_T_b * p.point_b)
-                        c.set_contact_normal_in_b(map_T_b.inv() * p.normal_world_b)
-                        result.append(c)
-        return result
-
     def init_asdf(self, cut_off_distances):
         self.query = defaultdict(float)
         self.reverse_map_a = {}
@@ -561,6 +532,8 @@ class World(object):
         logging.loginfo(u'--> attached object {} on link {}'.format(name, link))
 
     def detach(self, joint_name, from_obj=None):
+        if joint_name not in self.robot.get_joint_names():
+            raise UnknownBodyException(u'"{}" has not link "{}"'.format(self.robot.get_name(), joint_name))
         if from_obj is None:
             from_obj = self._robot_name
         elif from_obj != self._robot_name:

@@ -20,7 +20,7 @@ from giskardpy.robot import Robot
 from giskardpy.tfwrapper import init as tf_init
 import giskardpy.tfwrapper as tf
 from kineverse.model.paths import Path
-from utils_for_tests import PR2, compare_poses
+from utils_for_tests import PR2, compare_poses, update_world_error_code
 
 # TODO roslaunch iai_pr2_sim ros_control_sim_with_base.launch
 # TODO roslaunch iai_kitchen upload_kitchen_obj.launch
@@ -1444,7 +1444,6 @@ class TestCollisionAvoidanceGoals(object):
         """
         :type zero_pose: PR2
         """
-        # fixme
         pocky = u'pocky'
         zero_pose.attach_box(pocky, [0.1, 0.02, 0.02], u'', [0.05, 0, 0],
                              expected_response=UpdateWorldResponse.MISSING_BODY_ERROR)
@@ -1453,7 +1452,6 @@ class TestCollisionAvoidanceGoals(object):
         """
         :type zero_pose: PR2
         """
-        # fixme
         zero_pose.detach_object(u'nil', expected_response=UpdateWorldResponse.MISSING_BODY_ERROR)
 
     def test_add_remove_object(self, zero_pose):
@@ -1491,7 +1489,10 @@ class TestCollisionAvoidanceGoals(object):
         # fixme
         req = UpdateWorldRequest(UpdateWorldRequest.ADD, WorldBody(type=WorldBody.PRIMITIVE_BODY,
                                                                    shape=SolidPrimitive(type=42)), True, PoseStamped())
-        assert zero_pose.wrapper.update_world.call(req).error_codes == UpdateWorldResponse.CORRUPT_SHAPE_ERROR
+        result = zero_pose.wrapper.update_world.call(req)
+        assert result.error_codes == UpdateWorldResponse.CORRUPT_SHAPE_ERROR, \
+            u'got: {}, expected: {}'.format(update_world_error_code(result.error_codes),
+                                            update_world_error_code(UpdateWorldResponse.CORRUPT_SHAPE_ERROR))
 
     def test_unsupported_options(self, kitchen_setup):
         """

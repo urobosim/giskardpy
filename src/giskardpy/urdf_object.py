@@ -264,11 +264,11 @@ class URDFObject(ArticulatedObject):
 
     @memoize
     def has_joint(self, name):
-        return name in self._urdf_robot.joint_map
+        return name in self.get_joint_names()
 
     @memoize
     def has_link(self, name):
-        return name in self._urdf_robot.link_map
+        return name in self.get_link_names()
 
     @memoize
     def is_joint_continuous(self, name):
