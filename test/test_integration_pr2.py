@@ -1486,13 +1486,21 @@ class TestCollisionAvoidanceGoals(object):
         """
         :type zero_pose: PR2
         """
-        # fixme
+        p = PoseStamped()
+        p.header.frame_id = u'map'
+        p.pose.orientation.w = 1
         req = UpdateWorldRequest(UpdateWorldRequest.ADD, WorldBody(type=WorldBody.PRIMITIVE_BODY,
-                                                                   shape=SolidPrimitive(type=42)), True, PoseStamped())
+                                                                   shape=SolidPrimitive(type=42)), False, p)
         result = zero_pose.wrapper.update_world.call(req)
         assert result.error_codes == UpdateWorldResponse.CORRUPT_SHAPE_ERROR, \
             u'got: {}, expected: {}'.format(update_world_error_code(result.error_codes),
                                             update_world_error_code(UpdateWorldResponse.CORRUPT_SHAPE_ERROR))
+
+    def test_proper_tf_error(self, zero_pose):
+        """
+        :type zero_pose: PR2
+        """
+        zero_pose.add_box(pose=PoseStamped())
 
     def test_unsupported_options(self, kitchen_setup):
         """

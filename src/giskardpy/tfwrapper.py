@@ -10,6 +10,7 @@ from tf2_py._tf2 import ExtrapolationException
 from tf2_ros import Buffer, TransformListener
 
 from giskardpy import logging
+from giskardpy.utils import suppress_stderr
 
 tfBuffer = None  # type: Buffer
 tf_listener = None
@@ -43,15 +44,13 @@ def transform_pose(target_frame, pose):
     global tfBuffer
     if tfBuffer is None:
         init()
-    try:
+    with suppress_stderr():
         transform = tfBuffer.lookup_transform(target_frame,
                                               pose.header.frame_id,  # source frame
                                               pose.header.stamp,
                                               rospy.Duration(5.0))
-        new_pose = do_transform_pose(pose, transform)
-        return new_pose
-    except ExtrapolationException as e:
-        logging.logwarn(e)
+    new_pose = do_transform_pose(pose, transform)
+    return new_pose
 
 
 def transform_vector(target_frame, vector):
@@ -65,15 +64,12 @@ def transform_vector(target_frame, vector):
     global tfBuffer
     if tfBuffer is None:
         init()
-    try:
-        transform = tfBuffer.lookup_transform(target_frame,
-                                              vector.header.frame_id,  # source frame
-                                              vector.header.stamp,
-                                              rospy.Duration(5.0))
-        new_pose = do_transform_vector3(vector, transform)
-        return new_pose
-    except ExtrapolationException as e:
-        logging.logwarn(e)
+    transform = tfBuffer.lookup_transform(target_frame,
+                                          vector.header.frame_id,  # source frame
+                                          vector.header.stamp,
+                                          rospy.Duration(5.0))
+    new_pose = do_transform_vector3(vector, transform)
+    return new_pose
 
 
 def transform_point(target_frame, point):
@@ -87,15 +83,12 @@ def transform_point(target_frame, point):
     global tfBuffer
     if tfBuffer is None:
         init()
-    try:
-        transform = tfBuffer.lookup_transform(target_frame,
-                                              point.header.frame_id,  # source frame
-                                              point.header.stamp,
-                                              rospy.Duration(5.0))
-        new_pose = do_transform_point(point, transform)
-        return new_pose
-    except ExtrapolationException as e:
-        logging.logwarn(e)
+    transform = tfBuffer.lookup_transform(target_frame,
+                                          point.header.frame_id,  # source frame
+                                          point.header.stamp,
+                                          rospy.Duration(5.0))
+    new_pose = do_transform_point(point, transform)
+    return new_pose
 
 
 def lookup_transform(target_frame, source_frame, time=None):
@@ -110,11 +103,8 @@ def lookup_transform(target_frame, source_frame, time=None):
     global tfBuffer
     if tfBuffer is None:
         init()
-    try:
-        transform = tfBuffer.lookup_transform(target_frame, source_frame, time, rospy.Duration(5.0))
-        return transform
-    except:
-        return None
+    transform = tfBuffer.lookup_transform(target_frame, source_frame, time, rospy.Duration(5.0))
+    return transform
 
 
 def lookup_pose(target_frame, source_frame, time=None):
