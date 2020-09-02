@@ -129,7 +129,8 @@ class World(object):
         if self.query is None:
             self.init_asdf(cut_off_distances)
 
-        for obj_a, contacts in self.pb_subworld.world.get_closest_filtered_POD_batch(self.relevant_links).items():
+        result = self.pb_subworld.world.get_closest_filtered_POD_batch(self.relevant_links)
+        for obj_a, contacts in result.items():
             map_T_a = obj_a.transform
             link_a = self.reverse_map_a[obj_a]
             for contact in contacts:  # type: ClosestPair
