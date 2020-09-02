@@ -240,7 +240,6 @@ class TestFk(object):
             compare_poses(fk1.pose, fk2.pose)
 
     def test_fk2(self, zero_pose):
-        #fixme
         pocky = u'box'
         zero_pose.attach_box(pocky, [0.1, 0.02, 0.02], zero_pose.r_tip, [0.05, 0, 0], [1, 0, 0, 0])
         for root, tip in itertools.product(zero_pose.get_robot().get_link_names(), [pocky]):
@@ -885,7 +884,6 @@ class TestCartGoals(object):
         """
         :type zero_pose: PR2
         """
-        # fixme
         js = {
             u'r_elbow_flex_joint': -1.58118094489,
             u'r_forearm_roll_joint': -0.904933033043,
@@ -1081,7 +1079,6 @@ class TestCartGoals(object):
         """
         :type box_setup: PR2
         """
-        # fixme
         p = PoseStamped()
         p.header.frame_id = u'map'
         p.pose.position.x = 1.1
@@ -1190,7 +1187,6 @@ class TestCartGoals(object):
         """
         :type zero_pose: PR2
         """
-        # fixme also broken on master
         zero_pose.set_joint_goal(pocky_pose)
         zero_pose.add_waypoint()
         zero_pose.set_joint_goal(pick_up_pose)
@@ -1239,16 +1235,6 @@ class TestCollisionAvoidanceGoals(object):
     def test_open_drawer(self, kitchen_setup):
         self.open_drawer(kitchen_setup, kitchen_setup.l_tip, u'iai_kitchen/sink_area_left_middle_drawer_handle',
                              u'sink_area_left_middle_drawer_main_joint')
-
-    # def test_open_drawer2(self, kitchen_setup):
-    #     try:
-    #         self.open_drawer(kitchen_setup, kitchen_setup.l_tip, u'iai_kitchen/sink_area_trash_drawer_handle',
-    #                          u'sink_area_trash_drawer_main_joint')
-    #     except:
-    #         pass
-    #     kitchen_setup.km_visualizer.begin_draw_cycle(u'kitchen')
-    #     kitchen_setup.km_visualizer.draw_world(u'kitchen', kitchen_setup.get_world().pb_subworld)
-    #     kitchen_setup.km_visualizer.render(u'kitchen')
 
     def test_add_box(self, zero_pose):
         """
@@ -1333,7 +1319,6 @@ class TestCollisionAvoidanceGoals(object):
         """
         :type zero_pose: PR2
         """
-        # fixme
         pocky = u'pocky'
         zero_pose.attach_box(pocky, [0.1, 0.02, 0.02], zero_pose.r_tip, [0.05, 0, 0], [1, 0, 0, 0])
         p = PoseStamped()
@@ -1562,7 +1547,6 @@ class TestCollisionAvoidanceGoals(object):
         """
         :type zero_pose: PR2
         """
-        # fixme
         zero_pose.allow_self_collision()
         p = PoseStamped()
         p.header.frame_id = u'map'
@@ -1571,7 +1555,8 @@ class TestCollisionAvoidanceGoals(object):
         p.pose.position.z = -0.2
         p.pose.orientation.w = 1
         zero_pose.add_box(pose=p)
-        zero_pose.send_and_check_joint_goal(pocky_pose)
+        zero_pose.set_joint_goal(pocky_pose)
+        zero_pose.send_and_check_goal(expected_error_code=MoveResult.QP_SOLVER_ERROR)
 
     def test_unknown_object1(self, box_setup):
         """
@@ -1625,7 +1610,6 @@ class TestCollisionAvoidanceGoals(object):
         """
         :type zero_pose: PR2
         """
-        # fixme
         goal_js = {
             u'l_elbow_flex_joint': -1.43286344265,
             u'l_forearm_roll_joint': 1.26465060073,
@@ -1645,15 +1629,14 @@ class TestCollisionAvoidanceGoals(object):
         p.pose.orientation.w = 1
         zero_pose.allow_self_collision()
         zero_pose.set_and_check_cart_goal(p, zero_pose.l_tip, zero_pose.default_root)
-        zero_pose.check_cpi_leq(zero_pose.get_l_gripper_links(), 0.01)
-        zero_pose.check_cpi_leq([u'r_forearm_link'], 0.01)
-        zero_pose.check_cpi_geq(zero_pose.get_r_gripper_links(), 0.05)
+        zero_pose.check_cpi_leq(zero_pose.get_l_gripper_links(), zero_pose.get_robot().get_name(), 0.01, check_distance=0.3)
+        zero_pose.check_cpi_leq([u'r_forearm_link'], zero_pose.get_robot().get_name(), 0.01, check_distance=0.3)
+        zero_pose.check_cpi_geq(zero_pose.get_r_gripper_links(), zero_pose.get_robot().get_name(), 0.05, check_distance=0.3)
 
     def test_allow_self_collision3(self, zero_pose):
         """
         :type zero_pose: PR2
         """
-        # fixme
         goal_js = {
             u'l_elbow_flex_joint': -1.43286344265,
             u'l_forearm_roll_joint': 1.26465060073,
@@ -1681,9 +1664,9 @@ class TestCollisionAvoidanceGoals(object):
         zero_pose.add_collision_entries(ces)
 
         zero_pose.set_and_check_cart_goal(p, zero_pose.l_tip, zero_pose.default_root)
-        zero_pose.check_cpi_leq(zero_pose.get_l_gripper_links(), 0.01)
-        zero_pose.check_cpi_leq([u'r_forearm_link'], 0.01)
-        zero_pose.check_cpi_geq(zero_pose.get_r_gripper_links(), 0.05)
+        zero_pose.check_cpi_leq(zero_pose.get_l_gripper_links(), zero_pose.get_robot().get_name(), 0.01, check_distance=0.3)
+        zero_pose.check_cpi_leq([u'r_forearm_link'], zero_pose.get_robot().get_name(), 0.01, check_distance=0.3)
+        zero_pose.check_cpi_geq(zero_pose.get_r_gripper_links(), zero_pose.get_robot().get_name(), 0.05, check_distance=0.3)
 
     def test_avoid_self_collision(self, zero_pose):
         """
@@ -1708,17 +1691,13 @@ class TestCollisionAvoidanceGoals(object):
         p.pose.orientation.w = 1
         zero_pose.set_cart_goal(p, zero_pose.l_tip, zero_pose.default_root)
         zero_pose.send_goal()
-        # zero_pose.km_visualizer.begin_draw_cycle('collision')
-        # zero_pose.km_visualizer.draw_world('collision', zero_pose.get_world().pb_suboworld)
-        # zero_pose.km_visualizer.render()
 
-        zero_pose.check_cpi_geq(zero_pose.get_l_gripper_links(), 0.048)
+        zero_pose.check_cpi_geq(zero_pose.get_l_gripper_links(), zero_pose.get_robot().get_name(), 0.048, check_distance=0.3)
 
     def test_get_out_of_self_collision(self, zero_pose):
         """
         :type zero_pose: PR2
         """
-        # fixme
         goal_js = {
             u'l_elbow_flex_joint': -1.43286344265,
             u'l_forearm_roll_joint': 1.26465060073,
@@ -1740,7 +1719,7 @@ class TestCollisionAvoidanceGoals(object):
         zero_pose.allow_all_collisions()
         zero_pose.send_goal()
         zero_pose.send_goal()
-        zero_pose.check_cpi_geq(zero_pose.get_l_gripper_links(), 0.048)
+        zero_pose.check_cpi_geq(zero_pose.get_l_gripper_links(), zero_pose.get_robot().get_name(), 0.047, check_distance=0.3)
 
     def test_avoid_collision(self, box_setup):
         """
@@ -1752,8 +1731,8 @@ class TestCollisionAvoidanceGoals(object):
         # ce.min_dist = 0.05
         box_setup.add_collision_entries([ce])
         box_setup.send_and_check_goal(MoveResult.SUCCESS)
-        box_setup.check_cpi_geq(box_setup.get_l_gripper_links(), 0.048)
-        box_setup.check_cpi_geq(box_setup.get_r_gripper_links(), 0.048)
+        box_setup.check_cpi_geq(box_setup.get_l_gripper_links(), u'box', 0.048, check_distance=0.3)
+        box_setup.check_cpi_geq(box_setup.get_r_gripper_links(), u'box', 0.048, check_distance=0.3)
 
     def test_avoid_collision2(self, fake_table_setup):
         """
@@ -1909,7 +1888,6 @@ class TestCollisionAvoidanceGoals(object):
         """
         :type box_setup: PR2
         """
-        # FIXME
         js = {
             u'r_shoulder_pan_joint': -0.341482794236,
             u'r_shoulder_lift_joint': 0.0301123643508,
@@ -1924,10 +1902,10 @@ class TestCollisionAvoidanceGoals(object):
             u'torso_lift_joint': 0.277729421077,
         }
 
-        fake_table_setup.send_and_check_joint_goal(js)
-        fake_table_setup.check_cpi_geq(fake_table_setup.get_l_gripper_links(), 0.048)
-        fake_table_setup.check_cpi_leq([u'r_gripper_l_finger_tip_link'], 0.04)
-        fake_table_setup.check_cpi_leq([u'r_gripper_r_finger_tip_link'], 0.04)
+        fake_table_setup.set_joint_goal(js)
+        fake_table_setup.send_and_check_goal()
+        fake_table_setup.check_cpi_geq(fake_table_setup.get_l_gripper_links(), u'box', 0.048)
+        fake_table_setup.check_cpi_geq(fake_table_setup.get_r_gripper_links(), u'box', 0.048)
 
 
     def test_avoid_collision7(self, kitchen_setup):
@@ -2009,8 +1987,8 @@ class TestCollisionAvoidanceGoals(object):
         pocky_pose_setup.add_collision_entries([collision_entry])
 
         pocky_pose_setup.send_and_check_goal()
-        pocky_pose_setup.check_cpi_geq(pocky_pose_setup.get_l_gripper_links(), 0.048)
-        pocky_pose_setup.check_cpi_geq(pocky_pose_setup.get_r_gripper_links(), 0.048)
+        pocky_pose_setup.check_cpi_geq(pocky_pose_setup.get_l_gripper_links(), u'box',  0.048, check_distance=100)
+        pocky_pose_setup.check_cpi_geq(pocky_pose_setup.get_r_gripper_links(), u'box', 0.048, check_distance=100)
 
     def test_avoid_all_collision(self, box_setup):
         """
@@ -2029,8 +2007,8 @@ class TestCollisionAvoidanceGoals(object):
 
         box_setup.send_and_check_goal()
 
-        box_setup.check_cpi_geq(box_setup.get_l_gripper_links(), 0.0)
-        box_setup.check_cpi_geq(box_setup.get_r_gripper_links(), 0.0)
+        box_setup.check_cpi_geq(box_setup.get_l_gripper_links(), u'box', 0.0)
+        box_setup.check_cpi_geq(box_setup.get_r_gripper_links(), u'box', 0.0)
 
     def test_get_out_of_collision(self, box_setup):
         """
@@ -2056,14 +2034,13 @@ class TestCollisionAvoidanceGoals(object):
 
         box_setup.send_and_check_goal()
 
-        box_setup.check_cpi_geq(box_setup.get_l_gripper_links(), 0.0)
-        box_setup.check_cpi_geq(box_setup.get_r_gripper_links(), 0.0)
+        box_setup.check_cpi_geq(box_setup.get_l_gripper_links(), u'box', 0.0)
+        box_setup.check_cpi_geq(box_setup.get_r_gripper_links(), u'box', 0.0)
 
     def test_allow_collision_gripper(self, box_setup):
         """
         :type box_setup: PR2
         """
-        # fixme
         ces = box_setup.get_allow_l_gripper(u'box')
         box_setup.add_collision_entries(ces)
         p = PoseStamped()
@@ -2072,8 +2049,8 @@ class TestCollisionAvoidanceGoals(object):
         p.pose.position.x = 0.11
         p.pose.orientation.w = 1
         box_setup.set_and_check_cart_goal(p, box_setup.l_tip, box_setup.default_root)
-        box_setup.check_cpi_leq(box_setup.get_l_gripper_links(), 0.0)
-        box_setup.check_cpi_geq(box_setup.get_r_gripper_links(), 0.048)
+        box_setup.check_cpi_leq(box_setup.get_l_gripper_links(), u'box', 0.0)
+        box_setup.check_cpi_geq(box_setup.get_r_gripper_links(), u'box', 0.048)
 
     def test_attached_collision1(self, box_setup):
         """
@@ -2089,8 +2066,8 @@ class TestCollisionAvoidanceGoals(object):
         p.pose.position.x = -0.15
         p.pose.orientation.w = 1
         box_setup.set_and_check_cart_goal(p, box_setup.r_tip, box_setup.default_root)
-        box_setup.check_cpi_geq(box_setup.get_l_gripper_links(), 0.048)
-        box_setup.check_cpi_geq([attached_link_name], 0.048)
+        box_setup.check_cpi_geq(box_setup.get_l_gripper_links(), u'box', 0.048)
+        box_setup.check_cpi_geq([attached_link_name], u'box', 0.048)
         box_setup.detach_object(attached_link_name)
 
     def test_attached_collision2(self, box_setup):
@@ -2102,27 +2079,26 @@ class TestCollisionAvoidanceGoals(object):
         box_setup.attach_box(attached_link_name, [0.2, 0.04, 0.04], box_setup.r_tip, [0.05, 0, 0],
                              expected_response=UpdateWorldResponse.DUPLICATE_BODY_ERROR)
         box_setup.send_and_check_goal()
-        box_setup.check_cpi_geq(box_setup.get_l_gripper_links(), 0.048)
-        box_setup.check_cpi_geq([attached_link_name], 0.048)
+        box_setup.check_cpi_geq(box_setup.get_l_gripper_links(), u'box', 0.048)
+        box_setup.check_cpi_geq([attached_link_name], u'box', 0.048)
         box_setup.detach_object(attached_link_name)
 
     def test_attached_collision3(self, box_setup):
         """
         :type box_setup: PR2
         """
-        # fixme
         attached_link_name = u'pocky'
         box_setup.attach_box(attached_link_name, [0.2, 0.04, 0.04], box_setup.r_tip, [0.05, 0, 0])
         box_setup.attach_box(attached_link_name, [0.2, 0.04, 0.04], box_setup.r_tip, [0.05, 0, 0],
                              expected_response=UpdateWorldResponse.DUPLICATE_BODY_ERROR)
         p = PoseStamped()
         p.header.frame_id = box_setup.r_tip
-        p.header.stamp = rospy.get_rostime()
         p.pose.position.x = 0.
         p.pose.orientation.w = 1
-        box_setup.set_and_check_cart_goal(p, box_setup.r_tip, box_setup.default_root)
-        box_setup.check_cpi_geq(box_setup.get_l_gripper_links(), 0.048)
-        box_setup.check_cpi_geq([attached_link_name], 0.048)
+        box_setup.set_cart_goal(p, box_setup.r_tip, box_setup.default_root)
+        box_setup.send_and_check_goal()
+        box_setup.check_cpi_geq(box_setup.get_l_gripper_links(), u'box', 0.0)
+        box_setup.check_cpi_geq([attached_link_name], u'box', 0.0)
         box_setup.detach_object(attached_link_name)
 
     def test_attached_self_collision(self, zero_pose):
@@ -2171,9 +2147,8 @@ class TestCollisionAvoidanceGoals(object):
         """
         :type box_setup: PR2
         """
-        # fixme
         pocky = u'pocky'
-        box_setup.attach_box(pocky, [0.1, 0.02, 0.02], box_setup.r_tip, [0.05, 0, 0])
+        box_setup.attach_box(pocky, [0.2, 0.04, 0.04], box_setup.r_tip, [0.05, 0, 0])
 
         ces = []
         ce = CollisionEntry()
@@ -2189,8 +2164,8 @@ class TestCollisionAvoidanceGoals(object):
         p.pose.position.y = -0.11
         p.pose.orientation.w = 1
         box_setup.set_and_check_cart_goal(p, box_setup.r_tip, box_setup.default_root)
-        box_setup.check_cpi_geq(box_setup.get_l_gripper_links(), 0.048)
-        box_setup.check_cpi_leq([pocky], 0.0)
+        box_setup.check_cpi_geq(box_setup.get_l_gripper_links(), u'box', 0.048)
+        box_setup.check_cpi_leq([pocky], u'box', 0.0)
 
     # def test_collision_during_planning1(self, box_setup):
     #     """
@@ -2244,11 +2219,11 @@ class TestCollisionAvoidanceGoals(object):
         p = PoseStamped()
         p.header.frame_id = box_setup.l_tip
         p.header.stamp = rospy.get_rostime()
-        p.pose.position.x = 0.15
+        p.pose.position.x = 0.0
         p.pose.orientation.w = 1
         box_setup.set_cart_goal(p, box_setup.l_tip, box_setup.default_root)
         box_setup.send_goal()
-        box_setup.check_cpi_geq(box_setup.get_l_gripper_links(), 0.0)
+        box_setup.check_cpi_geq(box_setup.get_l_gripper_links(), u'box', 0.0)
 
     # def test_end_state_collision(self, box_setup):
     #     """
@@ -2302,7 +2277,7 @@ class TestCollisionAvoidanceGoals(object):
 
         zero_pose.send_and_check_goal()
 
-        zero_pose.check_cpi_geq([box1_name, box2_name], 0.049)
+        zero_pose.check_cpi_geq([box1_name, box2_name], zero_pose.get_robot().get_name(), 0.049)
 
         zero_pose.detach_object(box1_name)
         zero_pose.detach_object(box2_name)

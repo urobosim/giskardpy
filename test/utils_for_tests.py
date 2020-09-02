@@ -21,7 +21,6 @@ from tf.transformations import rotation_from_matrix, quaternion_matrix
 from giskardpy import logging, identifier
 from giskardpy.garden import grow_tree
 from giskardpy.identifier import robot, world
-from giskardpy.pybullet_world import PyBulletWorld
 from giskardpy.python_interface import GiskardWrapper
 from giskardpy.robot import Robot
 from giskardpy.tfwrapper import transform_pose, lookup_pose
@@ -74,7 +73,8 @@ def compare_axis_angle(actual_angle, actual_axis, expected_angle, expected_axis,
     except AssertionError:
         try:
             np.testing.assert_array_almost_equal(actual_axis, -expected_axis, decimal=decimal)
-            np.testing.assert_almost_equal(shortest_angular_distance(actual_angle, abs(expected_angle - 2 * pi)), 0, decimal=decimal)
+            np.testing.assert_almost_equal(shortest_angular_distance(actual_angle, abs(expected_angle - 2 * pi)), 0,
+                                           decimal=decimal)
         except AssertionError:
             np.testing.assert_almost_equal(shortest_angular_distance(actual_angle, 0), 0, decimal=decimal)
             np.testing.assert_almost_equal(shortest_angular_distance(0, expected_angle), 0, decimal=decimal)
@@ -177,12 +177,14 @@ def float_no_nan_no_inf(outer_limit=None, min_dist_to_zero=None):
     #     f = f.filter(lambda x: abs(x) < outer_limit)
     # return f
 
+
 @composite
 def sq_matrix(draw):
     i = draw(st.integers(min_value=1, max_value=10))
-    i_sq = i**2
+    i_sq = i ** 2
     l = draw(st.lists(limited_float(), min_size=i_sq, max_size=i_sq))
-    return np.array(l).reshape((i,i))
+    return np.array(l).reshape((i, i))
+
 
 def unit_vector(length, elements=None):
     if elements is None:
@@ -348,8 +350,6 @@ class GiskardTestWrapper(object):
         self.send_and_check_goal()
         self.check_joint_state(goal, decimal=decimal)
 
-
-
     #
     # CART GOAL STUFF ##################################################################################################
     #
@@ -418,7 +418,6 @@ class GiskardTestWrapper(object):
             np.testing.assert_array_almost_equal(msg_to_list(goal_in_base.pose.orientation),
                                                  -np.array(msg_to_list(current_pose.pose.orientation)), decimal=2)
 
-
     #
     # GENERAL GOAL STUFF ###############################################################################################
     #
@@ -451,7 +450,8 @@ class GiskardTestWrapper(object):
         result = self.results.get()
         return result
 
-    def send_and_check_goal(self, expected_error_code=MoveResult.SUCCESS, goal_type=MoveGoal.PLAN_AND_EXECUTE, goal=None):
+    def send_and_check_goal(self, expected_error_code=MoveResult.SUCCESS, goal_type=MoveGoal.PLAN_AND_EXECUTE,
+                            goal=None):
         r = self.send_goal(goal=goal, goal_type=goal_type)
         assert r.error_code == expected_error_code, \
             u'got: {}, expected: {} | error_massage: {}'.format(move_result_error_code(r.error_code),
@@ -697,19 +697,21 @@ class GiskardTestWrapper(object):
         for link in links:
             collisions = self.get_world().get_closest_distances(self.get_robot().get_name(), link, body_b,
                                                                 check_distance)
-            assert collisions.values()[0] >= distance_threshold, \
-                u'distance for {}: {} <= {}'.format(link,
-                                                    collisions.values()[0],
-                                                    distance_threshold)
+            closest_key, closest_value = collisions.items()[0]
+            assert closest_value >= distance_threshold, \
+                u'distance for {} with {}: {} < {}'.format(link, closest_key,
+                                                            closest_value,
+                                                            distance_threshold)
 
     def check_cpi_leq(self, links, body_b, distance_threshold, check_distance=0.2):
         for link in links:
             collisions = self.get_world().get_closest_distances(self.get_robot().get_name(), link, body_b,
                                                                 check_distance)
-            assert collisions.values()[0] <= distance_threshold, \
-                u'distance for {}: {} <= {}'.format(link,
-                                                    collisions.values()[0],
-                                                    distance_threshold)
+            closest_key, closest_value = collisions.items()[0]
+            assert closest_value <= distance_threshold, \
+                u'distance for {} with {}: {} > {}'.format(link, closest_key,
+                                                            closest_value,
+                                                            distance_threshold)
 
     def move_base(self, goal_pose):
         """
@@ -718,7 +720,7 @@ class GiskardTestWrapper(object):
         self.simple_base_pose_pub.publish(goal_pose)
         rospy.sleep(.07)
         self.wait_for_synced()
-        current_pose = self.get_robot().get_base_pose()
+        current_pose = self.get_robot().base_pose
         goal_pose = transform_pose(u'map', goal_pose)
         compare_poses(goal_pose.pose, current_pose.pose, decimal=1)
 
@@ -727,7 +729,6 @@ class GiskardTestWrapper(object):
         p.header.frame_id = self.map
         p.pose.orientation.w = 1
         self.teleport_base(p)
-
 
 
 class PR2(GiskardTestWrapper):
@@ -830,6 +831,7 @@ class Donbot(GiskardTestWrapper):
         self.allow_all_collisions()
         self.send_and_check_joint_goal(js)
 
+
 class KMR_IIWA(GiskardTestWrapper):
     def __init__(self):
         self.camera_tip = u'camera_link'
@@ -846,6 +848,7 @@ class KMR_IIWA(GiskardTestWrapper):
                                                                        goal_pose.pose.orientation.w]))[0]}
         self.allow_all_collisions()
         self.send_and_check_joint_goal(js)
+
 
 class Boxy(GiskardTestWrapper):
     def __init__(self):

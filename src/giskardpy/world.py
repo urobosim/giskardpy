@@ -85,11 +85,19 @@ class World(object):
         result = OrderedDict()
         for contact in contacts:  # type: ClosestPair
             path = Path(self.pb_subworld.object_name_map[contact.obj_b])
+            link_b_name = path[-1]
             for p in contact.points:  # type: ContactPoint
+                if object_name == object_b:
+                    if link_b_name == link_name:
+                        continue
+                    if object_name == self.robot.get_name():
+                        if (link_name, link_b_name) not in self.robot.get_self_collision_matrix() and \
+                            (link_b_name, link_name) not in self.robot.get_self_collision_matrix():
+                            continue
                 result[path] = p.distance
-        return result
+        return OrderedDict(sorted([(key, value) for key, value in result.items()], key=lambda x: x[1]))
 
-    def init_asdf(self, cut_off_distances):
+    def init_collision_avoidance_data_structures(self, cut_off_distances):
         self.query = defaultdict(float)
         self.reverse_map_a = {}
         self.reverse_map_b = {}
@@ -127,7 +135,7 @@ class World(object):
         self.sync_bullet_world()
         collisions = Collisions(self)
         if self.query is None:
-            self.init_asdf(cut_off_distances)
+            self.init_collision_avoidance_data_structures(cut_off_distances)
 
         result = self.pb_subworld.world.get_closest_filtered_POD_batch(self.relevant_links)
         for obj_a, contacts in result.items():
