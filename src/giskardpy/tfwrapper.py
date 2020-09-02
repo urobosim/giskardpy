@@ -6,11 +6,11 @@ from geometry_msgs.msg import PoseStamped, Vector3Stamped, PointStamped, Transfo
 from tf.transformations import quaternion_from_matrix
 from tf2_geometry_msgs import do_transform_pose, do_transform_vector3, do_transform_point
 
-from tf2_py._tf2 import ExtrapolationException
+from tf2_py._tf2 import ExtrapolationException, InvalidArgumentException
 from tf2_ros import Buffer, TransformListener
 
 from giskardpy import logging
-from giskardpy.utils import suppress_stderr
+from giskardpy.utils import suppress_stderr, suppress_stdout
 
 tfBuffer = None  # type: Buffer
 tf_listener = None
@@ -44,11 +44,12 @@ def transform_pose(target_frame, pose):
     global tfBuffer
     if tfBuffer is None:
         init()
-    with suppress_stderr():
-        transform = tfBuffer.lookup_transform(target_frame,
-                                              pose.header.frame_id,  # source frame
-                                              pose.header.stamp,
-                                              rospy.Duration(5.0))
+    if not target_frame or not pose.header.frame_id:
+        raise InvalidArgumentException(u'Invalid argument passed to lookupTransform argument source_frame in tf2 frame_ids cannot be empty')
+    transform = tfBuffer.lookup_transform(target_frame,
+                                          pose.header.frame_id,  # source frame
+                                          pose.header.stamp,
+                                          rospy.Duration(5.0))
     new_pose = do_transform_pose(pose, transform)
     return new_pose
 

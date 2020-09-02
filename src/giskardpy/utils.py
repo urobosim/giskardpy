@@ -31,7 +31,6 @@ from tf2_kdl import transform_to_kdl
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 
 from giskardpy import logging
-from giskardpy.data_types import SingleJointState
 from giskardpy.plugin import PluginBehavior
 
 r = rospkg.RosPack()
@@ -191,31 +190,6 @@ def qv_mult(quaternion, vector):
 #
 # CONVERSION FUNCTIONS FOR ROS MESSAGES
 #
-
-
-def to_joint_state_dict(msg):
-    """
-    Converts a ROS message of type sensor_msgs/JointState into an instance of MultiJointState.
-    :param msg: ROS message to convert.
-    :type msg: JointState
-    :return: Corresponding MultiJointState instance.
-    :rtype: OrderedDict[str, SingleJointState]
-    """
-    mjs = OrderedDict()
-    for i, joint_name in enumerate(msg.name):
-        sjs = SingleJointState()
-        sjs.name = joint_name
-        sjs.position = msg.position[i]
-        try:
-            sjs.velocity = msg.velocity[i]
-        except IndexError:
-            sjs.velocity = 0
-        try:
-            sjs.effort = msg.effort[i]
-        except IndexError:
-            sjs.effort = 0
-        mjs[joint_name] = sjs
-    return mjs
 
 
 def to_joint_state_dict2(msg):

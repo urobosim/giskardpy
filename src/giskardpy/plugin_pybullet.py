@@ -8,15 +8,16 @@ from giskard_msgs.srv import UpdateWorld, UpdateWorldResponse, UpdateWorldReques
     GetAttachedObjects, GetAttachedObjectsResponse
 from py_trees import Status
 from sensor_msgs.msg import JointState
+from tf2_py._tf2 import InvalidArgumentException, TransformException
 from visualization_msgs.msg import Marker, MarkerArray
 
 import giskardpy.identifier as identifier
 from giskardpy import logging
+from giskardpy.data_types import to_joint_state_dict
 from giskardpy.exceptions import CorruptShapeException, UnknownBodyException, \
     UnsupportedOptionException, DuplicateNameException
 from giskardpy.plugin import GiskardBehavior
 from giskardpy.tfwrapper import transform_pose
-from giskardpy.utils import to_joint_state_dict
 from giskardpy.world_object import WorldObject
 from giskardpy import  logging
 from giskardpy.urdf_object import URDFObject
@@ -171,6 +172,8 @@ class WorldUpdatePlugin(GiskardBehavior):
                     return UpdateWorldResponse(UpdateWorldResponse.DUPLICATE_BODY_ERROR, str(e))
                 except UnsupportedOptionException as e:
                     return UpdateWorldResponse(UpdateWorldResponse.UNSUPPORTED_OPTIONS, str(e))
+                except TransformException as e:
+                    return UpdateWorldResponse(UpdateWorldResponse.TF_ERROR, str(e))
                 except Exception as e:
                     traceback.print_exc()
                 return UpdateWorldResponse(UpdateWorldResponse.UNSUPPORTED_OPTIONS,

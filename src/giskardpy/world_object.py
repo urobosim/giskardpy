@@ -10,8 +10,8 @@ from geometry_msgs.msg import Pose, Quaternion
 
 from giskardpy import logging, identifier
 from giskardpy.data_types import SingleJointState
-from giskardpy.tfwrapper import msg_to_kdl
 from giskardpy.urdf_object import URDFObject
+from giskardpy.utils import msg_to_kdl
 from kineverse.model.paths import Path
 
 

@@ -13,12 +13,41 @@ HardConstraint = namedtuple(u'HardConstraint', [u'lower', u'upper', u'expression
 JointConstraint = namedtuple(u'JointConstraint', [u'lower', u'upper', u'weight'])
 
 
+def to_joint_state_dict(msg):
+    """
+    Converts a ROS message of type sensor_msgs/JointState into an instance of MultiJointState.
+    :param msg: ROS message to convert.
+    :type msg: JointState
+    :return: Corresponding MultiJointState instance.
+    :rtype: OrderedDict[str, SingleJointState]
+    """
+    mjs = OrderedDict()
+    for i, joint_name in enumerate(msg.name):
+        sjs = SingleJointState()
+        sjs.name = joint_name
+        sjs.position = msg.position[i]
+        try:
+            sjs.velocity = msg.velocity[i]
+        except IndexError:
+            sjs.velocity = 0
+        try:
+            sjs.effort = msg.effort[i]
+        except IndexError:
+            sjs.effort = 0
+        mjs[joint_name] = sjs
+    return mjs
+
 class SingleJointState(object):
     def __init__(self, name='', position=0.0, velocity=0.0, effort=0.0):
         self.name = name
         self.position = position
         self.velocity = velocity
         self.effort = effort
+
+    # @classmethod
+    # def from_urdf_file(cls, urdf_file, *args, **kwargs):
+
+
 
     def __str__(self):
         return u'{}: {}, {}, {}'.format(self.name, self.position, self.velocity, self.effort)

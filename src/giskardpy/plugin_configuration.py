@@ -6,9 +6,9 @@ from py_trees import Status
 from sensor_msgs.msg import JointState
 
 import giskardpy.identifier as identifier
+from giskardpy.data_types import to_joint_state_dict
 from giskardpy.plugin import GiskardBehavior
 from giskardpy.tfwrapper import lookup_pose, wait_for_transform
-from giskardpy.utils import to_joint_state_dict
 
 
 class ConfigurationPlugin(GiskardBehavior):

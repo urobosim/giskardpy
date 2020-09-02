@@ -1500,7 +1500,7 @@ class TestCollisionAvoidanceGoals(object):
         """
         :type zero_pose: PR2
         """
-        zero_pose.add_box(pose=PoseStamped())
+        zero_pose.add_box(pose=PoseStamped(), expected_response=UpdateWorldResponse.TF_ERROR)
 
     def test_unsupported_options(self, kitchen_setup):
         """

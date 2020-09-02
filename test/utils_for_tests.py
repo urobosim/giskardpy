@@ -540,12 +540,13 @@ class GiskardTestWrapper(object):
         assert r.error_codes == expected_response, \
             u'got: {}, expected: {}'.format(update_world_error_code(r.error_codes),
                                             update_world_error_code(expected_response))
-        p = transform_pose(u'map', pose)
-        o_p = self.get_world().get_object(name).base_pose
-        assert self.get_world().has_object(name)
-        compare_poses(p.pose, o_p)
-        assert name in self.wrapper.get_object_names().object_names
-        compare_poses(o_p, self.wrapper.get_object_info(name).pose.pose)
+        if expected_response == UpdateWorldResponse.SUCCESS:
+            p = transform_pose(u'map', pose)
+            o_p = self.get_world().get_object(name).base_pose
+            assert self.get_world().has_object(name)
+            compare_poses(p.pose, o_p)
+            assert name in self.wrapper.get_object_names().object_names
+            compare_poses(o_p, self.wrapper.get_object_info(name).pose.pose)
 
     def add_sphere(self, name=u'sphere', size=1, pose=None):
         r = self.wrapper.add_sphere(name=name, size=size, pose=pose)
