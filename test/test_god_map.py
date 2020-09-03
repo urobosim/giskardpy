@@ -250,8 +250,8 @@ class TestGodMap(unittest.TestCase):
     def test_to_symbol(self, key, value):
         gm = GodMap()
         gm.safe_set_data([key], value)
-        self.assertTrue(w.is_symbol(gm.to_symbol([key])))
-        self.assertTrue(key in str(gm.to_symbol([key])))
+        self.assertTrue(w.is_symbol(gm.identivier_to_symbol([key])))
+        self.assertTrue(key in str(gm.identivier_to_symbol([key])))
 
     @given(lists_of_same_length([variable_name(), st.floats()], unique=True))
     def test_get_symbol_map(self, keys_values):
@@ -259,7 +259,7 @@ class TestGodMap(unittest.TestCase):
         gm = GodMap()
         for key, value in zip(keys, values):
             gm.safe_set_data([key], value)
-            gm.to_symbol([key])
+            gm.identivier_to_symbol([key])
         self.assertEqual(len(gm.get_values(keys)), len(keys))
 
     def test_god_map_with_world(self):

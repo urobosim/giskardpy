@@ -21,18 +21,14 @@ class QProblemBuilder(object):
         :type joint_constraints_dict: dict
         :type hard_constraints_dict: dict
         :type soft_constraints_dict: dict
-        :type controlled_joint_symbols: set
+        :type controlled_joint_symbols: list
         :type free_symbols: set
         :param path_to_functions: location where the compiled functions can be safed.
         :type path_to_functions: str
         """
-        # assert (not len(controlled_joint_symbols) > len(joint_constraints_dict))
-        # assert (not len(controlled_joint_symbols) < len(joint_constraints_dict))
-        # assert (len(hard_constraints_dict) <= len(controlled_joint_symbols))
-        # self.path_to_functions = path_to_functions
-        self.joint_constraints_dict = joint_constraints_dict
-        self.soft_constraints_dict = soft_constraints_dict
-        self.controlled_joint_symbols = controlled_joint_symbols
+        self.joint_constraints_dict = OrderedDict(sorted((k, v) for k, v in joint_constraints_dict.items()))
+        self.soft_constraints_dict = OrderedDict(sorted((k, v) for k, v in soft_constraints_dict.items()))
+        self.controlled_joint_symbols = sorted(controlled_joint_symbols, key=lambda x: str(x))
         self.construct_big_ass_M()
         self.compile_big_ass_M()
 
@@ -106,14 +102,6 @@ class QProblemBuilder(object):
         """
         self.big_ass_M = w.zeros(self.s * 2 + self.j,
                                  self.j + self.s + 2)
-
-    # def construct_A_hard(self, hard_expressions):
-    #     A_hard = w.Matrix(hard_expressions)
-    #     A_hard = w.jacobian(A_hard, self.controlled_joint_symbols)
-    #     self.set_A_hard(A_hard)
-
-    # def set_A_hard(self, A_hard):
-    #     self.big_ass_M[:self.h, :self.j] = A_hard
 
     def construct_A_soft(self, soft_expressions):
         A_soft = w.zeros(self.s, self.j + self.s)
@@ -257,7 +245,7 @@ class QProblemBuilder(object):
         if xdot_full is None:
             return None
         # TODO enable debug print in an elegant way, preferably without slowing anything down
-        self.debug_print(np_H, A, lb, ub, lbA, ubA, xdot_full)
+        # self.debug_print(np_H, A, lb, ub, lbA, ubA, xdot_full)
         return OrderedDict((observable, xdot_full[i]) for i, observable in enumerate(self.controlled_joint_symbols)), \
                np_H, np_A, np_lb, np_ub, np_lbA, np_ubA, xdot_full
 

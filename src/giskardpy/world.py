@@ -174,7 +174,7 @@ class World(object):
         if self.km_model.has_data(name):
             raise DuplicateNameException(u'Something with name \'{}\' already exists'.format(name))
 
-        root_pose = PoseStampedInput(self.god_map.to_symbol,
+        root_pose = PoseStampedInput(self.god_map.identivier_to_symbol,
                                      translation_prefix=[self.__prefix, u'km_model', u'data_tree', u'data_tree', name,
                                                          u'base_pose',
                                                          u'position'],

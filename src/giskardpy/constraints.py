@@ -81,18 +81,18 @@ class Constraint(object):
         """
         returns a symbol that referes to the given joint
         """
-        return [self.get_god_map().to_symbol(identifier.joint_states + [joint_name, u'position']) for
+        return [self.get_god_map().identivier_to_symbol(identifier.joint_states + [joint_name, u'position']) for
                 joint_name in self.get_robot().controlled_joints]
 
     def get_joint_velocity_symbols(self):
         """
         returns a symbol that referes to the given joint
         """
-        return [self.get_god_map().to_symbol(identifier.joint_states + [joint_name, u'velocity']) for
+        return [self.get_god_map().identivier_to_symbol(identifier.joint_states + [joint_name, u'velocity']) for
                 joint_name in self.get_robot().controlled_joints]
 
     def get_input_sampling_period(self):
-        return self.god_map.to_symbol(identifier.sample_period)
+        return self.god_map.identivier_to_symbol(identifier.sample_period)
 
     # def make_polynomial_function(self, x, p1x, p1y,
     #                              p2x, p2y,
@@ -154,7 +154,7 @@ class Constraint(object):
         :type tip: str
         :return: root_T_tip
         """
-        return FrameInput(self.get_god_map().to_symbol,
+        return FrameInput(self.get_god_map().identivier_to_symbol,
                           prefix=identifier.world + [u'get_fk_np',
                                                      (root_path, tip_path)]).get_frame()
 
@@ -166,7 +166,7 @@ class Constraint(object):
         :type tip: str
         :return: root_T_tip
         """
-        return FrameInput(self.get_god_map().to_symbol,
+        return FrameInput(self.get_god_map().identivier_to_symbol,
                           prefix=identifier.fk_np +
                                  [(root, tip)]).get_frame()
 
@@ -177,7 +177,7 @@ class Constraint(object):
         :return: symbol
         """
         key = self.get_identifier() + [name]
-        return self.god_map.to_symbol(key)
+        return self.god_map.identivier_to_symbol(key)
 
     def parse_and_transform_PoseStamped(self, pose_stamped_json, goal_reference_frame):
         """
@@ -210,7 +210,7 @@ class Constraint(object):
         :param name: name of the god map entry
         :return: a homogeneous transformation matrix, with symbols that refer to a pose stamped in the god map.
         """
-        return PoseStampedInput(self.get_god_map().to_symbol,
+        return PoseStampedInput(self.get_god_map().identivier_to_symbol,
                                 translation_prefix=self.get_identifier() +
                                                    [name,
                                                     u'pose',
@@ -221,11 +221,11 @@ class Constraint(object):
                                                  u'orientation']).get_frame()
 
     def get_input_Vector3Stamped(self, name):
-        return Vector3StampedInput(self.god_map.to_symbol,
+        return Vector3StampedInput(self.god_map.identivier_to_symbol,
                                    vector_prefix=self.get_identifier() + [name, u'vector']).get_expression()
 
     def get_input_PointStamped(self, name):
-        return PointStampedInput(self.god_map.to_symbol,
+        return PointStampedInput(self.god_map.identivier_to_symbol,
                                  prefix=self.get_identifier() + [name, u'point']).get_expression()
 
     def get_expr_velocity(self, expr):
@@ -1011,7 +1011,7 @@ class ExternalCollisionAvoidance(Constraint):
         self.save_params_on_god_map(params)
 
     def get_contact_normal_on_b_in_root(self):
-        return Vector3Input(self.god_map.to_symbol,
+        return Vector3Input(self.god_map.identivier_to_symbol,
                             prefix=identifier.closest_point + [u'get_external_collisions',
                                                                (self.link_name,),
                                                                self.idx,
@@ -1019,7 +1019,7 @@ class ExternalCollisionAvoidance(Constraint):
                                                                tuple()]).get_expression()
 
     def get_closest_point_on_a_in_a(self):
-        return Point3Input(self.god_map.to_symbol,
+        return Point3Input(self.god_map.identivier_to_symbol,
                            prefix=identifier.closest_point + [u'get_external_collisions',
                                                               (self.link_name,),
                                                               self.idx,
@@ -1027,7 +1027,7 @@ class ExternalCollisionAvoidance(Constraint):
                                                               tuple()]).get_expression()
 
     def get_closest_point_on_b_in_root(self):
-        return Point3Input(self.god_map.to_symbol,
+        return Point3Input(self.god_map.identivier_to_symbol,
                            prefix=identifier.closest_point + [u'get_external_collisions',
                                                               (self.link_name,),
                                                               self.idx,
@@ -1035,18 +1035,18 @@ class ExternalCollisionAvoidance(Constraint):
                                                               tuple()]).get_expression()
 
     def get_actual_distance(self):
-        return self.god_map.to_symbol(identifier.closest_point + [u'get_external_collisions',
-                                                                  (self.link_name,),
-                                                                  self.idx,
+        return self.god_map.identivier_to_symbol(identifier.closest_point + [u'get_external_collisions',
+                                                                             (self.link_name,),
+                                                                             self.idx,
                                                                   u'get_contact_distance',
-                                                                  tuple()])
+                                                                             tuple()])
 
     def get_number_of_external_collisions(self):
-        return self.god_map.to_symbol(identifier.closest_point + [u'get_number_of_external_collisions',
-                                                                  (self.link_name,)])
+        return self.god_map.identivier_to_symbol(identifier.closest_point + [u'get_number_of_external_collisions',
+                                                                             (self.link_name,)])
 
     def get_max_number_of_repeller(self):
-        return self.god_map.to_symbol(identifier.number_of_repeller)
+        return self.god_map.identivier_to_symbol(identifier.number_of_repeller)
 
     def make_constraints(self):
         a_P_pa = self.get_closest_point_on_a_in_a()
@@ -1149,7 +1149,7 @@ class SelfCollisionAvoidance(Constraint):
         self.save_params_on_god_map(params)
 
     def get_contact_normal_in_b(self):
-        return Vector3Input(self.god_map.to_symbol,
+        return Vector3Input(self.god_map.identivier_to_symbol,
                             prefix=identifier.closest_point + [u'get_self_collisions',
                                                                (self.link_a, self.link_b),
                                                                self.idx,
@@ -1157,7 +1157,7 @@ class SelfCollisionAvoidance(Constraint):
                                                                tuple()]).get_expression()
 
     def get_position_on_a_in_a(self):
-        return Point3Input(self.god_map.to_symbol,
+        return Point3Input(self.god_map.identivier_to_symbol,
                            prefix=identifier.closest_point + [u'get_self_collisions',
                                                               (self.link_a, self.link_b),
                                                               self.idx,
@@ -1165,7 +1165,7 @@ class SelfCollisionAvoidance(Constraint):
                                                               tuple()]).get_expression()
 
     def get_b_T_pb(self):
-        return TranslationInput(self.god_map.to_symbol,
+        return TranslationInput(self.god_map.identivier_to_symbol,
                                 prefix=identifier.closest_point + [u'get_self_collisions',
                                                                    (self.link_a, self.link_b),
                                                                    self.idx,
@@ -1173,18 +1173,18 @@ class SelfCollisionAvoidance(Constraint):
                                                                    tuple()]).get_frame()
 
     def get_actual_distance(self):
-        return self.god_map.to_symbol(identifier.closest_point + [u'get_self_collisions',
-                                                                  (self.link_a, self.link_b),
-                                                                  self.idx,
+        return self.god_map.identivier_to_symbol(identifier.closest_point + [u'get_self_collisions',
+                                                                             (self.link_a, self.link_b),
+                                                                             self.idx,
                                                                   u'get_contact_distance',
-                                                                  tuple()])
+                                                                             tuple()])
 
     def get_number_of_self_collisions(self):
-        return self.god_map.to_symbol(identifier.closest_point + [u'get_number_of_self_collisions',
-                                                                  (self.link_a, self.link_b)])
+        return self.god_map.identivier_to_symbol(identifier.closest_point + [u'get_number_of_self_collisions',
+                                                                             (self.link_a, self.link_b)])
 
     def get_max_number_of_repeller(self):
-        return self.god_map.to_symbol(identifier.number_of_repeller)
+        return self.god_map.identivier_to_symbol(identifier.number_of_repeller)
 
     def make_constraints(self):
         repel_velocity = self.get_input_float(self.repel_velocity)

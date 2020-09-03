@@ -9,20 +9,19 @@ from time import time
 from giskard_msgs.msg import MoveCmd
 from py_trees import Status
 
-from kineverse.model.paths import Path
-from rospy_message_converter.message_converter import convert_ros_message_to_dictionary
-
 import giskardpy.constraints
 import giskardpy.identifier as identifier
 import kineverse.gradients.common_math as cm
+# import kineverse.gradients.gradient_math as gm
+from giskardpy import cas_wrapper as w
 from giskardpy.constraints import SelfCollisionAvoidance, ExternalCollisionAvoidance
-from giskardpy.data_types import JointConstraint, HardConstraint, SoftConstraint
+from giskardpy.data_types import JointConstraint, SoftConstraint
 from giskardpy.exceptions import InsolvableException, ImplementationException
 from giskardpy.logging import loginfo
 from giskardpy.plugin_action_server import GetGoal
-from kineverse.gradients.diff_logic import DiffSymbol, erase_type
-# import kineverse.gradients.gradient_math as gm
-from giskardpy import cas_wrapper as w
+from kineverse.gradients.diff_logic import DiffSymbol, erase_type, Position
+from kineverse.model.paths import Path
+from rospy_message_converter.message_converter import convert_ros_message_to_dictionary
 
 
 def allowed_constraint_names():
@@ -182,6 +181,9 @@ class GoalToConstraints(GetGoal):
 
         return Status.SUCCESS
 
+    def position_identifier_from_velocity_symbol(self, s):
+        return self.get_god_map().symbol_to_identifier(Position(erase_type(s)))
+
     def add_object_constraints(self):
         world = self.get_god_map().get_data(identifier.world)
         # FIXME you also still have to check the soft constraints for e.g. kitchen joints
@@ -214,7 +216,7 @@ class GoalToConstraints(GetGoal):
                 symbols.update(w.free_symbols(lower_limit))
                 symbols.update(w.free_symbols(upper_limit))
 
-                sample_period = self.get_god_map().to_symbol(identifier.sample_period)
+                sample_period = self.get_god_map().identivier_to_symbol(identifier.sample_period)
 
                 # FIXME support vel limit from param server again
                 lower_limit = lower_limit * sample_period
@@ -223,9 +225,11 @@ class GoalToConstraints(GetGoal):
                 weight = self.get_god_map().get_data(identifier.joint_cost)[joint_name]
                 weight = weight * (1. / (upper_limit)) ** 2
 
-                joint_constraints[joint_name] = JointConstraint(lower=lower_limit,
-                                                                upper=upper_limit,
-                                                                weight=weight)
+                key = self.position_identifier_from_velocity_symbol(c.expr)
+
+                joint_constraints[key] = JointConstraint(lower=lower_limit,
+                                                         upper=upper_limit,
+                                                         weight=weight)
 
         hard_constraints = OrderedDict()
         for k, c in sorted(constraints.items()):
@@ -245,7 +249,8 @@ class GoalToConstraints(GetGoal):
 
         for s in joint_velocity_symbols:
             joint_name = str(Path(erase_type(s))[-1])
-            if joint_name not in joint_constraints:
+            key = self.position_identifier_from_velocity_symbol(s)
+            if key not in joint_constraints:
                 if self.get_robot().is_joint_prismatic(joint_name):
                     limit = self.get_god_map().get_data(identifier.default_joint_velocity_linear_limit)
                 else:
@@ -253,7 +258,7 @@ class GoalToConstraints(GetGoal):
                 lower, upper = -limit, limit
                 weight = self.get_god_map().get_data(identifier.joint_cost)[joint_name]
                 weight = weight * (1. / (upper)) ** 2
-                joint_constraints[joint_name] = JointConstraint(lower, upper, weight)
+                joint_constraints[key] = JointConstraint(lower, upper, weight)
 
         joint_constraints = OrderedDict((key, value) for key, value in sorted(joint_constraints.items()))
 

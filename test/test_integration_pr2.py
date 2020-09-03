@@ -19,6 +19,7 @@ from giskardpy.identifier import fk_pose
 from giskardpy.robot import Robot
 from giskardpy.tfwrapper import init as tf_init
 import giskardpy.tfwrapper as tf
+from giskardpy.utils import normalize
 from kineverse.model.paths import Path
 from utils_for_tests import PR2, compare_poses, update_world_error_code
 
@@ -387,10 +388,10 @@ class TestConstraints(object):
         pocky_pose_setup.wrapper.update_god_map(updates)
         pocky_pose_setup.set_and_check_cart_goal(r_goal, pocky_pose_setup.r_tip)
         assert pocky_pose_setup.get_god_map().unsafe_get_data(identifier.joint_cost + [u'odom_x_joint']) == 0.0001
-        assert pocky_pose_setup.get_god_map().unsafe_get_data(identifier.joint_cost + [u'torso_lift_joint']) == 0.01
+        assert pocky_pose_setup.get_god_map().unsafe_get_data(identifier.joint_cost + [u'torso_lift_joint']) == 0.05
         pocky_pose_setup.send_and_check_goal(goal_type=MoveGoal.PLAN_ONLY)
-        assert pocky_pose_setup.get_god_map().unsafe_get_data(identifier.joint_cost + [u'odom_x_joint']) == 0.01
-        assert pocky_pose_setup.get_god_map().unsafe_get_data(identifier.joint_cost + [u'torso_lift_joint']) == 0.01
+        assert pocky_pose_setup.get_god_map().unsafe_get_data(identifier.joint_cost + [u'odom_x_joint']) == 0.05
+        assert pocky_pose_setup.get_god_map().unsafe_get_data(identifier.joint_cost + [u'torso_lift_joint']) == 0.05
 
     def test_base_pointing_forward(self, zero_pose):
         """
@@ -423,8 +424,8 @@ class TestConstraints(object):
         pocky_pose_setup.wrapper.update_god_map(updates)
         pocky_pose_setup.set_cart_goal(r_goal, pocky_pose_setup.r_tip)
         pocky_pose_setup.send_and_check_goal(expected_error_code=MoveResult.INSOLVABLE)
-        assert pocky_pose_setup.get_god_map().unsafe_get_data(identifier.joint_cost + [u'odom_x_joint']) == 0.01
-        assert pocky_pose_setup.get_god_map().unsafe_get_data(identifier.joint_cost + [u'torso_lift_joint']) == 0.01
+        assert pocky_pose_setup.get_god_map().unsafe_get_data(identifier.joint_cost + [u'odom_x_joint']) == 0.05
+        assert pocky_pose_setup.get_god_map().unsafe_get_data(identifier.joint_cost + [u'torso_lift_joint']) == 0.05
 
     def test_UpdateGodMap3(self, pocky_pose_setup):
         """
@@ -442,8 +443,8 @@ class TestConstraints(object):
         pocky_pose_setup.wrapper.update_god_map(updates)
         pocky_pose_setup.set_cart_goal(r_goal, pocky_pose_setup.r_tip)
         pocky_pose_setup.send_and_check_goal(expected_error_code=MoveResult.INSOLVABLE)
-        assert pocky_pose_setup.get_god_map().unsafe_get_data(identifier.joint_cost + [u'odom_x_joint']) == 0.01
-        assert pocky_pose_setup.get_god_map().unsafe_get_data(identifier.joint_cost + [u'torso_lift_joint']) == 0.01
+        assert pocky_pose_setup.get_god_map().unsafe_get_data(identifier.joint_cost + [u'odom_x_joint']) == 0.05
+        assert pocky_pose_setup.get_god_map().unsafe_get_data(identifier.joint_cost + [u'torso_lift_joint']) == 0.05
 
     def test_pointing(self, kitchen_setup):
         # fixme
@@ -752,7 +753,7 @@ class TestConstraints(object):
         x_goal.header.frame_id = u'map'
         x_goal.vector.y = -1
         # x_goal.vector.z = 0.2
-        x_goal.vector = tf.normalize(x_goal.vector)
+        x_goal.vector = normalize(x_goal.vector)
         zero_pose.align_planes(zero_pose.r_tip, x_gripper, root_normal=x_goal)
         zero_pose.send_and_check_goal()
 

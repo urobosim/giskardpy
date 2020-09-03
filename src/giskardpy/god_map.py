@@ -107,7 +107,7 @@ class GodMap(object):
             r = self.unsafe_get_data(identifier)
         return r
 
-    def to_symbol(self, identifier):
+    def identivier_to_symbol(self, identifier):
         """
         All registered identifiers will be included in self.get_symbol_map().
         :type identifier: list
@@ -125,9 +125,12 @@ class GodMap(object):
             self.expr_to_key[str(expr)] = identifier_parts
         return self.key_to_expr[identifier]
 
+    def symbol_to_identifier(self, symbol):
+        return self.expr_to_key[str(symbol)]
+
     def register_symbol(self, symbol):
         identifier_ = str(symbol).split(self.expr_separator)
-        self.to_symbol(identifier_)
+        self.identivier_to_symbol(identifier_)
 
     def register_symbols(self, symbols):
         for symbol in symbols:

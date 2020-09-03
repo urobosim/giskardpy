@@ -153,7 +153,7 @@ def process_joint_specific_params(identifier_, default, god_map):
     d = KeyDefaultDict(lambda key: god_map.unsafe_get_data(default))
     d.update(god_map.get_data(identifier_))
     god_map.safe_set_data(identifier_, d)
-    return KeyDefaultDict(lambda key: god_map.to_symbol(identifier_ + [key]))
+    return KeyDefaultDict(lambda key: god_map.identivier_to_symbol(identifier_ + [key]))
 
 
 def grow_tree():
