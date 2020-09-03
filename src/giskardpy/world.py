@@ -105,9 +105,10 @@ class World(object):
         self.flat_collision_matrix = []  # (robot_link, obj_b, link_b, pb_a, pb_b, distance)
 
         for (robot_link, body_b, link_b), distance in cut_off_distances.items():
+            distance *= 3
             obj_a = self.pb_subworld.named_objects[str(self.robot.get_link_path(robot_link))]
             self.reverse_map_a[obj_a] = robot_link
-            self.query[obj_a] = max(self.query[obj_a], distance * 3)
+            self.query[obj_a] = max(self.query[obj_a], distance)
             if link_b == CollisionEntry.ALL:
                 obj_bs = set()
                 for path_str in self.get_object(body_b).get_link_path_strs():
@@ -127,8 +128,6 @@ class World(object):
 
         for key in self.relevant_links.keys():
             self.relevant_links[key] = list(self.relevant_links[key])
-
-        print('init_asdf produced {} queries'.format(len(self.relevant_links)))
 
     @profile
     def check_collisions(self, cut_off_distances):
@@ -601,10 +600,8 @@ class World(object):
                 continue
             assert len(collision_entry.robot_links) == 1
             assert len(collision_entry.link_bs) == 1
-            if self.robot.link_order(collision_entry.robot_links[0], collision_entry.link_bs[0]):
-                key = (collision_entry.robot_links[0], collision_entry.body_b, collision_entry.link_bs[0])
-            else:
-                key = (collision_entry.link_bs[0], collision_entry.body_b, collision_entry.robot_links[0])
+            key = (collision_entry.robot_links[0], collision_entry.body_b, collision_entry.link_bs[0])
+            r_key = (collision_entry.link_bs[0], collision_entry.body_b, collision_entry.robot_links[0])
             if self.is_allow_collision(collision_entry):
                 if self.all_link_bs(collision_entry):
                     for key2 in list(min_allowed_distance.keys()):
@@ -612,6 +609,8 @@ class World(object):
                             del min_allowed_distance[key2]
                 elif key in min_allowed_distance:
                     del min_allowed_distance[key]
+                elif r_key in min_allowed_distance:
+                    del min_allowed_distance[r_key]
 
             elif self.is_avoid_collision(collision_entry):
                 min_allowed_distance[key] = min_dist[key[0]][u'zero_weight_distance']

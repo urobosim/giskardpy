@@ -2139,8 +2139,8 @@ class TestCollisionAvoidanceGoals(object):
         zero_pose.set_cart_goal(p, zero_pose.l_tip, zero_pose.default_root)
         zero_pose.send_goal()
 
-        zero_pose.check_cpi_geq(zero_pose.get_l_gripper_links(), 0.048)
-        zero_pose.check_cpi_geq([attached_link_name], 0.048)
+        zero_pose.check_cpi_geq(zero_pose.get_l_gripper_links(), zero_pose.get_robot().get_name(), 0.048)
+        zero_pose.check_cpi_geq([attached_link_name], zero_pose.get_robot().get_name(), 0.048)
         zero_pose.detach_object(attached_link_name)
 
     def test_allow_attached_self_collision(self, zero_pose):
@@ -2809,7 +2809,12 @@ class TestCollisionAvoidanceGoals(object):
     #     kitchen_setup.send_and_check_goal()
 
     def test_tray(self, kitchen_setup):
-        # fixme
+        base_pose = PoseStamped()
+        base_pose.header.frame_id = u'map'
+        base_pose.pose.position.y = 0.8
+        base_pose.pose.orientation.w = 1
+        kitchen_setup.teleport_base(base_pose)
+
         tray_name = u'tray'
 
         tray_pose = PoseStamped()
@@ -2852,6 +2857,7 @@ class TestCollisionAvoidanceGoals(object):
 
         tray_goal = tf.lookup_pose(u'base_footprint', tray_name)
         tray_goal.pose.position.y = 0
+        tray_goal.pose.position.z += 0.15
         tray_goal.pose.orientation = Quaternion(*quaternion_from_matrix([[-1, 0, 0, 0],
                                                                          [0, -1, 0, 0],
                                                                          [0, 0, 1, 0],
