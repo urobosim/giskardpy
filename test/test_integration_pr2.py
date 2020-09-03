@@ -2248,7 +2248,6 @@ class TestCollisionAvoidanceGoals(object):
 
     def test_attached_two_items(self, zero_pose):
         # FIXME visualization bug
-        # fixme
         box1_name = u'box1'
         box2_name = u'box2'
 

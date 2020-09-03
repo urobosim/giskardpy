@@ -195,7 +195,7 @@ class Collisions(object):
         self.all_collisions.add(collision)
 
         if collision.get_body_b() == self.world.robot.get_name():
-            key = collision.get_link_a(), collision.get_link_b()
+            key = tuple(sorted([collision.get_link_a(), collision.get_link_b()]))
             self.self_collisions[key].add(collision)
             self.number_of_self_collisions[key] = min(20, self.number_of_self_collisions[key] + 1)
         else:
