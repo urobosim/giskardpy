@@ -1500,8 +1500,11 @@ class TestCollisionAvoidanceGoals(object):
         pose.pose.orientation = Quaternion(w=1)
         wb.type = WorldBody.URDF_BODY
 
-        req = UpdateWorldRequest(UpdateWorldRequest.ADD, wb, True, pose)
-        assert kitchen_setup.wrapper.update_world.call(req).error_codes == UpdateWorldResponse.UNSUPPORTED_OPTIONS
+        req = UpdateWorldRequest(UpdateWorldRequest.ADD, wb, False, pose)
+        result = kitchen_setup.wrapper.update_world.call(req)
+        assert result.error_codes == UpdateWorldResponse.UNSUPPORTED_OPTIONS, \
+            u'got: {}, expected: {}'.format(update_world_error_code(result.error_codes),
+                                            update_world_error_code(UpdateWorldResponse.UNSUPPORTED_OPTIONS))
 
     def test_link_b_set_but_body_b_not(self, box_setup):
         """
@@ -1604,8 +1607,8 @@ class TestCollisionAvoidanceGoals(object):
         """
         :type zero_pose: PR2
         """
-        zero_pose.check_cpi_geq(zero_pose.get_r_gripper_links(), 0.1)
-        zero_pose.check_cpi_geq(zero_pose.get_l_gripper_links(), 0.1)
+        zero_pose.check_cpi_geq(zero_pose.get_r_gripper_links(), zero_pose.get_robot().get_name(), 0.1, check_distance=0.5)
+        zero_pose.check_cpi_geq(zero_pose.get_l_gripper_links(), zero_pose.get_robot().get_name(), 0.1, check_distance=0.5)
 
     def test_allow_self_collision2(self, zero_pose):
         """
@@ -1804,7 +1807,8 @@ class TestCollisionAvoidanceGoals(object):
 
         pocky_pose_setup.send_and_check_goal()
         # TODO check traj length?
-        pocky_pose_setup.check_cpi_geq(['box'], 0.048)
+        pocky_pose_setup.check_cpi_geq(['box'], u'bl', 0.048)
+        pocky_pose_setup.check_cpi_geq(['box'], u'br', 0.048)
 
     def test_avoid_collision4(self, pocky_pose_setup):
         """
@@ -2140,8 +2144,8 @@ class TestCollisionAvoidanceGoals(object):
         zero_pose.set_cart_goal(p, zero_pose.l_tip, zero_pose.default_root)
         zero_pose.send_goal()
 
-        zero_pose.check_cpi_geq(zero_pose.get_l_gripper_links(), zero_pose.get_robot().get_name(), 0.048)
-        zero_pose.check_cpi_geq([attached_link_name], zero_pose.get_robot().get_name(), 0.048)
+        zero_pose.check_cpi_geq(zero_pose.get_l_gripper_links(), zero_pose.get_robot().get_name(), 0.048, check_distance=0.5)
+        zero_pose.check_cpi_geq([attached_link_name], zero_pose.get_robot().get_name(), 0.048, check_distance=0.5)
         zero_pose.detach_object(attached_link_name)
 
     def test_allow_attached_self_collision(self, zero_pose):
