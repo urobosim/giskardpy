@@ -601,7 +601,10 @@ class World(object):
                 continue
             assert len(collision_entry.robot_links) == 1
             assert len(collision_entry.link_bs) == 1
-            key = (collision_entry.robot_links[0], collision_entry.body_b, collision_entry.link_bs[0])
+            if self.robot.link_order(collision_entry.robot_links[0], collision_entry.link_bs[0]):
+                key = (collision_entry.robot_links[0], collision_entry.body_b, collision_entry.link_bs[0])
+            else:
+                key = (collision_entry.link_bs[0], collision_entry.body_b, collision_entry.robot_links[0])
             if self.is_allow_collision(collision_entry):
                 if self.all_link_bs(collision_entry):
                     for key2 in list(min_allowed_distance.keys()):

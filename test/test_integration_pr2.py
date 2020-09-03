@@ -2101,7 +2101,7 @@ class TestCollisionAvoidanceGoals(object):
         box_setup.check_cpi_geq([attached_link_name], u'box', 0.0)
         box_setup.detach_object(attached_link_name)
 
-    def test_attached_self_collision(self, zero_pose):
+    def test_avoid_attached_self_collision(self, zero_pose):
         """
         :type box_setup: PR2
         """
@@ -2142,6 +2142,52 @@ class TestCollisionAvoidanceGoals(object):
         zero_pose.check_cpi_geq(zero_pose.get_l_gripper_links(), 0.048)
         zero_pose.check_cpi_geq([attached_link_name], 0.048)
         zero_pose.detach_object(attached_link_name)
+
+    def test_allow_attached_self_collision(self, zero_pose):
+        """
+        :type box_setup: PR2
+        """
+
+        collision_pose = {
+            u'r_shoulder_pan_joint': -0.1592669164939349,
+            u'r_shoulder_lift_joint': 0.5726770101613905,
+            u'r_upper_arm_roll_joint': -0.5532568387077381,
+            u'r_forearm_roll_joint': -7.517553513504836,
+            u'r_elbow_flex_joint': - 1.1343683863086362,
+            u'r_wrist_flex_joint': - 1.215660155912625,
+            u'r_wrist_roll_joint': -4.249300323527076,
+            u'torso_lift_joint': 0.2
+        }
+
+        zero_pose.set_joint_goal(collision_pose)
+        zero_pose.send_goal()
+
+        attached_link_name = u'wolfgang'
+        zero_pose.attach_box(attached_link_name, [0.16, 0.04, 0.04], zero_pose.r_tip, [0.04, 0, 0], [0, 0, 0, 1])
+
+        zero_pose.set_joint_goal({u'l_forearm_roll_joint': 0.0,
+                                  u'l_shoulder_lift_joint': 0.0,
+                                  u'l_shoulder_pan_joint': 0.0,
+                                  u'l_upper_arm_roll_joint': 0.0,
+                                  u'l_wrist_flex_joint': 0.0,
+                                  u'l_wrist_roll_joint': 0.0,
+                                  u'l_elbow_flex_joint': 0.0,
+                                  u'torso_lift_joint': 0.2})
+
+        p = PoseStamped()
+        p.header.frame_id = zero_pose.r_tip
+        p.pose.position.z = 0.10
+        p.pose.orientation.w = 1
+        zero_pose.set_cart_goal(p, zero_pose.r_tip, zero_pose.default_root)
+        zero_pose.allow_collision(robot_links=[attached_link_name],
+                                      body_b=zero_pose.get_robot().get_name(),
+                                      link_bs=[CollisionEntry.ALL])
+        zero_pose.send_goal()
+
+        zero_pose.check_cpi_geq(zero_pose.get_r_gripper_links(), zero_pose.get_robot().get_name(),0.048)
+        zero_pose.check_cpi_leq([attached_link_name], zero_pose.get_robot().get_name(), 0.048)
+        zero_pose.detach_object(attached_link_name)
+
 
     def test_attached_collision_allow(self, box_setup):
         """
