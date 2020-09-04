@@ -709,12 +709,10 @@ class TestCollisionAvoidanceGoals(object):
         """
         :type zero_pose: Donbot
         """
-        # fixme
         goal_js = {
             u'ur5_shoulder_lift_joint': .5,
         }
         zero_pose.set_joint_goal(goal_js)
-        # zero_pose.allow_self_collision()
         zero_pose.send_and_check_goal()
 
         arm_goal = PoseStamped()

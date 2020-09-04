@@ -139,32 +139,17 @@ class World(object):
 
         result = self.pb_subworld.world.get_closest_filtered_POD_batch(self.relevant_links)
         for obj_a, contacts in result.items():
-            # map_T_a = obj_a.transform
+            map_T_a = obj_a.transform
             link_a = self.reverse_map_a[obj_a]
-            map_T_a = self.get_fk_np('map', self.robot.get_link_path(link_a))
             for contact in contacts:  # type: ClosestPair
-                # map_T_b = contact.obj_b.transform
+                map_T_b = contact.obj_b.transform
                 body_b, link_b = self.reverse_map_b[contact.obj_b]
-                map_T_b = self.get_fk_np('map', self.get_link_path(body_b, link_b))
-                b_T_map = self.get_fk_np(self.get_link_path(body_b, link_b), 'map')
                 for p in contact.points:  # type: ContactPoint
-                    link_a_P_a = np.array([p.point_a[0],
-                                           p.point_a[1],
-                                           p.point_a[2],
-                                           1])
-                    link_b_P_b = np.array([p.point_b[0],
-                                           p.point_b[1],
-                                           p.point_b[2],
-                                           1])
-                    map_V_n = np.array([p.normal_world_b[0],
-                                        p.normal_world_b[1],
-                                        p.normal_world_b[2],
-                                        0])
-                    c = Collision(link_a, body_b, link_b, link_a_P_a, link_b_P_b, map_V_n,
+                    c = Collision(link_a, body_b, link_b, p.point_a, p.point_b, p.normal_world_b,
                                   p.distance)
-                    c.set_position_on_a_in_map(np.dot(map_T_a, link_a_P_a))
-                    c.set_position_on_b_in_map(np.dot(map_T_b, link_b_P_b))
-                    c.set_contact_normal_in_b(np.dot(b_T_map, map_V_n))
+                    c.set_position_on_a_in_map(map_T_a * p.point_a)
+                    c.set_position_on_b_in_map(map_T_b * p.point_b)
+                    c.set_contact_normal_in_b(map_T_b.inv().basis * p.normal_world_b)
                     collisions.add(c)
 
         return collisions
