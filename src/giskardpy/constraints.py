@@ -1227,10 +1227,12 @@ class SelfCollisionAvoidance(Constraint):
         # limit = self.limit_velocity(limit, repel_velocity)
 
         penetration_distance = zero_weight_distance - actual_distance
-        lower_limit = self.limit_velocity(penetration_distance, repel_velocity)
-        # upper_limit = self.limit_velocity(1e9, repel_velocity)
+        # lower_limit = self.limit_velocity(penetration_distance, repel_velocity)
+
+        repel_velocity *= self.get_input_sampling_period()
+        lower_limit = w.Min(penetration_distance, repel_velocity)
+
         upper_limit = 1e9
-        slack_limit = self.limit_velocity(actual_distance, repel_velocity)
 
         # self.add_debug_constraint('/pen', penetration_distance)
 
