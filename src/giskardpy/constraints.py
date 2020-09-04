@@ -1057,6 +1057,7 @@ class ExternalCollisionAvoidance(Constraint):
         # max_velocity = self.get_input_float(self.max_velocity)
         max_acceleration = self.get_input_float(self.max_acceleration)
         zero_weight_distance = self.get_input_float(self.zero_weight_distance)
+        max_weight_distance = self.get_input_float(self.max_weight_distance)
         sample_period = self.get_input_sampling_period()
         number_of_external_collisions = self.get_number_of_external_collisions()
         num_repeller = self.get_max_number_of_repeller()
@@ -1089,9 +1090,10 @@ class ExternalCollisionAvoidance(Constraint):
         # upper_slack = w.if_greater(actual_distance, 50,
         #                            1e9,
         #                            w.if_greater(actual_distance, 0, actual_distance, penetration_distance))
-        upper_slack = w.if_greater(actual_distance, 50,
+        upper_slack = w.if_greater(actual_distance, 50,  # assuming that distance of unchecked closest points is 100
                                    1e9,
-                                   w.if_greater(actual_distance, 0, 2 * slack_limit, 0))
+                                   w.Max(0, lower_limit + actual_distance - max_weight_distance)
+                                   )
         # self.add_debug_constraint('/pen', penetration_distance)
         # self.add_debug_constraint('/actual', actual_distance)
 
@@ -1189,6 +1191,7 @@ class SelfCollisionAvoidance(Constraint):
     def make_constraints(self):
         repel_velocity = self.get_input_float(self.repel_velocity)
         zero_weight_distance = self.get_input_float(self.zero_weight_distance)
+        max_weight_distance = self.get_input_float(self.max_weight_distance)
         actual_distance = self.get_actual_distance()
         number_of_self_collisions = self.get_number_of_self_collisions()
         num_repeller = self.get_max_number_of_repeller()
@@ -1238,9 +1241,10 @@ class SelfCollisionAvoidance(Constraint):
         #                     expression=dist,
         #                     goal_constraint=False)
 
-        upper_slack = w.if_greater(actual_distance, 50,
+        upper_slack = w.if_greater(actual_distance, 50,  # assuming that distance of unchecked closest points is 100
                                    1e9,
-                                   w.if_greater(actual_distance, 0, 2 * slack_limit, 0))
+                                   w.Max(0, lower_limit + actual_distance - max_weight_distance)
+                                   )
 
         self.add_constraint(u'/position',
                             lower=lower_limit,
