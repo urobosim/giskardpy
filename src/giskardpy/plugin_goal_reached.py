@@ -38,7 +38,10 @@ class GoalReachedPlugin(GiskardBehavior):
         # below_threshold = np.abs([v.velocity for v in current_js.values()]).max() < self.joint_convergence_threshold
         if planning_time - self.above_threshold_time >= self.window_size:
             x_dot_full = self.get_god_map().get_data(identifier.xdot_full)
-            below_threshold = np.all(np.abs(x_dot_full[:self.number_of_controlled_joints]) < self.thresholds)
+            try:
+                below_threshold = np.all(np.abs(x_dot_full[:self.number_of_controlled_joints]) < self.thresholds)
+            except:
+                pass
             if below_threshold:
                 logging.loginfo(u'found goal trajectory with length {}s in {}s'.format(planning_time,
                                                                              time() - self.get_blackboard().runtime))
