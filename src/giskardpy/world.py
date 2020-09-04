@@ -22,7 +22,7 @@ from giskardpy.robot import Robot
 from giskardpy.urdf_object import URDFObject, hacky_urdf_parser_fix
 from giskardpy.utils import KeyDefaultDict, memoize, homo_matrix_to_pose, suppress_stderr
 from kineverse.model.geometry_model import GeometryModel
-from kineverse.model.paths import Path
+from kineverse.model.paths import Path, CPath
 from kineverse.operations.basic_operations import ExecFunction
 from kineverse.operations.urdf_operations import load_urdf, FixedJoint, CreateURDFFrameConnection
 from kineverse.urdf_fix import urdf_filler
@@ -509,8 +509,8 @@ class World(object):
 
         joint_operation = ExecFunction(joint_path,
                                        FixedJoint,
-                                       str(parent_path),
-                                       str(child_path),
+                                       CPath(parent_path),
+                                       CPath(child_path),
                                        casadi_pose)
 
         self.km_model.apply_operation('create {}'.format(joint_path), joint_operation)
@@ -549,7 +549,7 @@ class World(object):
         child_name = child_path[0]
         if child_name != self._robot_name:
             child_obj = self.get_object(child_name)
-            o_in_w = self.get_fk_pose(Path(self.world_frame), Path(child_obj.get_link_path(child_obj.get_root()))).pose
+            o_in_w = self.get_fk_pose(Path(self.world_frame), child_obj.get_link_path(child_obj.get_root())).pose
         try:
             self.km_model.remove_operation('attach {} to {}'.format(child_path, parent_path))
             self.km_model.remove_operation('connect {} {}'.format(parent_path, child_path))
