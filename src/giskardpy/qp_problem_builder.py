@@ -1,6 +1,6 @@
 from collections import OrderedDict
 from time import time
-
+import numbers
 import numpy  as np
 import pandas as pd
 
@@ -32,8 +32,8 @@ class QProblemBuilder(object):
         self.construct_big_ass_M()
         self.compile_big_ass_M()
 
-        self.shape1 = len(self.soft_constraints_dict)
-        self.shape2 = len(self.joint_constraints_dict) + len(self.soft_constraints_dict)
+        # self.shape1 = len(self.soft_constraints_dict)
+        # self.shape2 = len(self.joint_constraints_dict) + len(self.soft_constraints_dict)
 
         self.num_joint_constraints = len(self.joint_constraints_dict)
         self.num_soft_constraints = len(self.soft_constraints_dict)
@@ -43,6 +43,11 @@ class QProblemBuilder(object):
 
     def get_expr(self):
         return self.compiled_big_ass_M.str_params
+
+    def is_hard_constraint(self, constraint):
+        return (isinstance(constraint.lower_slack_limit, numbers.Number) and
+                isinstance(constraint.upper_slack_limit, numbers.Number) and
+                constraint.lower_slack_limit == 0 and constraint.upper_slack_limit == 0)
 
     def construct_big_ass_M(self):
         # TODO cpu intensive
@@ -57,19 +62,23 @@ class QProblemBuilder(object):
             lb.append(constraint.lower)
             ub.append(constraint.upper)
         for constraint_name, constraint in self.soft_constraints_dict.items(): # type: (str, SoftConstraint)
-            weights.append(constraint.weight)
+            if not self.is_hard_constraint(constraint):
+                weights.append(constraint.weight)
+                lb.append(constraint.lower_slack_limit)
+                ub.append(constraint.upper_slack_limit)
             lbA.append(constraint.lbA)
             ubA.append(constraint.ubA)
-            lb.append(constraint.lower_slack_limit)
-            ub.append(constraint.upper_slack_limit)
             assert not w.is_matrix(constraint.expression), u'Matrices are not allowed as soft constraint expression'
             soft_expressions.append(constraint.expression)
 
         self.np_g = np.zeros(len(weights))
 
         logging.loginfo(u'constructing new controller with {} soft constraints...'.format(len(soft_expressions)))
-        self.s = len(self.soft_constraints_dict)
+        self.shape1 = len(lbA)
+        self.shape2 = len(lb)
         self.j = len(self.joint_constraints_dict)
+        self.s = self.shape2 - self.j
+        self.h = self.shape1 - self.s
 
         self.init_big_ass_M()
 
@@ -95,53 +104,59 @@ class QProblemBuilder(object):
         """
         #        j           s       1      1
         #    |----------------------------------
+        # h  | A hard    |   0    | lbA   | ubA
+        #    |-----------------------------------
         # s  | A soft    |identity| lbA   | ubA
         #    |-----------------------------------
         # j+s| H                  | lb    | ub
         #    | ----------------------------------
         """
-        self.big_ass_M = w.zeros(self.s * 2 + self.j,
-                                 self.j + self.s + 2)
+        self.big_ass_M = w.zeros(self.shape1 + self.shape2,
+                                 self.shape2 + 2)
 
     def construct_A_soft(self, soft_expressions):
-        A_soft = w.zeros(self.s, self.j + self.s)
+        A_soft = w.zeros(self.shape1, self.shape2)
         t = time()
         A_soft[:, :self.j] = w.jacobian(w.Matrix(soft_expressions), self.controlled_joint_symbols)
         logging.loginfo(u'computed Jacobian in {:.5f}s'.format(time() - t))
-        A_soft[:, self.j:] = w.eye(self.s)
+        A_soft[self.h:, self.j:] = w.eye(self.s)
         self.set_A_soft(A_soft)
 
     def set_A_soft(self, A_soft):
-        self.big_ass_M[:self.s, :self.j + self.s] = A_soft
+        self.big_ass_M[:self.shape1, :self.shape2] = A_soft
 
     def set_lbA(self, lbA):
-        self.big_ass_M[:self.s, self.j + self.s] = lbA
+        self.big_ass_M[:self.shape1, self.shape2] = lbA
 
     def set_ubA(self, ubA):
-        self.big_ass_M[:self.s, self.j + self.s + 1] = ubA
+        self.big_ass_M[:self.shape1, self.shape2 + 1] = ubA
 
     def set_lb(self, lb):
-        self.big_ass_M[self.s:, self.j + self.s] = lb
+        self.big_ass_M[self.shape1:, self.shape2] = lb
 
     def set_ub(self, ub):
-        self.big_ass_M[self.s:, self.j + self.s + 1] = ub
+        self.big_ass_M[self.shape1:, self.shape2 + 1] = ub
 
     def set_weights(self, weights):
-        self.big_ass_M[self.s:, :-2] = w.diag(*weights)
+        self.big_ass_M[self.shape1:, :-2] = w.diag(*weights)
 
     def debug_print(self, unfiltered_H, A, lb, ub, lbA, ubA, xdot_full=None):
         import pandas as pd
-        bA_mask, b_mask = make_filter_masks(unfiltered_H, self.num_joint_constraints)
+        bA_mask, b_mask = make_filter_masks(unfiltered_H, self.j, self.h)
         b_names = []
         bA_names = []
         for iJ, k in enumerate(self.joint_constraints_dict.keys()):
             key = 'j -- ' + str(k[4:-1])
             b_names.append(key)
 
-        for iS, k in enumerate(self.soft_constraints_dict.keys()):
-            key = 's -- ' + str(k)
-            bA_names.append(key)
-            b_names.append(key)
+        for iS, (k, constraint) in enumerate(self.soft_constraints_dict.items()):
+            if self.is_hard_constraint(constraint):
+                key = 'h -- ' + str(k)
+                bA_names.append(key)
+            else:
+                key = 's -- ' + str(k)
+                bA_names.append(key)
+                b_names.append(key)
 
         b_names = np.array(b_names)
         filtered_b_names = b_names[b_mask]
@@ -209,7 +224,7 @@ class QProblemBuilder(object):
                 print(array)
 
     def filter_zero_weight_constraints(self, H, A, lb, ub, lbA, ubA):
-        bA_mask, b_mask = make_filter_masks(H, self.num_joint_constraints)
+        bA_mask, b_mask = make_filter_masks(H, self.j, self.h)
         A = A[bA_mask][:, b_mask].copy()
         lbA = lbA[bA_mask]
         ubA = ubA[bA_mask]
