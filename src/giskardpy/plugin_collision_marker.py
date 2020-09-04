@@ -13,7 +13,7 @@ class CollisionMarker(GiskardBehavior):
     def setup(self, timeout=10.0, name_space=u'pybullet_collisions'):
         super(CollisionMarker, self).setup(timeout)
         self.pub_collision_marker = rospy.Publisher(u'~visualization_marker_array', MarkerArray, queue_size=1)
-        self.name_space = name_space
+        self.name_space = str(name_space)
         rospy.sleep(.5)
         return True
 

@@ -1245,6 +1245,9 @@ class SelfCollisionAvoidance(Constraint):
                                    1e9,
                                    w.Max(0, lower_limit + actual_distance - max_weight_distance)
                                    )
+        self.add_debug_constraint(u'/normal/x', pb_V_n[0])
+        self.add_debug_constraint(u'/normal/y', pb_V_n[1])
+        self.add_debug_constraint(u'/normal/z', pb_V_n[2])
 
         self.add_constraint(u'/position',
                             lower=lower_limit,
