@@ -71,16 +71,16 @@ class World(object):
         pb.batch_set_transforms(self.pb_subworld.collision_objects, self.pb_subworld.pose_generator.call2(data))
 
     def in_collision(self, body_a, link_a, body_b, link_b, distance):
-        obj_a = self.pb_subworld.named_objects[str(self.get_link_path(body_a, link_a))]
-        obj_b = self.pb_subworld.named_objects[str(self.get_link_path(body_b, link_b))]
+        obj_a = self.pb_subworld.named_objects[self.get_link_path(body_a, link_a)]
+        obj_b = self.pb_subworld.named_objects[self.get_link_path(body_b, link_b)]
         result = self.pb_subworld.world.get_distance(obj_a, obj_b, distance)
         return len(result) > 0 and result[0].distance < distance
 
     def get_closest_distances(self, object_name, link_name, object_b, distance):
-        obj_a = self.pb_subworld.named_objects[str(self.get_link_path(object_name, link_name))]
+        obj_a = self.pb_subworld.named_objects[self.get_link_path(object_name, link_name)]
         world_object_b = self.get_object(object_b)
-        body_bs = [self.pb_subworld.named_objects[path_str] for path_str in world_object_b.get_link_path_strs() if
-                   path_str in self.pb_subworld.named_objects]
+        body_bs = [self.pb_subworld.named_objects[path] for path in world_object_b.get_link_paths() if
+                   path in self.pb_subworld.named_objects]
         contacts = self.pb_subworld.world.get_closest_filtered(obj_a, body_bs, distance)
         result = OrderedDict()
         for contact in contacts:  # type: ClosestPair
@@ -98,36 +98,31 @@ class World(object):
         return OrderedDict(sorted([(key, value) for key, value in result.items()], key=lambda x: x[1]))
 
     def init_collision_avoidance_data_structures(self, cut_off_distances):
-        self.query = defaultdict(float)
         self.reverse_map_a = {}
         self.reverse_map_b = {}
-        self.relevant_links = defaultdict(set)
-        self.flat_collision_matrix = []  # (robot_link, obj_b, link_b, pb_a, pb_b, distance)
+        self.query = defaultdict(set)
 
         for (robot_link, body_b, link_b), distance in cut_off_distances.items():
             distance *= 3
-            obj_a = self.pb_subworld.named_objects[str(self.robot.get_link_path(robot_link))]
+            obj_a = self.pb_subworld.named_objects[self.robot.get_link_path(robot_link)]
             self.reverse_map_a[obj_a] = robot_link
-            self.query[obj_a] = max(self.query[obj_a], distance)
             if link_b == CollisionEntry.ALL:
                 obj_bs = set()
-                for path_str in self.get_object(body_b).get_link_path_strs():
-                    if path_str in self.pb_subworld.named_objects:
-                        obj_b = self.pb_subworld.named_objects[path_str]
+                for path in self.get_object(body_b).get_link_paths():
+                    if path in self.pb_subworld.named_objects:
+                        obj_b = self.pb_subworld.named_objects[path]
                         obj_bs.add((obj_b, distance))
                         self.reverse_map_b[obj_b] = (body_b, link_b)
-                        self.flat_collision_matrix.append((robot_link, body_b, link_b, obj_a, obj_b, distance))
-                self.relevant_links[obj_a] |= obj_bs
+                self.query[obj_a] |= obj_bs
             else:
-                path_str = self.get_object(body_b).get_link_path_str(link_b)
-                if path_str in self.pb_subworld.named_objects:
-                    obj_b = self.pb_subworld.named_objects[path_str]
+                path = self.get_object(body_b).get_link_path(link_b)
+                if path in self.pb_subworld.named_objects:
+                    obj_b = self.pb_subworld.named_objects[path]
                     self.reverse_map_b[obj_b] = (body_b, link_b)
-                    self.relevant_links[obj_a].add((obj_b, distance))
-                    self.flat_collision_matrix.append((robot_link, body_b, link_b, obj_a, obj_b, distance))
+                    self.query[obj_a].add((obj_b, distance))
 
-        for key in self.relevant_links.keys():
-            self.relevant_links[key] = list(self.relevant_links[key])
+        for key in self.query.keys():
+            self.query[key] = list(self.query[key])
 
     @profile
     def check_collisions(self, cut_off_distances):
@@ -136,7 +131,7 @@ class World(object):
         if self.query is None:
             self.init_collision_avoidance_data_structures(cut_off_distances)
 
-        result = self.pb_subworld.world.get_closest_filtered_POD_batch(self.relevant_links)
+        result = self.pb_subworld.world.get_closest_filtered_POD_batch(self.query)
         for obj_a, contacts in result.items():
             map_T_a = obj_a.transform
             link_a = self.reverse_map_a[obj_a]
