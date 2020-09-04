@@ -555,7 +555,6 @@ class TestCollisionAvoidanceGoals(object):
         """
         :type box_setup: PR2
         """
-        # fixme
         better_pose.attach_box(size=[0.05, 0.05, 0.2],
                                frame_id=better_pose.gripper_tip,
                                position=[0, 0, 0.08],
@@ -570,13 +569,12 @@ class TestCollisionAvoidanceGoals(object):
 
         better_pose.allow_self_collision()
         better_pose.send_and_check_goal()
-        better_pose.check_cpi_geq(['box'], 0.025)
+        better_pose.check_cpi_geq(['box'], 'br', 0.025)
 
     def test_avoid_collision3(self, better_pose):
         """
         :type box_setup: PR2
         """
-        # fixme
         better_pose.attach_box(size=[0.05, 0.05, 0.2],
                                frame_id=better_pose.gripper_tip,
                                position=[0, 0, 0.08],
@@ -604,7 +602,8 @@ class TestCollisionAvoidanceGoals(object):
 
         better_pose.send_and_check_goal()
         # TODO check traj length?
-        better_pose.check_cpi_geq(['box'], 0.048)
+        better_pose.check_cpi_geq(['box'], 'bl', 0.048)
+        better_pose.check_cpi_geq(['box'], 'br', 0.048)
 
     def test_avoid_collision4(self, better_pose):
         """
