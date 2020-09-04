@@ -1050,7 +1050,7 @@ class ExternalCollisionAvoidance(Constraint):
 
     def make_constraints(self):
         a_P_pa = self.get_closest_point_on_a_in_a()
-        r_P_pb = self.get_closest_point_on_b_in_root()
+        # r_P_pb = self.get_closest_point_on_b_in_root()
         r_V_n = self.get_contact_normal_on_b_in_root()
         actual_distance = self.get_actual_distance()
         repel_velocity = self.get_input_float(self.repel_velocity)
@@ -1065,7 +1065,7 @@ class ExternalCollisionAvoidance(Constraint):
         r_T_a = self.get_fk(self.robot_root, self.link_name)
 
         r_P_pa = w.dot(r_T_a, a_P_pa)
-        r_V_pb_pa = r_P_pa - r_P_pb
+        r_V_pb_pa = r_P_pa #- r_P_pb
 
         dist = w.dot(r_V_n.T, r_V_pb_pa)[0]
 
@@ -1075,8 +1075,10 @@ class ExternalCollisionAvoidance(Constraint):
                                  w.Min(number_of_external_collisions, num_repeller))
 
         penetration_distance = zero_weight_distance - actual_distance
-        lower_limit = self.limit_velocity(penetration_distance, repel_velocity)
-        # upper_limit = self.limit_velocity(1e9, repel_velocity)
+        # lower_limit = self.limit_velocity(penetration_distance, repel_velocity)
+
+        repel_velocity *= self.get_input_sampling_period()
+        lower_limit = w.Min(penetration_distance, repel_velocity)
         upper_limit = 1e9
 
         slack_limit = self.limit_velocity(actual_distance, repel_velocity)
@@ -1094,7 +1096,12 @@ class ExternalCollisionAvoidance(Constraint):
                                    1e9,
                                    w.Max(0, lower_limit + actual_distance - max_weight_distance)
                                    )
-        # self.add_debug_constraint('/pen', penetration_distance)
+        # self.add_debug_constraint('/a_P_pa/x', a_P_pa[0])
+        # self.add_debug_constraint('/a_P_pa/y', a_P_pa[1])
+        # self.add_debug_constraint('/a_P_pa/z', a_P_pa[2])
+        # self.add_debug_constraint('/r_V_n/x', r_V_n[0])
+        # self.add_debug_constraint('/r_V_n/y', r_V_n[1])
+        # self.add_debug_constraint('/r_V_n/z', r_V_n[2])
         # self.add_debug_constraint('/actual', actual_distance)
 
         self.add_constraint(u'/position',

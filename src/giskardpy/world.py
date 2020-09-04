@@ -145,10 +145,19 @@ class World(object):
                 map_T_b = contact.obj_b.transform
                 body_b, link_b = self.reverse_map_b[contact.obj_b]
                 for p in contact.points:  # type: ContactPoint
-                    c = Collision(link_a, body_b, link_b, p.point_a, p.point_b, p.normal_world_b,
+                    a = np.array(p.point_a)
+                    a[-1] = 1
+                    b = np.array(p.point_b)
+                    b[-1] = 1
+                    c = Collision(link_a, body_b, link_b, a, b, p.normal_world_b,
                                   p.distance)
-                    c.set_position_on_a_in_map(map_T_a * p.point_a)
-                    c.set_position_on_b_in_map(map_T_b * p.point_b)
+                    map_P_a = np.array(map_T_a * p.point_a)
+                    map_P_a[-1] = 1
+                    c.set_position_on_a_in_map(map_P_a)
+                    map_P_b = map_T_b * p.point_b
+                    map_P_b = np.array(map_P_b)
+                    map_P_b[-1] = 1
+                    c.set_position_on_b_in_map(map_P_b)
                     c.set_contact_normal_in_b(map_T_b.inv().basis * p.normal_world_b)
                     collisions.add(c)
 
