@@ -135,7 +135,7 @@ class QProblemBuilder(object):
         b_names = []
         bA_names = []
         for iJ, k in enumerate(self.joint_constraints_dict.keys()):
-            key = 'j -- ' + str(k)
+            key = 'j -- ' + str(k[4:-1])
             b_names.append(key)
 
         for iS, k in enumerate(self.soft_constraints_dict.keys()):

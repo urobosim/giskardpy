@@ -1,9 +1,10 @@
-from collections import defaultdict, OrderedDict
+from collections import OrderedDict
 from collections import defaultdict
 from copy import deepcopy
 from itertools import product
 
 import betterpybullet as pb
+import numpy as np
 import urdf_parser_py.urdf as up
 from betterpybullet import ClosestPair
 from betterpybullet import ContactPoint
@@ -27,6 +28,18 @@ from kineverse.operations.basic_operations import ExecFunction
 from kineverse.operations.urdf_operations import load_urdf, FixedJoint, CreateURDFFrameConnection
 from kineverse.urdf_fix import urdf_filler
 
+# TODO: Find propper location for this
+def np_inverse_frame(frame):
+    """
+    :param frame: 4x4 Matrix
+    :type frame: Matrix
+    :return: 4x4 Matrix
+    :rtype: Matrix
+    """
+    inv = np.eye(4)
+    inv[:3, :3] = frame[:3, :3].T
+    inv[:3, 3] = np.dot(-inv[:3, :3], frame[:3, 3])
+    return inv
 
 class World(object):
     world_frame = u'map'
@@ -92,7 +105,7 @@ class World(object):
                         continue
                     if object_name == self.robot.get_name():
                         if (link_name, link_b_name) not in self.robot.get_self_collision_matrix() and \
-                            (link_b_name, link_name) not in self.robot.get_self_collision_matrix():
+                                (link_b_name, link_name) not in self.robot.get_self_collision_matrix():
                             continue
                 result[path] = p.distance
         return OrderedDict(sorted([(key, value) for key, value in result.items()], key=lambda x: x[1]))
@@ -133,19 +146,21 @@ class World(object):
 
         result = self.pb_subworld.world.get_closest_filtered_POD_batch(self.query)
         for obj_a, contacts in result.items():
-            map_T_a = obj_a.transform
+            map_T_a = obj_a.np_transform
             link_a = self.reverse_map_a[obj_a]
             for contact in contacts:  # type: ClosestPair
-                map_T_b = contact.obj_b.transform
+                map_T_b = contact.obj_b.np_transform
+                b_T_map = np_inverse_frame(map_T_b)
                 body_b, link_b = self.reverse_map_b[contact.obj_b]
                 for p in contact.points:  # type: ContactPoint
                     c = Collision(link_a, body_b, link_b, p.point_a, p.point_b, p.normal_world_b,
                                   p.distance)
-                    c.set_position_on_a_in_map(map_T_a * p.point_a)
-                    c.set_position_on_b_in_map(map_T_b * p.point_b)
-                    c.set_contact_normal_in_b(map_T_b.inv() * p.normal_world_b)
+                    map_P_a = map_T_a.dot(p.point_a)
+                    c.set_position_on_a_in_map(map_P_a)
+                    map_P_b = map_T_b.dot(p.point_b)
+                    c.set_position_on_b_in_map(map_P_b)
+                    c.set_contact_normal_in_b(b_T_map.dot(p.normal_world_b))
                     collisions.add(c)
-
         return collisions
 
     # Objects ----------------------------------------------------------------------------------------------------------
