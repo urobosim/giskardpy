@@ -3,7 +3,7 @@ from collections import OrderedDict, defaultdict, namedtuple
 import numpy as np
 from sortedcontainers import SortedKeyList
 
-from giskardpy.utils import to_np
+from giskardpy.utils import to_np, np_point
 
 SoftConstraint = namedtuple(u'SoftConstraint', [u'lbA', u'ubA',
                                                 u'weight', u'expression', u'goal_constraint',
@@ -171,8 +171,9 @@ class Collisions(object):
         :type world: giskardpy.world.World
         """
         self.world = world
-        self.root_T_map = to_np(self.world.robot._root_T_map)
-        self.robot_root = self.world.robot.get_root()
+        self.robot = world.robot
+        self.root_T_map = to_np(self.robot._root_T_map)
+        self.robot_root = self.robot.get_root()
 
         # @profile
         def default_f():
@@ -185,7 +186,7 @@ class Collisions(object):
         self.number_of_self_collisions = defaultdict(int)
         self.number_of_external_collisions = defaultdict(int)
 
-    # @profile
+    @profile
     def add(self, collision):
         """
         :type collision: Collision
@@ -194,7 +195,7 @@ class Collisions(object):
         collision = self.transform_closest_point(collision)
         self.all_collisions.add(collision)
 
-        if collision.get_body_b() == self.world.robot.get_name():
+        if collision.get_body_b() == self.robot.get_name():
             key = tuple(sorted([collision.get_link_a(), collision.get_link_b()]))
             self.self_collisions[key].add(collision)
             self.number_of_self_collisions[key] = min(20, self.number_of_self_collisions[key] + 1)
@@ -203,18 +204,18 @@ class Collisions(object):
             self.external_collision[key].add(collision)
             self.number_of_external_collisions[key] = min(20, self.number_of_external_collisions[key] + 1)
 
-    # @profile
+    @profile
     def transform_closest_point(self, collision):
         """
         :type collision: Collision
         :rtype: Collision
         """
-        if collision.get_body_b() == self.world.robot.get_name():
+        if collision.get_body_b() == self.robot.get_name():
             return self.transform_self_collision(collision)
         else:
             return self.transform_external_collision(collision)
 
-    # @profile
+    @profile
     def transform_self_collision(self, collision):
         """
         :type collision: Collision
@@ -222,39 +223,39 @@ class Collisions(object):
         """
         link_a = collision.get_original_link_a()
         link_b = collision.get_original_link_b()
-        new_link_a, new_link_b = self.world.robot.get_chain_reduced_to_controlled_joints(link_a, link_b)
-        # new_b_T_r = self.world.get_robot_fk_np(new_link_b, self.robot_root)
-        # new_a_T_r = self.world.get_robot_fk_np(new_link_a, self.robot_root)
+        new_link_a, new_link_b = self.robot.get_chain_reduced_to_controlled_joints(link_a, link_b)
+        new_b_T_b = self.robot.get_fk_np(new_link_b, collision.get_original_link_b())
+        new_a_T_a = self.robot.get_fk_np(new_link_a, collision.get_original_link_a())
         collision.set_link_a(new_link_a)
         collision.set_link_b(new_link_b)
 
         # new_b_T_map = np.dot(new_b_T_r, self.root_T_map)
 
-        # new_a_P_pa = np.dot(np.dot(new_a_T_r, self.root_T_map), np_point(*collision.get_position_on_a_in_map()))
-        # new_b_P_pb = np.dot(new_b_T_map, np_point(*collision.get_position_on_b_in_map()))
+        new_a_P_pa = np.dot(new_a_T_a, collision.get_position_on_a_in_a())
+        new_b_P_pb = np.dot(new_b_T_b, collision.get_position_on_b_in_b())
         # r_P_pb = np.dot(self.root_T_map, np_point(*closest_point.position_on_b))
         # new_b_V_n = np.dot(new_b_T_map, np_vector(*collision.get_contact_normal_in_map()))
-        # collision.set_position_on_a_in_a(new_a_P_pa[:-1])
-        # collision.set_position_on_b_in_b(new_b_P_pb[:-1])
+        collision.set_position_on_a_in_a(new_a_P_pa[:-1])
+        collision.set_position_on_b_in_b(new_b_P_pb[:-1])
         # collision.set_contact_normal_in_b(new_b_V_n[:-1])
         return collision
 
-    # @profile
+    @profile
     def transform_external_collision(self, collision):
         """
         :type collision: Collision
         :rtype: Collision
         """
-        movable_joint = self.world.robot.get_controlled_parent_joint(collision.get_original_link_a())
-        new_a = self.world.robot.get_child_link_of_joint(movable_joint)
-        # new_a_T_r = self.world.get_robot_fk_np(new_a, self.robot_root)
+        movable_joint = self.robot.get_controlled_parent_joint(collision.get_original_link_a())
+        new_a = self.robot.get_child_link_of_joint(movable_joint)
+        new_a_T_a = self.robot.get_fk_np(new_a, collision.get_original_link_a())
         collision.set_link_a(new_a)
 
-        # new_a_P_pa = np.dot(np.dot(new_a_T_r, self.root_T_map), np_point(*collision.get_position_on_a_in_map()))
-        # r_P_pb = np.dot(self.root_T_map, np_point(*collision.get_position_on_b_in_map()))
+        new_a_P_pa = np.dot(new_a_T_a, collision.get_position_on_a_in_a())
+        r_P_pb = np.dot(self.root_T_map, collision.get_position_on_b_in_map())
         r_V_n = np.dot(self.root_T_map, collision.get_contact_normal_in_map())
-        # collision.set_position_on_a_in_a(new_a_P_pa[:-1])
-        # collision.set_position_on_b_in_root(r_P_pb[:-1])
+        collision.set_position_on_a_in_a(new_a_P_pa[:-1])
+        collision.set_position_on_b_in_root(r_P_pb[:-1])
         collision.set_contact_normal_in_root(r_V_n[:-1])
         return collision
 
