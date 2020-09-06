@@ -197,7 +197,7 @@ class GoalToConstraints(GetGoal):
 
 
         joint_position_symbols = joint_position_symbols.intersection(constraint_symbols)
-        joint_position_symbols |= self.get_robot().get_joint_position_symbols()
+        joint_position_symbols |= self.get_robot().get_controlled_joint_position_symbols()
         self.get_god_map().set_data(identifier.controlled_joint_symbols, joint_position_symbols)
 
         joint_velocity_symbols = {DiffSymbol(s) for s in joint_position_symbols}
@@ -309,22 +309,22 @@ class GoalToConstraints(GetGoal):
         Adds a constraint for each link that pushed it away from its closest point.
         """
         soft_constraints = {}
-        # number_of_repeller = self.get_god_map().get_data(identifier.number_of_repeller)
-        # for joint_name in self.get_robot().controlled_joints:
-        #     child_link = self.get_robot().get_child_link_of_joint(joint_name)
-        #     for i in range(number_of_repeller):
-        #         constraint = ExternalCollisionAvoidance(self.god_map, child_link,
-        #                                                 max_weight_distance=self.get_god_map().get_data(
-        #                                                     identifier.distance_thresholds +
-        #                                                     [joint_name, u'max_weight_distance']),
-        #                                                 low_weight_distance=self.get_god_map().get_data(
-        #                                                     identifier.distance_thresholds +
-        #                                                     [joint_name, u'low_weight_distance']),
-        #                                                 zero_weight_distance=self.get_god_map().get_data(
-        #                                                     identifier.distance_thresholds +
-        #                                                     [joint_name, u'zero_weight_distance']),
-        #                                                 idx=i)
-        #         soft_constraints.update(constraint.get_constraints())
+        number_of_repeller = self.get_god_map().get_data(identifier.number_of_repeller)
+        for joint_name in self.get_robot().controlled_joints:
+            child_link = self.get_robot().get_child_link_of_joint(joint_name)
+            for i in range(number_of_repeller):
+                constraint = ExternalCollisionAvoidance(self.god_map, child_link,
+                                                        max_weight_distance=self.get_god_map().get_data(
+                                                            identifier.distance_thresholds +
+                                                            [joint_name, u'max_weight_distance']),
+                                                        low_weight_distance=self.get_god_map().get_data(
+                                                            identifier.distance_thresholds +
+                                                            [joint_name, u'low_weight_distance']),
+                                                        zero_weight_distance=self.get_god_map().get_data(
+                                                            identifier.distance_thresholds +
+                                                            [joint_name, u'zero_weight_distance']),
+                                                        idx=i)
+                soft_constraints.update(constraint.get_constraints())
 
         # TODO turn this into a function
         counter = defaultdict(int)

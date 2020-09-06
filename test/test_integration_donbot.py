@@ -645,6 +645,7 @@ class TestCollisionAvoidanceGoals(object):
         p.pose.orientation = Quaternion(*quaternion_about_axis(np.pi / 2, [0, 1, 0]))
         better_pose.add_cylinder('bup', [0.2, 0.01], p)
 
+        better_pose.allow_self_collision()
         better_pose.send_and_check_goal()
         # TODO check traj length?
 

@@ -75,4 +75,4 @@ collision_avoidance:
     add:
       - [plate, ur5_upper_arm_link]
   external_collision_avoidance:
-    number_of_repeller: 5
+    number_of_repeller: 4
