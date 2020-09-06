@@ -150,7 +150,7 @@ class World(object):
             link_a = self.reverse_map_a[obj_a]
             for contact in contacts:  # type: ClosestPair
                 map_T_b = contact.obj_b.np_transform
-                b_T_map = np_inverse_frame(map_T_b)
+                b_T_map = contact.obj_b.np_inv_transform
                 body_b, link_b = self.reverse_map_b[contact.obj_b]
                 for p in contact.points:  # type: ContactPoint
                     c = Collision(link_a, body_b, link_b, p.point_a, p.point_b, p.normal_world_b,
