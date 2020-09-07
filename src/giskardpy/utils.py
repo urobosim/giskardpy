@@ -810,10 +810,8 @@ def make_filter_masks(H, num_joint_constraints, num_hard_constraints):
         bA_mask = s_mask
     else:
         bA_mask = np.concatenate((np.array([True] * num_hard_constraints), s_mask))
+
     return bA_mask, b_mask
-
-
-
 
 def trajectory_to_np(tj, joint_names):
     """

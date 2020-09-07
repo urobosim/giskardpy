@@ -9,7 +9,6 @@ SoftConstraint = namedtuple(u'SoftConstraint', [u'lbA', u'ubA',
                                                 u'weight', u'expression', u'goal_constraint',
                                                 u'lower_slack_limit',
                                                 u'upper_slack_limit'])
-HardConstraint = namedtuple(u'HardConstraint', [u'lower', u'upper', u'expression'])
 JointConstraint = namedtuple(u'JointConstraint', [u'lower', u'upper', u'weight'])
 
 

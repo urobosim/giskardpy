@@ -6,7 +6,7 @@ from itertools import combinations
 from geometry_msgs.msg import PoseStamped
 
 from giskardpy import WORLD_IMPLEMENTATION, cas_wrapper as w
-from giskardpy.data_types import SingleJointState, HardConstraint, JointConstraint
+from giskardpy.data_types import SingleJointState
 from giskardpy.pybullet_world_object import PyBulletWorldObject
 from giskardpy.utils import KeyDefaultDict, \
     homo_matrix_to_pose, memoize
