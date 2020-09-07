@@ -11,7 +11,7 @@ from geometry_msgs.msg import Pose, Quaternion
 from giskardpy import logging, identifier
 from giskardpy.data_types import SingleJointState
 from giskardpy.urdf_object import URDFObject
-from giskardpy.utils import msg_to_kdl
+from giskardpy.utils import msg_to_kdl, memoize
 from kineverse.model.paths import Path
 
 
@@ -60,6 +60,7 @@ class WorldObject(URDFObject):
         new_js.update(self._js)
         self._js = new_js
         self._js.update(value)
+        self.get_fk_np.memo.clear()
 
     @property
     def base_pose(self):
@@ -340,6 +341,7 @@ class WorldObject(URDFObject):
         tip_path = self.get_link_path(tip_link)
         return self._world.get_fk_pose(root_path, tip_path)
 
+    @memoize
     def get_fk_np(self, root_link, tip_link):
         root_path = self.get_link_path(root_link)
         tip_path = self.get_link_path(tip_link)
