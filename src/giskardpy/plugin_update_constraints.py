@@ -77,9 +77,13 @@ class GoalToConstraints(GetGoal):
         # TODO make this interruptable
         # TODO try catch everything
 
-        move_cmd = self.get_god_map().get_data(identifier.next_move_goal)  # type: MoveCmd
-        if not move_cmd:
+        try:
+            move_cmd = self.get_god_map().get_data(identifier.next_move_goal)  # type: MoveCmd
+        except KeyError:
             return Status.FAILURE
+        else:
+            if not move_cmd:
+                return Status.FAILURE
 
         self.get_god_map().safe_set_data(identifier.constraints_identifier, {})
 
@@ -340,7 +344,7 @@ class GoalToConstraints(GetGoal):
 
         for link_a, link_b in counter:
             # TODO turn 2 into parameter
-            num_of_constraints = min(2, counter[link_a, link_b])
+            num_of_constraints = min(1, counter[link_a, link_b])
             for i in range(num_of_constraints):
                 max_weight_distance = min(self.get_god_map().get_data(identifier.distance_thresholds +
                                                                       [link_a, u'max_weight_distance']),

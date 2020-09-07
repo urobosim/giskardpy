@@ -46,16 +46,19 @@ def get_data(identifier, data, default_value=0.0):
     try:
         for member in identifier:
             result = get_member(result, member)
-    except AttributeError:
-        return default_value
+    except AttributeError as e:
+        raise e
+        # return default_value
     except KeyError as e:
         # traceback.print_exc()
         # raise KeyError(identifier)
         # TODO is this really a good idea?
         # I do this because it automatically sets weights for unused goals to 0
-        return default_value
-    except IndexError:
-        return default_value
+        raise e
+        # return default_value
+    except IndexError as e:
+        raise e
+        # return default_value
     return result
 
 

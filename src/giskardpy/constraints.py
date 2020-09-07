@@ -337,6 +337,15 @@ class Constraint(object):
         """
         self.add_constraint(name, expr, expr, 1, 0, False)
 
+    def add_debug_matrix(self, name, matrix_expr):
+        for x in range(matrix_expr.shape[0]):
+            for y in range(matrix_expr.shape[1]):
+                self.add_debug_constraint(name + u'/{},{}'.format(x, y), matrix_expr[x, y])
+
+    def add_debug_vector(self, name, vector_expr):
+        for x in range(vector_expr.shape[0]):
+            self.add_debug_constraint(name + u'/{}'.format(x), vector_expr[x])
+
     def add_minimize_position_constraints(self, r_P_g, max_velocity, max_acceleration, root, tip, goal_constraint):
         """
         :param r_P_g: position of goal relative to root frame
@@ -1015,7 +1024,7 @@ class ExternalCollisionAvoidance(Constraint):
                             prefix=identifier.closest_point + [u'get_external_collisions',
                                                                (self.link_name,),
                                                                self.idx,
-                                                               u'get_contact_normal_in_root',
+                                                               u'get_root_V_n',
                                                                tuple()]).get_expression()
 
     def get_closest_point_on_a_in_a(self):
@@ -1023,7 +1032,7 @@ class ExternalCollisionAvoidance(Constraint):
                            prefix=identifier.closest_point + [u'get_external_collisions',
                                                               (self.link_name,),
                                                               self.idx,
-                                                              u'get_position_on_a_in_a',
+                                                              u'get_new_a_P_a',
                                                               tuple()]).get_expression()
 
     def get_closest_point_on_b_in_root(self):
@@ -1031,7 +1040,7 @@ class ExternalCollisionAvoidance(Constraint):
                            prefix=identifier.closest_point + [u'get_external_collisions',
                                                               (self.link_name,),
                                                               self.idx,
-                                                              u'get_position_on_b_in_root',
+                                                              u'get_root_P_b',
                                                               tuple()]).get_expression()
 
     def get_actual_distance(self):
@@ -1162,7 +1171,7 @@ class SelfCollisionAvoidance(Constraint):
                             prefix=identifier.closest_point + [u'get_self_collisions',
                                                                (self.link_a, self.link_b),
                                                                self.idx,
-                                                               u'get_contact_normal_in_b',
+                                                               u'get_new_b_V_n',
                                                                tuple()]).get_expression()
 
     def get_position_on_a_in_a(self):
@@ -1170,7 +1179,7 @@ class SelfCollisionAvoidance(Constraint):
                            prefix=identifier.closest_point + [u'get_self_collisions',
                                                               (self.link_a, self.link_b),
                                                               self.idx,
-                                                              u'get_position_on_a_in_a',
+                                                              u'get_new_a_P_a',
                                                               tuple()]).get_expression()
 
     def get_b_T_pb(self):
@@ -1178,7 +1187,7 @@ class SelfCollisionAvoidance(Constraint):
                                 prefix=identifier.closest_point + [u'get_self_collisions',
                                                                    (self.link_a, self.link_b),
                                                                    self.idx,
-                                                                   u'get_position_on_b_in_b',
+                                                                   u'get_new_b_P_b',
                                                                    tuple()]).get_frame()
 
     def get_actual_distance(self):
@@ -1209,7 +1218,8 @@ class SelfCollisionAvoidance(Constraint):
 
         b_T_a = self.get_fk(self.link_b, self.link_a)
 
-        pb_T_b = w.inverse_frame(self.get_b_T_pb())
+        b_T_pb = self.get_b_T_pb()
+        pb_T_b = w.inverse_frame(b_T_pb)
         f_P_pa = self.get_position_on_a_in_a()
 
         pb_V_n = self.get_contact_normal_in_b()
@@ -1256,16 +1266,9 @@ class SelfCollisionAvoidance(Constraint):
                                    w.Max(0, lower_limit + actual_distance - max_weight_distance)
                                    )
 
-        # self.add_debug_constraint('/a_P_pa/x', f_P_pa[0])
-        # self.add_debug_constraint('/a_P_pa/y', f_P_pa[1])
-        # self.add_debug_constraint('/a_P_pa/z', f_P_pa[2])
-        # self.add_debug_constraint('/a_P_pa/x', a_P_pa[0])
-        # self.add_debug_constraint('/a_P_pa/y', a_P_pa[1])
-        # self.add_debug_constraint('/a_P_pa/z', a_P_pa[2])
-        # self.add_debug_constraint('/pb_V_n/x', pb_V_n[0])
-        # self.add_debug_constraint('/pb_V_n/y', pb_V_n[1])
-        # self.add_debug_constraint('/pb_V_n/z', pb_V_n[2])
-        # self.add_debug_constraint('/actual', actual_distance)
+        self.add_debug_vector('/f_P_pa', f_P_pa)
+        self.add_debug_matrix('/b_T_pb', b_T_pb)
+        self.add_debug_vector('/pb_V_n', pb_V_n)
 
         self.add_constraint(u'/position',
                             lower=lower_limit,

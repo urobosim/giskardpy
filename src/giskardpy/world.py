@@ -152,14 +152,13 @@ class World(object):
                 map_T_b = contact.obj_b.np_transform
                 b_T_map = contact.obj_b.np_inv_transform
                 body_b, link_b = self.reverse_map_b[contact.obj_b]
+                # b_T_map = self.get_fk_np(self.robot.get_link_path(link_b), 'map')
                 for p in contact.points:  # type: ContactPoint
-                    c = Collision(link_a, body_b, link_b, p.point_a, p.point_b, p.normal_world_b,
-                                  p.distance)
                     map_P_a = map_T_a.dot(p.point_a)
-                    c.set_position_on_a_in_map(map_P_a)
                     map_P_b = map_T_b.dot(p.point_b)
-                    c.set_position_on_b_in_map(map_P_b)
-                    c.set_contact_normal_in_b(b_T_map.dot(p.normal_world_b))
+                    map_V_n = b_T_map.dot(p.normal_world_b)
+
+                    c = Collision(link_a, body_b, link_b, map_P_a, map_P_b, map_V_n, p.distance)
                     collisions.add(c)
         return collisions
 

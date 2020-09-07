@@ -57,9 +57,6 @@ class ControllerPlugin(GiskardBehavior):
 
     @profile
     def update(self):
-        last_cmd = self.get_god_map().get_data(identifier.cmd)
-        self.get_god_map().safe_set_data(identifier.last_cmd, last_cmd)
-
         state_vars = self.controller.get_expr()
         expr = self.god_map.get_values(state_vars)
 
