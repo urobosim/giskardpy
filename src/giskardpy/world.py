@@ -23,11 +23,23 @@ from giskardpy.robot import Robot
 from giskardpy.urdf_object import URDFObject, hacky_urdf_parser_fix
 from giskardpy.utils import KeyDefaultDict, memoize, homo_matrix_to_pose, suppress_stderr
 from kineverse.model.geometry_model import GeometryModel
-from kineverse.model.paths import Path
+from kineverse.model.paths import Path, CPath
 from kineverse.operations.basic_operations import ExecFunction
 from kineverse.operations.urdf_operations import load_urdf, FixedJoint, CreateURDFFrameConnection
 from kineverse.urdf_fix import urdf_filler
 
+# TODO: Find propper location for this
+def np_inverse_frame(frame):
+    """
+    :param frame: 4x4 Matrix
+    :type frame: Matrix
+    :return: 4x4 Matrix
+    :rtype: Matrix
+    """
+    inv = np.eye(4)
+    inv[:3, :3] = frame[:3, :3].T
+    inv[:3, 3] = np.dot(-inv[:3, :3], frame[:3, 3])
+    return inv
 
 class World(object):
     world_frame = u'map'
@@ -72,16 +84,16 @@ class World(object):
         pb.batch_set_transforms(self.pb_subworld.collision_objects, self.pb_subworld.pose_generator.call2(data))
 
     def in_collision(self, body_a, link_a, body_b, link_b, distance):
-        obj_a = self.pb_subworld.named_objects[str(self.get_link_path(body_a, link_a))]
-        obj_b = self.pb_subworld.named_objects[str(self.get_link_path(body_b, link_b))]
+        obj_a = self.pb_subworld.named_objects[self.get_link_path(body_a, link_a)]
+        obj_b = self.pb_subworld.named_objects[self.get_link_path(body_b, link_b)]
         result = self.pb_subworld.world.get_distance(obj_a, obj_b, distance)
         return len(result) > 0 and result[0].distance < distance
 
     def get_closest_distances(self, object_name, link_name, object_b, distance):
-        obj_a = self.pb_subworld.named_objects[str(self.get_link_path(object_name, link_name))]
+        obj_a = self.pb_subworld.named_objects[self.get_link_path(object_name, link_name)]
         world_object_b = self.get_object(object_b)
-        body_bs = [self.pb_subworld.named_objects[path_str] for path_str in world_object_b.get_link_path_strs() if
-                   path_str in self.pb_subworld.named_objects]
+        body_bs = [self.pb_subworld.named_objects[path] for path in world_object_b.get_link_paths() if
+                   path in self.pb_subworld.named_objects]
         contacts = self.pb_subworld.world.get_closest_filtered(obj_a, body_bs, distance)
         result = OrderedDict()
         for contact in contacts:  # type: ClosestPair
@@ -99,36 +111,31 @@ class World(object):
         return OrderedDict(sorted([(key, value) for key, value in result.items()], key=lambda x: x[1]))
 
     def init_collision_avoidance_data_structures(self, cut_off_distances):
-        self.query = defaultdict(float)
         self.reverse_map_a = {}
         self.reverse_map_b = {}
-        self.relevant_links = defaultdict(set)
-        self.flat_collision_matrix = []  # (robot_link, obj_b, link_b, pb_a, pb_b, distance)
+        self.query = defaultdict(set)
 
         for (robot_link, body_b, link_b), distance in cut_off_distances.items():
             distance *= 3
-            obj_a = self.pb_subworld.named_objects[str(self.robot.get_link_path(robot_link))]
+            obj_a = self.pb_subworld.named_objects[self.robot.get_link_path(robot_link)]
             self.reverse_map_a[obj_a] = robot_link
-            self.query[obj_a] = max(self.query[obj_a], distance)
             if link_b == CollisionEntry.ALL:
                 obj_bs = set()
-                for path_str in self.get_object(body_b).get_link_path_strs():
-                    if path_str in self.pb_subworld.named_objects:
-                        obj_b = self.pb_subworld.named_objects[path_str]
+                for path in self.get_object(body_b).get_link_paths():
+                    if path in self.pb_subworld.named_objects:
+                        obj_b = self.pb_subworld.named_objects[path]
                         obj_bs.add((obj_b, distance))
-                        self.reverse_map_b[obj_b] = (body_b, Path(path_str)[-1])
-                        self.flat_collision_matrix.append((robot_link, body_b, link_b, obj_a, obj_b, distance))
-                self.relevant_links[obj_a] |= obj_bs
+                        self.reverse_map_b[obj_b] = (body_b, link_b)
+                self.query[obj_a] |= obj_bs
             else:
-                path_str = self.get_object(body_b).get_link_path_str(link_b)
-                if path_str in self.pb_subworld.named_objects:
-                    obj_b = self.pb_subworld.named_objects[path_str]
+                path = self.get_object(body_b).get_link_path(link_b)
+                if path in self.pb_subworld.named_objects:
+                    obj_b = self.pb_subworld.named_objects[path]
                     self.reverse_map_b[obj_b] = (body_b, link_b)
-                    self.relevant_links[obj_a].add((obj_b, distance))
-                    self.flat_collision_matrix.append((robot_link, body_b, link_b, obj_a, obj_b, distance))
+                    self.query[obj_a].add((obj_b, distance))
 
-        for key in self.relevant_links.keys():
-            self.relevant_links[key] = list(self.relevant_links[key])
+        for key in self.query.keys():
+            self.query[key] = list(self.query[key])
 
     @profile
     def check_collisions(self, cut_off_distances):
@@ -137,30 +144,23 @@ class World(object):
         if self.query is None:
             self.init_collision_avoidance_data_structures(cut_off_distances)
 
-        result = self.pb_subworld.world.get_closest_filtered_POD_batch(self.relevant_links)
+        result = self.pb_subworld.world.get_closest_filtered_POD_batch(self.query)
         for obj_a, contacts in result.items():
-            map_T_a = obj_a.transform
+            map_T_a = obj_a.np_transform
             link_a = self.reverse_map_a[obj_a]
             for contact in contacts:  # type: ClosestPair
-                map_T_b = contact.obj_b.transform
+                map_T_b = contact.obj_b.np_transform
+                b_T_map = contact.obj_b.np_inv_transform
                 body_b, link_b = self.reverse_map_b[contact.obj_b]
                 for p in contact.points:  # type: ContactPoint
-                    a = np.array(p.point_a)
-                    a[-1] = 1
-                    b = np.array(p.point_b)
-                    b[-1] = 1
-                    c = Collision(link_a, body_b, link_b, a, b, p.normal_world_b,
+                    c = Collision(link_a, body_b, link_b, p.point_a, p.point_b, p.normal_world_b,
                                   p.distance)
-                    map_P_a = np.array(map_T_a * p.point_a)
-                    map_P_a[-1] = 1
+                    map_P_a = map_T_a.dot(p.point_a)
                     c.set_position_on_a_in_map(map_P_a)
-                    map_P_b = map_T_b * p.point_b
-                    map_P_b = np.array(map_P_b)
-                    map_P_b[-1] = 1
+                    map_P_b = map_T_b.dot(p.point_b)
                     c.set_position_on_b_in_map(map_P_b)
-                    c.set_contact_normal_in_b(map_T_b.inv().basis * p.normal_world_b)
+                    c.set_contact_normal_in_b(b_T_map.dot(p.normal_world_b))
                     collisions.add(c)
-
         return collisions
 
     # Objects ----------------------------------------------------------------------------------------------------------
@@ -524,8 +524,8 @@ class World(object):
 
         joint_operation = ExecFunction(joint_path,
                                        FixedJoint,
-                                       str(parent_path),
-                                       str(child_path),
+                                       CPath(parent_path),
+                                       CPath(child_path),
                                        casadi_pose)
 
         self.km_model.apply_operation('create {}'.format(joint_path), joint_operation)
@@ -564,7 +564,7 @@ class World(object):
         child_name = child_path[0]
         if child_name != self._robot_name:
             child_obj = self.get_object(child_name)
-            o_in_w = self.get_fk_pose(Path(self.world_frame), Path(child_obj.get_link_path(child_obj.get_root()))).pose
+            o_in_w = self.get_fk_pose(Path(self.world_frame), child_obj.get_link_path(child_obj.get_root())).pose
         try:
             self.km_model.remove_operation('attach {} to {}'.format(child_path, parent_path))
             self.km_model.remove_operation('connect {} {}'.format(parent_path, child_path))

@@ -185,7 +185,7 @@ class Collisions(object):
         self.number_of_self_collisions = defaultdict(int)
         self.number_of_external_collisions = defaultdict(int)
 
-    # @profile
+    @profile
     def add(self, collision):
         """
         :type collision: Collision
@@ -203,7 +203,7 @@ class Collisions(object):
             self.external_collision[key].add(collision)
             self.number_of_external_collisions[key] = min(20, self.number_of_external_collisions[key] + 1)
 
-    # @profile
+    @profile
     def transform_closest_point(self, collision):
         """
         :type collision: Collision
@@ -214,7 +214,7 @@ class Collisions(object):
         else:
             return self.transform_external_collision(collision)
 
-    # @profile
+    @profile
     def transform_self_collision(self, collision):
         """
         :type collision: Collision
@@ -239,7 +239,7 @@ class Collisions(object):
         # collision.set_contact_normal_in_b(new_b_V_n[:-1])
         return collision
 
-    # @profile
+    @profile
     def transform_external_collision(self, collision):
         """
         :type collision: Collision
