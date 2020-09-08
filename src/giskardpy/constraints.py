@@ -1210,16 +1210,15 @@ class SelfCollisionAvoidance(Constraint):
         max_weight_distance = self.get_input_float(self.max_weight_distance)
         actual_distance = self.get_actual_distance()
         number_of_self_collisions = self.get_number_of_self_collisions()
-        num_repeller = self.get_max_number_of_repeller()
+        num_repeller = 1
+
 
         movable_joint = self.get_robot().get_controlled_parent_joint(self.link_a)
         f = self.get_robot().get_child_link_of_joint(movable_joint)
         a_T_f = self.get_fk_evaluated(self.link_a, f)
 
         b_T_a = self.get_fk(self.link_b, self.link_a)
-
-        b_T_pb = self.get_b_T_pb()
-        pb_T_b = w.inverse_frame(b_T_pb)
+        pb_T_b = w.inverse_frame(self.get_b_T_pb())
         f_P_pa = self.get_position_on_a_in_a()
 
         pb_V_n = self.get_contact_normal_in_b()
@@ -1230,45 +1229,28 @@ class SelfCollisionAvoidance(Constraint):
 
         dist = w.dot(pb_V_n.T, pb_P_pa)[0]
 
-        # weight_f = self.magic_weight_function(actual_distance,
-        #                                       0.0, WEIGHT_MAX,
-        #                                       0.01, WEIGHTS[4],
-        #                                       0.05, WEIGHTS[2],
-        #                                       0.06, WEIGHT_MIN)
-        # weight_f = WEIGHT_COLLISION_AVOIDANCE
         weight = w.if_greater(actual_distance, 50, 0, WEIGHT_COLLISION_AVOIDANCE)
         weight = self.normalize_error(repel_velocity, weight)
         weight = w.save_division(weight,  # divide by number of active repeller per link
                                  w.Min(number_of_self_collisions, num_repeller))
 
-        # limit = zero_weight_distance - actual_distance
-        # limit = self.limit_velocity(limit, repel_velocity)
-
         penetration_distance = zero_weight_distance - actual_distance
-        # lower_limit = self.limit_velocity(penetration_distance, repel_velocity)
-
-        repel_velocity *= self.get_input_sampling_period()
-        lower_limit = w.Min(penetration_distance, repel_velocity)
-
+        lower_limit = self.limit_velocity(penetration_distance, repel_velocity)
         upper_limit = 1e9
+        # slack_limit = self.limit_velocity(actual_distance, repel_velocity)
 
-        # self.add_debug_constraint('/pen', penetration_distance)
-
-        # self.add_constraint('',
-        #                     lower=limit,
-        #                     upper=1e9,
-        #                     weight=weight,
-        #                     expression=dist,
-        #                     goal_constraint=False)
 
         upper_slack = w.if_greater(actual_distance, 50,  # assuming that distance of unchecked closest points is 100
                                    1e9,
                                    w.Max(0, lower_limit + actual_distance - max_weight_distance)
                                    )
 
-        self.add_debug_vector('/f_P_pa', f_P_pa)
-        self.add_debug_matrix('/b_T_pb', b_T_pb)
-        self.add_debug_vector('/pb_V_n', pb_V_n)
+        self.add_debug_matrix('/a_P_pa', a_P_pa)
+        self.add_debug_matrix('/b_T_a', b_T_a)
+        self.add_debug_matrix('/pb_T_b', pb_T_b)
+        self.add_debug_matrix('/a_T_f', a_T_f)
+        self.add_debug_matrix('/f_P_pa', f_P_pa)
+        self.add_debug_matrix('/pb_V_n', pb_V_n)
 
         self.add_constraint(u'/position',
                             lower=lower_limit,

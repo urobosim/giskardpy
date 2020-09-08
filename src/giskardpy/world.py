@@ -116,7 +116,7 @@ class World(object):
         self.query = defaultdict(set)
 
         for (robot_link, body_b, link_b), distance in cut_off_distances.items():
-            distance *= 3
+            distance *= 1.1
             obj_a = self.pb_subworld.named_objects[self.robot.get_link_path(robot_link)]
             self.reverse_map_a[obj_a] = robot_link
             if link_b == CollisionEntry.ALL:
@@ -150,15 +150,14 @@ class World(object):
             link_a = self.reverse_map_a[obj_a]
             for contact in contacts:  # type: ClosestPair
                 map_T_b = contact.obj_b.np_transform
-                b_T_map = contact.obj_b.np_inv_transform
+                # b_T_map = contact.obj_b.np_inv_transform
                 body_b, link_b = self.reverse_map_b[contact.obj_b]
                 # b_T_map = self.get_fk_np(self.robot.get_link_path(link_b), 'map')
                 for p in contact.points:  # type: ContactPoint
                     map_P_a = map_T_a.dot(p.point_a)
                     map_P_b = map_T_b.dot(p.point_b)
-                    map_V_n = b_T_map.dot(p.normal_world_b)
 
-                    c = Collision(link_a, body_b, link_b, map_P_a, map_P_b, map_V_n, p.distance)
+                    c = Collision(link_a, body_b, link_b, map_P_a, map_P_b, p.normal_world_b, p.distance)
                     collisions.add(c)
         return collisions
 

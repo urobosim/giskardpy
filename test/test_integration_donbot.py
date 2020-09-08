@@ -232,7 +232,6 @@ class TestJointGoals(object):
             "ur5_wrist_3_joint": - 1.6503928343402308
         }
         zero_pose.send_and_check_joint_goal(js2)
-        # zero_pose.allow_all_collisions()
         zero_pose.send_and_check_joint_goal(js1)
 
     def test_empty_joint_goal(self, zero_pose):

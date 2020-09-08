@@ -34,10 +34,20 @@ class WorldObject(URDFObject):
             p.orientation.w = 1
             self.base_pose = p
         # FIXME using .joint_state creates a chicken egg problem in pybulletworldobject
-        self._js = self.get_zero_joint_state()
+        # self._js = self.get_zero_joint_state()
+        self.init_joint_state()
         self._controlled_links = None
         self._self_collision_matrix = set()
         super(WorldObject, self).init2(*args, **kwargs)
+
+    def init_joint_state(self):
+        js = {}
+        for joint_name in self.get_controllable_joints():
+            sjs = SingleJointState()
+            sjs.name = joint_name
+            sjs.position = 0 # fixme, check if 0 is valid joint value
+            js[joint_name] = sjs
+        self._js = js
 
     def dump_state(self):
         state = {}

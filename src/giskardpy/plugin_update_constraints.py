@@ -237,21 +237,21 @@ class GoalToConstraints(GetGoal):
                                                          upper=upper_limit,
                                                          weight=weight)
 
-        hard_constraints = OrderedDict()
-        for k, c in sorted(constraints.items()):
-            if k not in to_remove:
-                symbols.update(w.free_symbols(c.lower))
-                symbols.update(w.free_symbols(c.upper))
-                symbols.update(w.free_symbols(c.expr))
-                hard_constraints[k] = SoftConstraint(lbA=c.lower,
-                                                     ubA=c.upper,
-                                                     weight=1,
-                                                     expression=c.expr,
-                                                     goal_constraint=False,
-                                                     lower_slack_limit=0,
-                                                     upper_slack_limit=0)
-
-        hard_constraints = OrderedDict([((self.robot.get_name(), k), c) for k, c in hard_constraints.items()])
+        # hard_constraints = OrderedDict()
+        # for k, c in sorted(constraints.items()):
+        #     if k not in to_remove:
+        #         symbols.update(w.free_symbols(c.lower))
+        #         symbols.update(w.free_symbols(c.upper))
+        #         symbols.update(w.free_symbols(c.expr))
+        #         hard_constraints[k] = SoftConstraint(lbA=c.lower,
+        #                                              ubA=c.upper,
+        #                                              weight=1,
+        #                                              expression=c.expr,
+        #                                              goal_constraint=False,
+        #                                              lower_slack_limit=0,
+        #                                              upper_slack_limit=0)
+        #
+        # hard_constraints = OrderedDict([((self.robot.get_name(), k), c) for k, c in hard_constraints.items()])
 
         for s in joint_velocity_symbols:
             joint_name = str(Path(erase_type(s))[-1])
@@ -271,7 +271,7 @@ class GoalToConstraints(GetGoal):
         self.get_god_map().register_symbols(symbols)
 
         self.get_god_map().safe_set_data(identifier.joint_constraint_identifier, joint_constraints)
-        self.soft_constraints.update(hard_constraints)
+        # self.soft_constraints.update(hard_constraints)
         # self.get_god_map().safe_set_data(identifier.hard_constraint_identifier, hard_constraints)
 
     def parse_constraints(self, cmd):

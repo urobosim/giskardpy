@@ -54,7 +54,7 @@ def get_data(identifier, data, default_value=0.0):
         # raise KeyError(identifier)
         # TODO is this really a good idea?
         # I do this because it automatically sets weights for unused goals to 0
-        raise e
+        raise KeyError(identifier)
         # return default_value
     except IndexError as e:
         raise e
