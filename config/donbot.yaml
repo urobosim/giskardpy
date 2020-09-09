@@ -71,7 +71,9 @@ collision_avoidance:
     ur5_forearm_link: *low
     ur5_upper_arm_link: *low
   self_collision_avoidance:
-    ignore: []
+    ignore:
+      - [ ur5_forearm_link, ur5_wrist_3_link ]
+      - [ ur5_base_link, ur5_upper_arm_link ]
     add:
       - [plate, ur5_upper_arm_link]
   external_collision_avoidance:

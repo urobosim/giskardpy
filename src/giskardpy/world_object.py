@@ -164,9 +164,9 @@ class WorldObject(URDFObject):
 
         # find meaningless self-collisions
         for link_a, link_b in link_combinations:
-            if self.are_linked(link_a, link_b) or link_a == link_b:
+            if self.are_linked(link_a, link_b) or link_a == link_b or (link_a, link_b) in self._ignored_pairs or \
+                    (link_b, link_a) in self._ignored_pairs:
                 always.add((link_a, link_b))
-        always = always.difference({tuple(x) for x in self._ignored_pairs})
         rest = link_combinations.difference(always)
         self.joint_state = self.get_zero_joint_state()
         always = always.union(self.check_collisions(rest, d))

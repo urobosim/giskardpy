@@ -1251,6 +1251,7 @@ class SelfCollisionAvoidance(Constraint):
         self.add_debug_matrix('/a_T_f', a_T_f)
         self.add_debug_matrix('/f_P_pa', f_P_pa)
         self.add_debug_matrix('/pb_V_n', pb_V_n)
+        self.add_debug_matrix('/actual_distance', actual_distance)
 
         self.add_constraint(u'/position',
                             lower=lower_limit,
