@@ -1213,17 +1213,17 @@ class SelfCollisionAvoidance(Constraint):
         num_repeller = 1
 
 
-        movable_joint = self.get_robot().get_controlled_parent_joint(self.link_a)
-        f = self.get_robot().get_child_link_of_joint(movable_joint)
-        a_T_f = self.get_fk_evaluated(self.link_a, f)
+        # movable_joint = self.get_robot().get_controlled_parent_joint(self.link_a)
+        # f = self.get_robot().get_child_link_of_joint(movable_joint)
+        # a_T_f = self.get_fk_evaluated(self.link_a, f)
 
         b_T_a = self.get_fk(self.link_b, self.link_a)
         pb_T_b = w.inverse_frame(self.get_b_T_pb())
-        f_P_pa = self.get_position_on_a_in_a()
+        a_P_pa = self.get_position_on_a_in_a()
 
         pb_V_n = self.get_contact_normal_in_b()
 
-        a_P_pa = w.dot(a_T_f, f_P_pa)
+        # a_P_pa = w.dot(a_T_f, f_P_pa)
 
         pb_P_pa = w.dot(pb_T_b, b_T_a, a_P_pa)
 
@@ -1245,11 +1245,11 @@ class SelfCollisionAvoidance(Constraint):
                                    w.Max(0, lower_limit + actual_distance - max_weight_distance)
                                    )
 
+
+        # if 'ur5_wrist_3_link' in [self.link_a, self.link_b]:
         # self.add_debug_matrix('/a_P_pa', a_P_pa)
         # self.add_debug_matrix('/b_T_a', b_T_a)
         # self.add_debug_matrix('/pb_T_b', pb_T_b)
-        # self.add_debug_matrix('/a_T_f', a_T_f)
-        # self.add_debug_matrix('/f_P_pa', f_P_pa)
         # self.add_debug_matrix('/pb_V_n', pb_V_n)
         # self.add_debug_matrix('/actual_distance', actual_distance)
 
