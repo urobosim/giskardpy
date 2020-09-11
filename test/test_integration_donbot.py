@@ -499,7 +499,6 @@ class TestCollisionAvoidanceGoals(object):
         """
         :type zero_pose: PR2
         """
-        #fixme
         pocky = u'http://muh#pocky'
         better_pose.attach_box(pocky, [0.1, 0.02, 0.02], better_pose.gripper_tip, [0.05, 0, 0])
 
@@ -507,7 +506,6 @@ class TestCollisionAvoidanceGoals(object):
         """
         :type zero_pose: Donbot
         """
-        # fixme
         box = u'box'
         p = PoseStamped()
         p.header.frame_id = u'map'
