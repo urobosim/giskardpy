@@ -609,7 +609,6 @@ class TestCollisionAvoidanceGoals(object):
         """
         :type box_setup: PR2
         """
-        # fixme
         better_pose.attach_cylinder(height=0.3,
                                     radius=0.025,
                                     frame_id=better_pose.gripper_tip,

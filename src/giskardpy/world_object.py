@@ -70,7 +70,7 @@ class WorldObject(URDFObject):
         new_js.update(self._js)
         self._js = new_js
         self._js.update(value)
-        self.get_fk_np.memo.clear()
+        # self.get_fk_np.memo.clear()
 
     @property
     def base_pose(self):
@@ -351,7 +351,7 @@ class WorldObject(URDFObject):
         tip_path = self.get_link_path(tip_link)
         return self._world.get_fk_pose(root_path, tip_path)
 
-    @memoize
+    # @memoize
     def get_fk_np(self, root_link, tip_link):
         root_path = self.get_link_path(root_link)
         tip_path = self.get_link_path(tip_link)
