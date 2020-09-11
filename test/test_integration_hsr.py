@@ -125,40 +125,6 @@ class TestCartGoals(object):
 
 class TestCollisionAvoidanceGoals(object):
 
-    def test_self_collision_matrix(self, zero_pose):
-        cm = zero_pose.get_robot().get_self_collision_matrix()
-        expected = {
-            ('arm_roll_link', 'base_link'),
-            ('arm_roll_link', 'head_rgbd_sensor_link'),
-            ('arm_roll_link', 'head_tilt_link'),
-            ('base_link', 'hand_palm_link'),
-            ('base_link', 'hand_r_distal_link'),
-            ('base_link', 'hand_r_spring_proximal_link'),
-            ('base_link', 'head_tilt_link'),
-            ('hand_l_distal_link', 'base_link'),
-            ('hand_l_distal_link', 'head_tilt_link'),
-            ('hand_l_distal_link', 'torso_lift_link'),
-            ('hand_l_spring_proximal_link', 'base_link'),
-            ('hand_l_spring_proximal_link', 'head_tilt_link'),
-            ('hand_l_spring_proximal_link', 'torso_lift_link'),
-            ('hand_palm_link', 'head_rgbd_sensor_link'),
-            ('hand_palm_link', 'head_tilt_link'),
-            ('hand_r_distal_link', 'head_rgbd_sensor_link'),
-            ('head_pan_link', 'hand_r_distal_link'),
-            ('head_pan_link', 'hand_r_spring_proximal_link'),
-            ('head_rgbd_sensor_link', 'arm_flex_link'),
-            ('head_rgbd_sensor_link', 'hand_r_spring_proximal_link'),
-            ('head_rgbd_sensor_link', 'wrist_flex_link'),
-            ('head_tilt_link', 'arm_flex_link'),
-            ('head_tilt_link', 'hand_r_distal_link'),
-            ('head_tilt_link', 'hand_r_spring_proximal_link'),
-            ('head_tilt_link', 'wrist_flex_link'),
-            ('wrist_roll_link', 'base_link'),
-            ('wrist_roll_link', 'head_pan_link'),
-            ('wrist_roll_link', 'head_rgbd_sensor_link')
-        }
-        assert cm.difference(expected) == set()
-
     def test_self_collision_avoidance(self, zero_pose):
         """
         :type zero_pose: HSR
@@ -182,6 +148,7 @@ class TestCollisionAvoidanceGoals(object):
             u'wrist_flex_joint': -1.55,
             u'wrist_roll_joint': 0.11,
         }
+        zero_pose.allow_self_collision()
         zero_pose.send_and_check_joint_goal(js)
 
         goal_pose = PoseStamped()
