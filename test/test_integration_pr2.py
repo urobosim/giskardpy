@@ -436,7 +436,9 @@ class TestConstraints(object):
         r_goal.pose.position.x += 0.1
         updates = {
             u'rosparam': {
-                u'joint_weights': u'asdf'
+                u'general_options': {
+                    u'joint_weights': u'asdf'
+                }
             }
         }
         pocky_pose_setup.wrapper.update_god_map(updates)
@@ -1632,7 +1634,7 @@ class TestCollisionAvoidanceGoals(object):
         p.pose.position.x = 0.2
         p.pose.orientation.w = 1
         zero_pose.allow_self_collision()
-        zero_pose.set_and_check_cart_goal(p, zero_pose.l_tip, zero_pose.default_root)
+        zero_pose.set_and_check_cart_goal(p, zero_pose.l_tip, u'base_footprint')
         zero_pose.check_cpi_leq(zero_pose.get_l_gripper_links(), zero_pose.get_robot().get_name(), 0.01,
                                 check_distance=0.3)
         zero_pose.check_cpi_leq([u'r_forearm_link'], zero_pose.get_robot().get_name(), 0.01, check_distance=0.3)
@@ -1776,7 +1778,7 @@ class TestCollisionAvoidanceGoals(object):
         box_setup.wrapper.set_collision_entries([collision_entry])
 
         box_setup.allow_self_collision()
-        box_setup.set_and_check_cart_goal(p, box_setup.r_tip, box_setup.default_root)
+        box_setup.set_and_check_cart_goal(p, box_setup.r_tip, u'base_footprint')
 
         box_setup.check_cpi_geq(box_setup.get_l_gripper_links(), u'box', 0.0)
         box_setup.check_cpi_leq(box_setup.get_r_gripper_links(), u'box', 0.0)
