@@ -201,9 +201,9 @@ class QProblemBuilder(object):
             p_xH = pd.DataFrame(xH, filtered_b_names, [u'data'], dtype=float).sort_index()
             # p_xg = p_g * p_xdot
             xHx = np.dot(np.dot(xdot_full.T, filtered_H), xdot_full)
-            x_soft = xdot_full[len(xdot_full) - len(lbA):]
-            p_lbA_minus_x = pd.DataFrame(lbA - x_soft, filtered_bA_names, [u'data'], dtype=float).sort_index()
-            p_ubA_minus_x = pd.DataFrame(ubA - x_soft, filtered_bA_names, [u'data'], dtype=float).sort_index()
+            x_soft = xdot_full[self.j:]
+            p_lbA_minus_x = pd.DataFrame(lbA[self.h:] - x_soft, filtered_bA_names[self.h:], [u'data'], dtype=float).sort_index()
+            p_ubA_minus_x = pd.DataFrame(ubA[self.h:] - x_soft, filtered_bA_names[self.h:], [u'data'], dtype=float).sort_index()
         else:
             p_xdot = None
 
