@@ -212,6 +212,7 @@ class GoalToConstraints(GetGoal):
         to_remove = set()
         symbols = set()
 
+        sample_period = self.get_god_map().identivier_to_symbol(identifier.sample_period)
         for k, c in sorted(constraints.items()):
             if cm.is_symbol(c.expr) and c.expr in joint_velocity_symbols and str(c.expr) not in joint_constraints:
                 joint_name = str(Path(erase_type(c.expr))[-1])
@@ -221,8 +222,6 @@ class GoalToConstraints(GetGoal):
 
                 symbols.update(w.free_symbols(lower_limit))
                 symbols.update(w.free_symbols(upper_limit))
-
-                sample_period = self.get_god_map().identivier_to_symbol(identifier.sample_period)
 
                 # FIXME support vel limit from param server again
                 lower_limit = lower_limit * sample_period
@@ -262,6 +261,8 @@ class GoalToConstraints(GetGoal):
                 else:
                     limit = self.get_god_map().get_data(identifier.default_joint_velocity_angular_limit)
                 lower, upper = -limit, limit
+                lower *= sample_period
+                upper *= sample_period
                 weight = self.get_god_map().get_data(identifier.joint_cost)[joint_name]
                 weight = weight * (1. / (upper)) ** 2
                 joint_constraints[key] = JointConstraint(lower, upper, weight)
@@ -301,12 +302,6 @@ class GoalToConstraints(GetGoal):
             except TypeError as e:
                 traceback.print_exc()
                 raise ImplementationException(help(c.make_constraints))
-
-    def has_robot_changed(self):
-        new_urdf = self.get_robot().get_urdf_str()
-        result = self.last_urdf != new_urdf
-        self.last_urdf = new_urdf
-        return result
 
     def add_collision_avoidance_soft_constraints(self):
         """
