@@ -116,7 +116,7 @@ class World(object):
         self.query = defaultdict(set)
 
         for (robot_link, body_b, link_b), distance in cut_off_distances.items():
-            distance *= 1.1
+            distance *= 3
             obj_a = self.pb_subworld.named_objects[self.robot.get_link_path(robot_link)]
             self.reverse_map_a[obj_a] = robot_link
             if link_b == CollisionEntry.ALL:
