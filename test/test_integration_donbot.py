@@ -751,7 +751,6 @@ class TestCollisionAvoidanceGoals(object):
         zero_pose.set_and_check_cart_goal(arm_goal, zero_pose.gripper_tip, zero_pose.default_root)
 
     def test_avoid_self_collision2(self, self_collision_pose):
-        # fixme
         self_collision_pose.send_and_check_goal()
         map_T_root = lookup_pose(u'map', u'base_footprint')
         expected_pose = Pose()
@@ -762,7 +761,6 @@ class TestCollisionAvoidanceGoals(object):
         """
         :type box_setup: PR2
         """
-        # fixme
         ce = CollisionEntry()
         ce.type = CollisionEntry.AVOID_COLLISION
         ce.body_b = u'asdf'

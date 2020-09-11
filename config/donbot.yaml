@@ -61,6 +61,10 @@ collision_avoidance:
       max_weight_distance: 0.005
       low_weight_distance: 0.01
       zero_weight_distance: 0.02
+    low: &low2
+      max_weight_distance: 0.00
+      low_weight_distance: 0.01
+      zero_weight_distance: 0.00001
     base_link:
       max_weight_distance: 0.04
       low_weight_distance: 0.06
@@ -70,6 +74,9 @@ collision_avoidance:
     ur5_wrist_3_link: *low
     ur5_forearm_link: *low
     ur5_upper_arm_link: *low
+    gripper_gripper_left_link: *low2
+    gripper_gripper_right_link: *low2
+    refills_finger, refills_tool_frame: *low2
   self_collision_avoidance:
     ignore:
       - [ ur5_forearm_link, ur5_wrist_3_link ]

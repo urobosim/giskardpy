@@ -393,7 +393,7 @@ class Constraint(object):
                             goal_constraint=goal_constraint)
 
     def add_minimize_vector_angle_constraints(self, max_velocity, root, tip, tip_V_tip_normal, root_V_goal_normal,
-                                              goal_constraint):
+                                              weight=WEIGHT_BELOW_CA, goal_constraint=False):
         root_R_tip = w.rotation_of(self.get_fk(root, tip))
         root_V_tip_normal = w.dot(root_R_tip, tip_V_tip_normal)
 
@@ -402,19 +402,22 @@ class Constraint(object):
         root_V_goal_normal_intermediate = w.slerp(root_V_tip_normal, root_V_goal_normal, angle_limited)
         error = root_V_goal_normal_intermediate - root_V_tip_normal
 
-        weight = self.normalize_error(max_velocity, WEIGHT_ABOVE_CA)
+        weight = self.normalize_error(max_velocity, weight)
 
-        self.add_constraint(u'/rot/x', lower=error[0],
+        self.add_constraint(u'/rot/x',
+                            lower=error[0],
                             upper=error[0],
                             weight=weight,
                             expression=root_V_tip_normal[0],
                             goal_constraint=goal_constraint)
-        self.add_constraint(u'/rot/y', lower=error[1],
+        self.add_constraint(u'/rot/y',
+                            lower=error[1],
                             upper=error[1],
                             weight=weight,
                             expression=root_V_tip_normal[1],
                             goal_constraint=goal_constraint)
-        self.add_constraint(u'/rot/z', lower=error[2],
+        self.add_constraint(u'/rot/z',
+                            lower=error[2],
                             upper=error[2],
                             weight=weight,
                             expression=root_V_tip_normal[2],
@@ -1259,13 +1262,14 @@ class SelfCollisionAvoidance(Constraint):
         s = super(SelfCollisionAvoidance, self).__str__()
         return u'{}/{}/{}/{}'.format(s, self.link_a, self.link_b, self.idx)
 
-
 class AlignPlanes(Constraint):
     root_normal_id = u'root_normal'
     tip_normal_id = u'tip_normal'
     max_velocity_id = u'max_velocity'
+    weight_id = u'weight'
 
-    def __init__(self, god_map, root, tip, root_normal, tip_normal, max_velocity=0.5, goal_constraint=True):
+    def __init__(self, god_map, root, tip, root_normal, tip_normal, max_velocity=0.5, weight=WEIGHT_BELOW_CA,
+                 goal_constraint=True):
         """
         :type god_map:
         :type root: str
@@ -1283,7 +1287,8 @@ class AlignPlanes(Constraint):
 
         params = {self.root_normal_id: self.root_normal,
                   self.tip_normal_id: self.tip_normal,
-                  self.max_velocity_id: max_velocity}
+                  self.max_velocity_id: max_velocity,
+                  self.weight_id: weight}
         self.save_params_on_god_map(params)
 
     def __str__(self):
@@ -1303,9 +1308,14 @@ class AlignPlanes(Constraint):
         max_velocity = self.get_input_float(self.max_velocity_id)
         tip_normal__tip = self.get_tip_normal_vector()
         root_normal__root = self.get_root_normal_vector()
-        self.add_minimize_vector_angle_constraints(max_velocity, self.root, self.tip, tip_normal__tip,
-                                                   root_normal__root, self.goal_constraint)
-
+        weight = self.get_input_float(self.weight_id)
+        self.add_minimize_vector_angle_constraints(max_velocity=max_velocity,
+                                                   root=self.root,
+                                                   tip=self.tip,
+                                                   tip_V_tip_normal=tip_normal__tip,
+                                                   root_V_goal_normal=root_normal__root,
+                                                   weight=weight,
+                                                   goal_constraint=self.goal_constraint)
 
 class GraspBar(Constraint):
     bar_axis_id = u'bar_axis'
