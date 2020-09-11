@@ -245,3 +245,23 @@ class Robot(Backend):
             except:
                 pass
 
+    @memoize
+    def get_directly_controllable_collision_links(self, joint_name):
+        if joint_name not in self.controlled_joints:
+            return []
+        link_name = self.get_child_link_of_joint(joint_name)
+        links = [link_name]
+        collision_links = []
+        while links:
+            link_name = links.pop(0)
+            parent_joint = self.get_parent_joint_of_link(link_name)
+
+            if parent_joint != joint_name and parent_joint in self.controlled_joints:
+                continue
+            if self.has_link_collision(link_name):
+                collision_links.append(link_name)
+            else:
+                child_links = self.get_child_links_of_link(link_name)
+                if child_links:
+                    links.extend(child_links)
+        return collision_links

@@ -1105,13 +1105,6 @@ class ExternalCollisionAvoidance(Constraint):
                                    1e9,
                                    w.Max(0, lower_limit + actual_distance - max_weight_distance)
                                    )
-        # self.add_debug_constraint('/a_P_pa/x', a_P_pa[0])
-        # self.add_debug_constraint('/a_P_pa/y', a_P_pa[1])
-        # self.add_debug_constraint('/a_P_pa/z', a_P_pa[2])
-        # self.add_debug_constraint('/r_V_n/x', r_V_n[0])
-        # self.add_debug_constraint('/r_V_n/y', r_V_n[1])
-        # self.add_debug_constraint('/r_V_n/z', r_V_n[2])
-        # self.add_debug_constraint('/actual', actual_distance)
 
         self.add_constraint(u'/position',
                             lower=lower_limit,

@@ -315,20 +315,22 @@ class GoalToConstraints(GetGoal):
         soft_constraints = {}
         number_of_repeller = self.get_god_map().get_data(identifier.number_of_repeller)
         for joint_name in self.get_robot().controlled_joints:
-            child_link = self.get_robot().get_child_link_of_joint(joint_name)
-            for i in range(number_of_repeller):
-                constraint = ExternalCollisionAvoidance(self.god_map, child_link,
-                                                        max_weight_distance=self.get_god_map().get_data(
-                                                            identifier.distance_thresholds +
-                                                            [joint_name, u'max_weight_distance']),
-                                                        low_weight_distance=self.get_god_map().get_data(
-                                                            identifier.distance_thresholds +
-                                                            [joint_name, u'low_weight_distance']),
-                                                        zero_weight_distance=self.get_god_map().get_data(
-                                                            identifier.distance_thresholds +
-                                                            [joint_name, u'zero_weight_distance']),
-                                                        idx=i)
-                soft_constraints.update(constraint.get_constraints())
+            child_links = self.get_robot().get_directly_controllable_collision_links(joint_name)
+            if child_links:
+                for i in range(number_of_repeller):
+                    child_link = self.get_robot().get_child_link_of_joint(joint_name)
+                    constraint = ExternalCollisionAvoidance(self.god_map, child_link,
+                                                            max_weight_distance=self.get_god_map().get_data(
+                                                                identifier.distance_thresholds +
+                                                                [joint_name, u'max_weight_distance']),
+                                                            low_weight_distance=self.get_god_map().get_data(
+                                                                identifier.distance_thresholds +
+                                                                [joint_name, u'low_weight_distance']),
+                                                            zero_weight_distance=self.get_god_map().get_data(
+                                                                identifier.distance_thresholds +
+                                                                [joint_name, u'zero_weight_distance']),
+                                                            idx=i)
+                    soft_constraints.update(constraint.get_constraints())
 
         # TODO turn this into a function
         counter = defaultdict(int)
