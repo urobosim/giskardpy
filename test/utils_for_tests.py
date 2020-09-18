@@ -871,7 +871,7 @@ class Boxy(GiskardTestWrapper):
 
 class HSR(GiskardTestWrapper):
     def __init__(self):
-        self.tip = u'hand_palm_link'
+        self.tip = u'hand_gripper_tool_frame'
         super(HSR, self).__init__(u'hsr.yaml')
 
     def move_base(self, goal_pose):

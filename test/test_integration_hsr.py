@@ -3,10 +3,10 @@ from copy import deepcopy
 import numpy as np
 import pytest
 import rospy
-from geometry_msgs.msg import PoseStamped, Point, Quaternion
+from geometry_msgs.msg import PoseStamped, Point, Quaternion, Vector3Stamped, PointStamped
 from numpy import pi
 from tf.transformations import quaternion_from_matrix, quaternion_about_axis
-
+import giskardpy.tfwrapper as tf
 from giskardpy import logging
 from giskardpy.tfwrapper import init as tf_init
 from utils_for_tests import PR2, HSR
@@ -99,8 +99,18 @@ def box_setup(zero_pose):
     zero_pose.add_box(size=[1, 1, 1], pose=p)
     return zero_pose
 
-
-# fixme hsr, can not get loaded
+@pytest.fixture()
+def kitchen_setup(zero_pose):
+    """
+    :type resetted_giskard: GiskardTestWrapper
+    :return:
+    """
+    object_name = u'kitchen'
+    zero_pose.add_urdf(object_name, rospy.get_param(u'kitchen_description'),
+                              tf.lookup_pose(u'map', u'iai_kitchen/world'), u'/kitchen/joint_states')
+    js = {k: 0.0 for k in zero_pose.get_world().get_object(object_name).get_controllable_joints()}
+    zero_pose.set_kitchen_js(js)
+    return zero_pose
 
 class TestJointGoals(object):
     def test_move_base(self, zero_pose):
@@ -202,3 +212,70 @@ class TestCollisionAvoidanceGoals(object):
 
         js = {u'arm_flex_joint': 0}
         zero_pose.send_and_check_joint_goal(js)
+
+class TestConstraints(object):
+    def test_open_fridge(self, kitchen_setup):
+        """
+        :type kitchen_setup: HSR
+        """
+        handle_frame_id = u'iai_kitchen/iai_fridge_door_handle'
+        handle_name = u'iai_fridge_door_handle'
+
+        base_goal = PoseStamped()
+        base_goal.header.frame_id = u'map'
+        base_goal.pose.position = Point(0.3, -0.5, 0)
+        base_goal.pose.orientation.w = 1
+        kitchen_setup.move_base(base_goal)
+
+        bar_axis = Vector3Stamped()
+        bar_axis.header.frame_id = handle_frame_id
+        bar_axis.vector.z = 1
+
+        bar_center = PointStamped()
+        bar_center.header.frame_id = handle_frame_id
+
+        tip_grasp_axis = Vector3Stamped()
+        tip_grasp_axis.header.frame_id = kitchen_setup.tip
+        tip_grasp_axis.vector.x = 1
+
+        kitchen_setup.add_json_goal(u'GraspBar',
+                                    root=kitchen_setup.default_root,
+                                    tip=kitchen_setup.tip,
+                                    tip_grasp_axis=tip_grasp_axis,
+                                    bar_center=bar_center,
+                                    bar_axis=bar_axis,
+                                    bar_length=.65)
+        x_gripper = Vector3Stamped()
+        x_gripper.header.frame_id = kitchen_setup.tip
+        x_gripper.vector.z = 1
+
+        x_goal = Vector3Stamped()
+        x_goal.header.frame_id = handle_frame_id
+        x_goal.vector.x = -1
+        kitchen_setup.align_planes(kitchen_setup.tip, x_gripper, root_normal=x_goal)
+        kitchen_setup.allow_all_collisions()
+        # kitchen_setup.add_json_goal(u'AvoidJointLimits', percentage=10)
+        kitchen_setup.send_and_check_goal()
+
+        kitchen_setup.add_json_goal(u'Open1Dof',
+                                    tip=kitchen_setup.tip,
+                                    object_name=u'kitchen',
+                                    handle_link=handle_name,
+                                    goal_joint_state=1.5)
+        # kitchen_setup.allow_all_collisions()
+        kitchen_setup.allow_self_collision()
+        # kitchen_setup.add_json_goal(u'AvoidJointLimits')
+        kitchen_setup.send_and_check_goal()
+        kitchen_setup.set_kitchen_js({u'iai_fridge_door_joint': 1.5})
+
+        kitchen_setup.add_json_goal(u'Open1Dof',
+                                    tip=kitchen_setup.tip,
+                                    object_name=u'kitchen',
+                                    handle_link=handle_name,
+                                    goal_joint_state=0)
+        kitchen_setup.allow_all_collisions()
+        kitchen_setup.send_and_check_goal()
+        kitchen_setup.set_kitchen_js({u'iai_fridge_door_joint': 0})
+
+        kitchen_setup.send_and_check_goal()
+
