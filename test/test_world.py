@@ -79,8 +79,8 @@ def delete_test_folder(request):
 def default_god_map():
     god_map = GodMap()
     for x in range(1, len(identifier.data_folder)):
-        god_map.safe_set_data(identifier.data_folder[:x], {})
-    god_map.safe_set_data(identifier.data_folder, u'tmp_data/')
+        god_map.set_data(identifier.data_folder[:x], {})
+    god_map.set_data(identifier.data_folder, u'tmp_data/')
     return god_map
 
 def allow_all_entry():
@@ -115,7 +115,7 @@ class TestWorldObj(test_urdf_object.TestUrdfObject):
         super(TestWorldObj, self).test_get_parent_joint_of_joint(function_setup)
 
     def test_safe_load_collision_matrix(self, test_folder, delete_test_folder):
-        r = self.cls(donbot_urdf(), path_to_data_folder=test_folder)
+        r = self.make_object_without_limits(donbot_urdf(), path_to_data_folder=test_folder)
         r.init_self_collision_matrix()
         scm = r.get_self_collision_matrix()
         r.safe_self_collision_matrix(test_folder)
@@ -123,12 +123,12 @@ class TestWorldObj(test_urdf_object.TestUrdfObject):
         assert scm == r.get_self_collision_matrix()
 
     def test_safe_load_collision_matrix2(self, test_folder, delete_test_folder):
-        r = self.cls(donbot_urdf())
+        r = self.make_object_without_limits(donbot_urdf())
         r.init2(path_to_data_folder=test_folder)
         r.init_self_collision_matrix()
         scm = r.get_self_collision_matrix()
 
-        box = self.cls.from_world_body(make_world_body_box())
+        box = make_world_body_box()
         p = Pose()
         p.position = Point(0, 0, 0)
         p.orientation = Quaternion(0, 0, 0, 1)
@@ -177,17 +177,24 @@ class TestWorldObj(test_urdf_object.TestUrdfObject):
 
 class TestRobot(TestWorldObj):
     cls = Robot
+    def make_object_without_limits(self, urdf, cls=Robot, **kwargs):
+        return super(TestWorldObj, self).make_object_without_limits(urdf, cls, **kwargs)
+
+    def make_object(self, urdf, cls=Robot, **kwargs):
+        return super(TestWorldObj, self).make_object(urdf, cls, **kwargs)
+
     def test_get_chain4(self, function_setup):
         super(TestRobot, self).test_get_chain4(function_setup)
 
     def test_safe_load_collision_matrix(self, test_folder, delete_test_folder):
-        r = self.cls(donbot_urdf())
+        r = self.make_object_without_limits(donbot_urdf())
         r.init2(path_to_data_folder=test_folder)
         scm = r.get_self_collision_matrix()
         assert len(scm) == 0
 
     def test_get_controlled_leaf_joints(self, test_folder, delete_test_folder):
-        r = self.cls(pr2_urdf(), path_to_data_folder=test_folder)
+        r = self.make_object_without_limits(pr2_urdf())
+        r.init2(path_to_data_folder=test_folder)
         r.controlled_joints = [u'torso_lift_joint',
                                u'r_upper_arm_roll_joint',
                                u'r_shoulder_pan_joint',
@@ -216,7 +223,8 @@ class TestRobot(TestWorldObj):
         }
 
     def test_get_controlled_leaf_joints2(self, test_folder, delete_test_folder):
-        r = self.cls(donbot_urdf(), path_to_data_folder=test_folder)
+        r = self.make_object_without_limits(donbot_urdf())
+        r.init2(path_to_data_folder=test_folder)
         r.controlled_joints = [u'ur5_shoulder_pan_joint',
                                u'ur5_shoulder_lift_joint',
                                u'ur5_elbow_joint',
@@ -233,7 +241,8 @@ class TestRobot(TestWorldObj):
         }
 
     def test_get_directly_controllable_collision_links(self, test_folder, delete_test_folder):
-        r = self.cls(pr2_urdf(), path_to_data_folder=test_folder)
+        r = self.make_object_without_limits(pr2_urdf())
+        r.init2(path_to_data_folder=test_folder)
         r.controlled_joints = [u'torso_lift_joint',
                                u'r_upper_arm_roll_joint',
                                u'r_shoulder_pan_joint',
