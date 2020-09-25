@@ -1088,3 +1088,14 @@ class FIFOSet(set):
     def remove(self, item):
         self.remove(item)
         self._data_queue.remove(item)
+
+
+def kdl_to_pose_stamped(frame, frame_id):
+    """
+    :type frame: PyKDL.Frame
+    :rtype: Pose
+    """
+    p = PoseStamped()
+    p.header.frame_id = frame_id
+    p.pose = kdl_to_pose(frame)
+    return p

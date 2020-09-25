@@ -198,9 +198,9 @@ class Robot(Backend):
         :return: minimum of default velocity limit and limit specified in urdfs
         :rtype: float
         """
-        limit = self.get_joint_velocity_limit_expr(joint_name)
-        f = w.speed_up(limit, w.free_symbols(limit))
-        return f.call2(god_map.get_values(f.str_params))[0][0]
+        return self.get_joint_velocity_limit(joint_name)
+        # f = w.speed_up(limit, w.free_symbols(limit))
+        # return f.call2(god_map.get_values(f.str_params))[0][0]
 
     def get_joint_frame(self, joint_name):
         """

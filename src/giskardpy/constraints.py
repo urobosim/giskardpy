@@ -745,7 +745,8 @@ class AvoidJointLimitsRevolute(Constraint):
         percentage = self.get_input_float(self.percentage) / 100.
         lower_limit, upper_limit = self.get_robot().get_joint_limits(self.joint_name)
         max_velocity = w.Min(self.get_input_float(self.max_velocity),
-                             self.get_robot().get_joint_velocity_limit_expr(self.joint_name))
+                             self.get_robot().get_joint_velocity_limit(
+                                 self.joint_name))
 
         joint_range = upper_limit - lower_limit
         center = (upper_limit + lower_limit) / 2.
@@ -803,7 +804,8 @@ class AvoidJointLimitsPrismatic(Constraint):
         percentage = self.get_input_float(self.percentage) / 100.
         lower_limit, upper_limit = self.get_robot().get_joint_limits(self.joint_name)
         max_velocity = w.Min(self.get_input_float(self.max_velocity),
-                             self.get_robot().get_joint_velocity_limit_expr(self.joint_name))
+                             self.get_robot().get_joint_velocity_limit(
+                                 self.joint_name))
 
         joint_range = upper_limit - lower_limit
         center = (upper_limit + lower_limit) / 2.
@@ -1604,7 +1606,6 @@ class SelfCollisionAvoidance(Constraint):
         repel_velocity = self.get_input_float(self.max_velocity_id)
         hard_threshold = self.get_input_float(self.hard_threshold_id)
         soft_threshold = self.get_input_float(self.soft_threshold_id)
-        max_weight_distance = self.get_input_float(self.max_weight_distance)
         actual_distance = self.get_actual_distance()
         number_of_self_collisions = self.get_number_of_self_collisions()
         num_repeller = self.get_input_float(self.num_repeller_id)
@@ -2104,7 +2105,7 @@ class Open1Dof(Constraint):
         asdf = w.save_division(r_P_error, trans_error)
         r_P_intermediate_error = asdf * trans_scale
 
-        weight = self.normalize_error(max_translation_velocity, WEIGHT_ABOVE_CA)
+        weight = self.normalize_weight(max_translation_velocity, WEIGHT_ABOVE_CA)
         # self.add_debug_constraint(u'/real_error/x', r_P_error[0])
         # self.add_debug_constraint(u'/real_error/y', r_P_error[1])
         # self.add_debug_constraint(u'/real_error/z', r_P_error[2])
@@ -2163,7 +2164,7 @@ class Open1Dof(Constraint):
         c_R_g_intermediate_aa = intermediate_error_axis * intermediate_error_angle
 
         weight = WEIGHT_ABOVE_CA
-        weight = self.normalize_error(max_angular_velocity, weight)
+        weight = self.normalize_weight(max_angular_velocity, weight)
 
         self.add_constraint(u'/0',
                             lower=c_R_g_intermediate_aa[0],
@@ -2187,7 +2188,7 @@ class Open1Dof(Constraint):
         # joint goal for kitchen
 
         err = self.limit_velocity(self.goal_joint_state - goal_joint_symbol, 0.1)
-        weight = self.normalize_error(0.1, self.weight)
+        weight = self.normalize_weight(0.1, self.weight)
 
         # Fixme: This is a very short version of this
         self.add_constraint(u'/object_joint_goal',

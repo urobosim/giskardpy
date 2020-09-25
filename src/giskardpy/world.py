@@ -140,7 +140,7 @@ class World(object):
     @profile
     def check_collisions(self, cut_off_distances, collision_list_size=20):
         self.sync_bullet_world()
-        collisions = Collisions(self)
+        collisions = Collisions(self, collision_list_size)
         if self.query is None:
             self.init_collision_avoidance_data_structures(cut_off_distances)
 

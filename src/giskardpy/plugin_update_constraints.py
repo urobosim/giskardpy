@@ -62,7 +62,7 @@ class GoalToConstraints(GetGoal):
 
         self.get_god_map().set_data(identifier.constraints_identifier, {})
 
-        self.get_robot()._create_constraints(self.get_god_map())
+        # self.get_robot()._create_constraints(self.get_god_map())
 
         self.soft_constraints = {}
         if not (self.get_god_map().get_data(identifier.check_reachability)):
@@ -199,7 +199,7 @@ class GoalToConstraints(GetGoal):
                 lower_limit = lower_limit * sample_period
                 upper_limit = upper_limit * sample_period
 
-                weight = self.get_god_map().get_data(identifier.joint_cost)[joint_name]
+                weight = self.get_god_map().get_data(identifier.joint_weight)[joint_name]
                 weight = weight * (1. / (upper_limit)) ** 2
 
                 key = self.position_identifier_from_velocity_symbol(c.expr)

@@ -42,6 +42,7 @@ controlled_joint_symbols = [u'controlled_joint_symbols']
 
 post_processing = [u'post_processing']
 soft_constraints = post_processing + [u'soft_constraints']
+result_message = [u'result_message']
 
 
 
