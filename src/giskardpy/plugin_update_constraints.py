@@ -231,15 +231,15 @@ class GoalToConstraints(GetGoal):
             key = self.position_identifier_from_velocity_symbol(s)
             if key not in joint_constraints:
                 if self.get_robot().is_joint_prismatic(joint_name):
-                    limit = self.get_god_map().get_data(identifier.default_joint_velocity_linear_limit)
+                    limit = self.get_god_map().get_data(identifier.joint_velocity_linear_limit_default)
                 else:
-                    limit = self.get_god_map().get_data(identifier.default_joint_velocity_angular_limit)
+                    limit = self.get_god_map().get_data(identifier.joint_velocity_angular_limit_default)
                 lower, upper = -limit, limit
                 lower *= sample_period
                 upper *= sample_period
-                weight = self.get_god_map().get_data(identifier.joint_cost)[joint_name]
+                weight = self.get_god_map().get_data(identifier.joint_weight)[joint_name]
                 weight = weight * (1. / (upper)) ** 2
-                joint_constraints[key] = JointConstraint(lower, upper, weight)
+                joint_constraints[key] = JointConstraint(lower, upper, weight, 0)
 
         joint_constraints = OrderedDict((key, value) for key, value in sorted(joint_constraints.items()))
 

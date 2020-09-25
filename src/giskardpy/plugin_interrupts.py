@@ -30,7 +30,10 @@ class WiggleCancel(GiskardBehavior):
         self.velocity_limits = []
         for joint_name, threshold in zip(self.get_robot().controlled_joints,
                                          make_velocity_threshold(self.get_god_map())):
-            velocity_limit = self.get_robot().get_joint_velocity_limit_expr_evaluated(joint_name, self.god_map)
+            try:
+                velocity_limit = self.get_robot().get_joint_velocity_limit_expr_evaluated(joint_name, self.god_map)
+            except:
+                velocity_limit = 1
             if self.get_robot().is_joint_prismatic(joint_name):
                 velocity_limit = min(self.max_linear_velocity, velocity_limit)
             else:
