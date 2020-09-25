@@ -686,7 +686,7 @@ class TestUrdfObject(object):
         tip = u'l_gripper_tool_frame'
         root = u'l_gripper_tool_frame'
         chain = parsed_pr2.get_joint_names_from_chain(root, tip)
-        assert chain == []
+        assert chain == [u'l_gripper_tool_frame']
 
     def test_get_chain5(self, function_setup):
         parsed_pr2 = self.make_object_without_limits(pr2_urdf())
@@ -755,12 +755,12 @@ class TestUrdfObject(object):
         assert len(leaves) == 40
 
     def test_get_controllable_parent_joint(self, function_setup):
-        parsed_pr2 = self.cls(pr2_urdf())
+        parsed_pr2 = self.make_object_without_limits(pr2_urdf())
         joint = parsed_pr2.get_movable_parent_joint(u'r_gripper_tool_frame')
         assert joint == u'r_wrist_roll_joint'
 
     def test_get_link_names_from_joint_chain(self, function_setup):
-        parsed_pr2 = self.cls(pr2_urdf())
+        parsed_pr2 = self.make_object_without_limits(pr2_urdf())
         result = parsed_pr2.get_link_names_from_joint_chain(u'odom_x_joint', u'odom_y_joint')
         assert result == [u'odom_x_frame']
 
