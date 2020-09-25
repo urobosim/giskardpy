@@ -2,12 +2,12 @@ import os
 import pickle
 
 import casadi as ca
+import errno
 import numpy as np
 from casadi import sign, cos, acos, sin, sqrt, atan2
 from numpy import pi
 
 from giskardpy import logging
-from giskardpy.utils import create_path
 from kineverse.gradients.common_math import Symbol as KineverseSymbol
 import kineverse.gradients.gradient_math as gm
 
@@ -218,7 +218,12 @@ def if_eq(a, b, if_result, else_result):
 
 
 def safe_compiled_function(f, file_name):
-    create_path(file_name)
+    if not os.path.exists(os.path.dirname(file_name)):
+        try:
+            os.makedirs(os.path.dirname(file_name))
+        except OSError as exc:  # Guard against race condition
+            if exc.errno != errno.EEXIST:
+                raise
     with open(file_name, 'w') as file:
         pickle.dump(f, file)
         logging.loginfo(u'saved {}'.format(file_name))
@@ -979,3 +984,8 @@ def distance_point_to_line_segment(point, line_start, line_end):
     nearest = nearest + line_start
     return dist, nearest
 
+
+def angle_between_vector(v1, v2):
+    v1 = v1[:3]
+    v2 = v2[:3]
+    return acos(dot(v1.T, v2) / (norm(v1) * norm(v2)))

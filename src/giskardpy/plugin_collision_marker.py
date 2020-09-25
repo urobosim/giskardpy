@@ -34,7 +34,7 @@ class CollisionMarker(GiskardBehavior):
         :type collisions: Collisions
         """
         m = Marker()
-        m.header.frame_id = self.get_robot().get_root()
+        m.header.frame_id = self.get_god_map().get_data(identifier.map_frame)
         m.action = Marker.ADD
         m.type = Marker.LINE_LIST
         m.id = 1337
@@ -46,7 +46,7 @@ class CollisionMarker(GiskardBehavior):
             for collision in collisions.items():  # type: Collision
                 red_threshold = 0.05  # TODO don't hardcode this
                 yellow_threshold = red_threshold * 2
-                green_threshold = red_threshold * 3
+                green_threshold = yellow_threshold * 2
                 contact_distance = collision.get_contact_distance()
 
                 if contact_distance < green_threshold:

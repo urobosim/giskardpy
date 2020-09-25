@@ -1,10 +1,13 @@
 import py_trees
+import rospy
 from kineverse.visualization.bpb_visualizer import ROSBPBVisualizer
 from plugin import GiskardBehavior
 
-# TODO ensure one last update after planning
-
 class VisualizationBehavior(GiskardBehavior):
+    def __init__(self, name, ensure_publish=False):
+        super(VisualizationBehavior, self).__init__(name)
+        self.ensure_publish = ensure_publish
+
     def setup(self, timeout):
         self.robot_base = self.get_robot().get_root()
         self.visualizer = ROSBPBVisualizer(u'~visualization_marker_array', self.get_world().world_frame)
@@ -17,4 +20,6 @@ class VisualizationBehavior(GiskardBehavior):
             self.visualizer.begin_draw_cycle(self.namespace)
             self.visualizer.draw_world(self.namespace, subworld)
             self.visualizer.render()
+        if self.ensure_publish:
+            rospy.sleep(0.1)
         return py_trees.common.Status.SUCCESS

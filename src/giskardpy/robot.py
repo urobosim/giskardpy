@@ -1,12 +1,14 @@
+from __future__ import division
 import traceback
 from collections import namedtuple, OrderedDict, defaultdict
 from copy import deepcopy
 from itertools import combinations
-
+from giskardpy import identifier
 from geometry_msgs.msg import PoseStamped
 
 from giskardpy import WORLD_IMPLEMENTATION, cas_wrapper as w
 from giskardpy.data_types import SingleJointState
+from giskardpy.god_map import GodMap
 from giskardpy.pybullet_world_object import PyBulletWorldObject
 from giskardpy.utils import KeyDefaultDict, \
     homo_matrix_to_pose, memoize
@@ -69,6 +71,48 @@ class Robot(Backend):
         while joint not in self.controlled_joints:
             joint = self.get_parent_joint_of_joint(joint)
         return joint
+
+    @memoize
+    def get_controlled_leaf_joints(self):
+        leaves = self.get_leaves()
+        result = []
+        for link_name in leaves:
+            has_collision = self.has_link_collision(link_name)
+            joint_name = self.get_parent_joint_of_link(link_name)
+            while True:
+                if joint_name is None:
+                    break
+                if joint_name in self.controlled_joints:
+                    if has_collision:
+                        result.append(joint_name)
+                    break
+                parent_link = self.get_parent_link_of_joint(joint_name)
+                has_collision = has_collision or self.has_link_collision(parent_link)
+                joint_name = self.get_parent_joint_of_joint(joint_name)
+            else: # if not break
+                pass
+        return set(result)
+
+    @memoize
+    def get_directly_controllable_collision_links(self, joint_name):
+        if joint_name not in self.controlled_joints:
+            return []
+        link_name = self.get_child_link_of_joint(joint_name)
+        links = [link_name]
+        collision_links = []
+        while links:
+            link_name = links.pop(0)
+            parent_joint = self.get_parent_joint_of_link(link_name)
+
+            if parent_joint != joint_name and parent_joint in self.controlled_joints:
+                continue
+            if self.has_link_collision(link_name):
+                collision_links.append(link_name)
+            else:
+                child_links = self.get_child_links_of_link(link_name)
+                if child_links:
+                    links.extend(child_links)
+        return collision_links
 
     def get_joint_state_positions(self):
         try:
@@ -147,6 +191,17 @@ class Robot(Backend):
     #     else:
     #         return w.Min(limit, limit_symbol)
 
+    def get_joint_velocity_limit_expr_evaluated(self, joint_name, god_map):
+        """
+        :param joint_name: name of the joint in the urdfs
+        :type joint_name: str
+        :return: minimum of default velocity limit and limit specified in urdfs
+        :rtype: float
+        """
+        limit = self.get_joint_velocity_limit_expr(joint_name)
+        f = w.speed_up(limit, w.free_symbols(limit))
+        return f.call2(god_map.get_values(f.str_params))[0][0]
+
     def get_joint_frame(self, joint_name):
         """
         :param joint_name: name of the joint in the urdfs
@@ -184,7 +239,7 @@ class Robot(Backend):
         :return:
         """
         js = {}
-        for joint_name in self.controlled_joints:
+        for joint_name in sorted(self.controlled_joints):
             sjs = SingleJointState()
             sjs.name = joint_name
             sjs.position = f(joint_name)

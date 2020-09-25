@@ -1,13 +1,17 @@
+from copy import copy
+
 import PyKDL
 import rospy
 import numpy as np
 from geometry_msgs.msg import PoseStamped, Vector3Stamped, PointStamped, TransformStamped, Pose, Quaternion, Point, \
-    Vector3, Twist, TwistStamped
-from tf.transformations import quaternion_from_matrix
+    Vector3, Twist, TwistStamped, QuaternionStamped
+from std_msgs.msg import ColorRGBA
+from tf.transformations import quaternion_from_matrix, quaternion_about_axis
 from tf2_geometry_msgs import do_transform_pose, do_transform_vector3, do_transform_point
 
 from tf2_py._tf2 import ExtrapolationException, InvalidArgumentException
 from tf2_ros import Buffer, TransformListener
+from visualization_msgs.msg import MarkerArray, Marker
 
 from giskardpy import logging
 from giskardpy.utils import suppress_stderr, suppress_stdout
@@ -36,7 +40,7 @@ def wait_for_transform(target_frame, source_frame, time, timeout):
 def transform_pose(target_frame, pose):
     """
     Transforms a pose stamped into a different target frame.
-    :type target_frame: str
+    :type target_frame: Union[str, unicode]
     :type pose: PoseStamped
     :return: Transformed pose of None on loop failure
     :rtype: PoseStamped
@@ -57,7 +61,7 @@ def transform_pose(target_frame, pose):
 def transform_vector(target_frame, vector):
     """
     Transforms a pose stamped into a different target frame.
-    :type target_frame: str
+    :type target_frame: Union[str, unicode]
     :type vector: Vector3Stamped
     :return: Transformed pose of None on loop failure
     :rtype: Vector3Stamped
@@ -76,7 +80,7 @@ def transform_vector(target_frame, vector):
 def transform_point(target_frame, point):
     """
     Transforms a pose stamped into a different target frame.
-    :type target_frame: str
+    :type target_frame: Union[str, unicode]
     :type point: PointStamped
     :return: Transformed pose of None on loop failure
     :rtype: PointStamped
@@ -110,8 +114,8 @@ def lookup_transform(target_frame, source_frame, time=None):
 
 def lookup_pose(target_frame, source_frame, time=None):
     """
-    :type target_frame: str
-    :type source_frame: str
+    :type target_frame: Union[str, unicode]
+    :type source_frame: Union[str, unicode]
     :return: target_frame <- source_frame
     :rtype: PoseStamped
     """
@@ -125,8 +129,8 @@ def lookup_pose(target_frame, source_frame, time=None):
 
 def lookup_point(target_frame, source_frame, time=None):
     """
-    :type target_frame: str
-    :type source_frame: str
+    :type target_frame: Union[str, unicode]
+    :type source_frame: Union[str, unicode]
     :return: target_frame <- source_frame
     :rtype: PointStamped
     """

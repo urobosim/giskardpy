@@ -16,8 +16,7 @@ from shape_msgs.msg import SolidPrimitive
 from visualization_msgs.msg import MarkerArray
 
 from giskardpy.urdf_object import URDFObject, hacky_urdf_parser_fix
-from giskardpy.utils import dict_to_joint_states, make_world_body_box, make_world_body_cylinder
-from giskardpy import logging
+from giskardpy.utils import position_dict_to_joint_states, make_world_body_box, make_world_body_cylinder
 
 
 class GiskardWrapper(object):
@@ -45,15 +44,15 @@ class GiskardWrapper(object):
     def get_root(self):
         return self.robot_urdf.get_root()
 
-    def set_cart_goal(self, root, tip, pose_stamped, trans_max_velocity=None, rot_max_velocity=None):
+    def set_cart_goal(self, root, tip, pose_stamped, trans_max_velocity=None, rot_max_velocity=None, weight=None):
         """
         :param tip:
         :type tip: str
         :param pose_stamped:
         :type pose_stamped: PoseStamped
         """
-        self.set_translation_goal(root, tip, pose_stamped, max_velocity=trans_max_velocity)
-        self.set_rotation_goal(root, tip, pose_stamped, max_velocity=rot_max_velocity)
+        self.set_translation_goal(root, tip, pose_stamped, max_velocity=trans_max_velocity, weight=weight)
+        self.set_rotation_goal(root, tip, pose_stamped, max_velocity=rot_max_velocity, weight=weight)
 
     def set_translation_goal(self, root, tip, pose_stamped, weight=None, max_velocity=None):
         """
@@ -127,18 +126,23 @@ class GiskardWrapper(object):
                 constraint.goal_state = joint_state
             self.cmd_seq[-1].joint_constraints.append(constraint)
         elif isinstance(joint_state, dict):
-            for joint_name, joint_position in joint_state.items():
-                constraint = Constraint()
-                constraint.type = u'JointPosition'
-                params = {}
-                params[u'joint_name'] = joint_name
-                params[u'goal'] = joint_position
-                if weight:
-                    params[u'weight'] = weight
-                if max_velocity:
-                    params[u'max_velocity'] = max_velocity
-                constraint.parameter_value_pair = json.dumps(params)
-                self.cmd_seq[-1].constraints.append(constraint)
+            constraint = Constraint()
+            constraint.type = JointConstraint.JOINT
+            if not isinstance(joint_state, JointState):
+                goal_state = JointState()
+                for joint_name, joint_position in joint_state.items():
+                    goal_state.name.append(joint_name)
+                    goal_state.position.append(joint_position)
+            else:
+                goal_state = joint_state
+            params = {}
+            params[u'goal_state'] = convert_ros_message_to_dictionary(goal_state)
+            if weight:
+                params[u'weight'] = weight
+            if max_velocity:
+                params[u'max_velocity'] = max_velocity
+            constraint.parameter_value_pair = json.dumps(params)
+            self.cmd_seq[-1].constraints.append(constraint)
 
     def align_planes(self, tip, tip_normal, root=None, root_normal=None, weight=None):
         """
@@ -172,8 +176,8 @@ class GiskardWrapper(object):
         self.set_json_goal(u'UpdateGodMap', updates=updates)
 
     def pointing(self, tip, goal_point, root=None, pointing_axis=None, weight=None):
-        kwargs = {u'tip':tip,
-                  u'goal_point':goal_point}
+        kwargs = {u'tip': tip,
+                  u'goal_point': goal_point}
         if root is not None:
             kwargs[u'root'] = root
         if pointing_axis is not None:
@@ -246,6 +250,14 @@ class GiskardWrapper(object):
     def allow_self_collision(self):
         collision_entry = CollisionEntry()
         collision_entry.type = CollisionEntry.ALLOW_COLLISION
+        collision_entry.robot_links = [CollisionEntry.ALL]
+        collision_entry.body_b = self.get_robot_name()
+        collision_entry.link_bs = [CollisionEntry.ALL]
+        self.set_collision_entries([collision_entry])
+
+    def avoid_self_collision(self):
+        collision_entry = CollisionEntry()
+        collision_entry.type = CollisionEntry.AVOID_COLLISION
         collision_entry.robot_links = [CollisionEntry.ALL]
         collision_entry.body_b = self.get_robot_name()
         collision_entry.link_bs = [CollisionEntry.ALL]
@@ -440,7 +452,7 @@ class GiskardWrapper(object):
         req = UpdateWorldRequest(UpdateWorldRequest.ADD, object, False, pose)
         return self.update_world.call(req)
 
-    def attach_box(self, name=u'box', size=None, frame_id=None, position=None, orientation=None):
+    def attach_box(self, name=u'box', size=None, frame_id=None, position=None, orientation=None, pose=None):
         """
         :type name: str
         :type size: list
@@ -451,11 +463,12 @@ class GiskardWrapper(object):
         """
 
         box = make_world_body_box(name, size[0], size[1], size[2])
-        pose = PoseStamped()
-        pose.header.stamp = rospy.Time.now()
-        pose.header.frame_id = str(frame_id) if frame_id is not None else u'map'
-        pose.pose.position = Point(*(position if position is not None else [0, 0, 0]))
-        pose.pose.orientation = Quaternion(*(orientation if orientation is not None else [0, 0, 0, 1]))
+        if pose is None:
+            pose = PoseStamped()
+            pose.header.stamp = rospy.Time.now()
+            pose.header.frame_id = str(frame_id) if frame_id is not None else u'map'
+            pose.pose.position = Point(*(position if position is not None else [0, 0, 0]))
+            pose.pose.orientation = Quaternion(*(orientation if orientation is not None else [0, 0, 0, 1]))
 
         req = UpdateWorldRequest(UpdateWorldRequest.ADD, box, True, pose)
         return self.update_world.call(req)
@@ -513,7 +526,7 @@ class GiskardWrapper(object):
 
     def set_object_joint_state(self, object_name, joint_states):
         if isinstance(joint_states, dict):
-            joint_states = dict_to_joint_states(joint_states)
+            joint_states = position_dict_to_joint_states(joint_states)
         self.object_js_topics[object_name].publish(joint_states)
 
     def get_object_names(self):
@@ -545,6 +558,3 @@ class GiskardWrapper(object):
         :rtype: GetAttachedObjectsResponse
         """
         return self.get_attached_objects()
-
-
-

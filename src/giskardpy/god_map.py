@@ -4,6 +4,7 @@ from multiprocessing import Lock, RLock
 import kineverse.gradients.common_math as cm
 from giskardpy import cas_wrapper as w
 
+
 def get_member(identifier, member):
     """
     :param identifier:
@@ -29,6 +30,127 @@ def get_member(identifier, member):
     except RuntimeError:
         pass
 
+class GetMember(object):
+    def __init__(self, default_value):
+        self.member = None
+        self.default_value = default_value
+        self.child = None
+
+
+    def init_call(self, identifier, data):
+        self.member = identifier[0]
+        sub_data = self.c(data)
+        if len(identifier) == 2:
+            self.child = GetMemberLeaf(self.default_value)
+            return self.child.init_call(identifier[-1], sub_data)
+        elif len(identifier) > 2:
+            self.child = GetMember(self.default_value)
+            return self.child.init_call(identifier[1:], sub_data)
+        return sub_data
+
+
+
+    def __call__(self, a):
+        return self.c(a)
+
+
+    def c(self, a):
+        try:
+            r = a[self.member]
+            self.c = self.return_dict
+            return r
+        except (TypeError, AttributeError):
+            if callable(a):
+                r = a(*self.member)
+                self.c = self.return_function_result
+                return r
+            try:
+                r = getattr(a, self.member)
+                self.c = self.return_attribute
+                return r
+            except TypeError:
+                pass
+        except IndexError:
+            r = a[int(self.member)]
+            self.c = self.return_list
+            return r
+        except RuntimeError:
+            pass
+        return self.default_value
+
+
+    def return_dict(self, a):
+        return self.child.c(a[self.member])
+
+
+    def return_list(self, a):
+        return self.child.c(a[int(self.member)])
+
+
+    def return_attribute(self, a):
+        return self.child.c(getattr(a, self.member))
+
+
+    def return_function_result(self, a):
+        return self.child.c(a(*self.member))
+
+class GetMemberLeaf(object):
+    def __init__(self, default_value):
+        self.member = None
+        self.default_value = default_value
+        self.child = None
+
+    def init_call(self, member, data):
+        self.member = member
+        return self.c(data)
+
+
+
+    def __call__(self, a):
+        return self.c(a)
+
+
+    def c(self, a):
+        try:
+            r = a[self.member]
+            self.c = self.return_dict
+            return r
+        except TypeError:
+            if callable(a):
+                r = a(*self.member)
+                self.c = self.return_function_result
+                return r
+            try:
+                r = getattr(a, self.member)
+                self.c = self.return_attribute
+                return r
+            except TypeError:
+                pass
+        except IndexError:
+            r = a[int(self.member)]
+            self.c = self.return_list
+            return r
+        except RuntimeError:
+            pass
+        raise KeyError(u'cant extract {} from god map'.format(a))
+
+
+    def return_dict(self, a):
+        return a[self.member]
+
+
+    def return_list(self, a):
+        return a[int(self.member)]
+
+
+    def return_attribute(self, a):
+        return getattr(a, self.member)
+
+
+    def return_function_result(self, a):
+        return a(*self.member)
+
+
 
 def get_data(identifier, data, default_value=0.0):
     """
@@ -41,25 +163,27 @@ def get_data(identifier, data, default_value=0.0):
     :type identifier: list
     :return: object that is saved at key
     """
-    # TODO deal with unused identifiers
-    result = data
     try:
-        for member in identifier:
-            result = get_member(result, member)
+        if len(identifier) == 1:
+            shortcut = GetMemberLeaf(default_value)
+            result = shortcut.init_call(identifier[0], data)
+        else:
+            shortcut = GetMember(default_value)
+            result = shortcut.init_call(identifier, data)
     except AttributeError as e:
         raise e
-        # return default_value
+        # return default_value, None
     except KeyError as e:
         # traceback.print_exc()
         # raise KeyError(identifier)
         # TODO is this really a good idea?
         # I do this because it automatically sets weights for unused goals to 0
         raise KeyError(identifier)
-        # return default_value
+        # return default_value, None
     except IndexError as e:
         raise e
-        # return default_value
-    return result
+        # return default_value, None
+    return result, shortcut
 
 
 class GodMap(object):
@@ -73,8 +197,8 @@ class GodMap(object):
         self.expr_separator = u'__'
         self.key_to_expr = {}
         self.expr_to_key = {}
-        self.default_value = 0
         self.last_expr_values = {}
+        self.shortcuts = {}
         self.lock = RLock()
 
     def __copy__(self):
@@ -91,6 +215,7 @@ class GodMap(object):
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.lock.release()
 
+
     def unsafe_get_data(self, identifier):
         """
 
@@ -103,12 +228,22 @@ class GodMap(object):
         :type identifier: list
         :return: object that is saved at key
         """
-        return get_data(identifier, self._data, self.default_value)
+        identifier = tuple(identifier)
+        if identifier not in self.shortcuts:
+            result, shortcut = get_data(identifier, self._data)
+            if shortcut:
+                self.shortcuts[identifier] = shortcut
+            return result
+        return self.shortcuts[identifier].c(self._data)
 
     def get_data(self, identifier):
         with self.lock:
             r = self.unsafe_get_data(identifier)
         return r
+
+    def clear_cache(self):
+        # TODO should be possible without clear cache
+        self.shortcuts = {}
 
     def identivier_to_symbol(self, identifier):
         """
@@ -158,7 +293,7 @@ class GodMap(object):
         """
         return self.key_to_expr.values()
 
-    def set_data(self, identifier, value):
+    def unsafe_set_data(self, identifier, value):
         """
 
         :param identifier: e.g. ['pose', 'position', 'x']
@@ -189,9 +324,9 @@ class GodMap(object):
             else:
                 self._data[namespace] = value
 
-    def safe_set_data(self, identifier, value):
+    def set_data(self, identifier, value):
         with self.lock:
-            self.set_data(identifier, value)
+            self.unsafe_set_data(identifier, value)
 
     def get_kineverse_symbol(self, symbol):
         return cm.free_symbols(symbol).pop()

@@ -138,7 +138,7 @@ class World(object):
             self.query[key] = list(self.query[key])
 
     @profile
-    def check_collisions(self, cut_off_distances):
+    def check_collisions(self, cut_off_distances, collision_list_size=20):
         self.sync_bullet_world()
         collisions = Collisions(self)
         if self.query is None:
@@ -266,7 +266,7 @@ class World(object):
 
     def get_object(self, name):
         """
-        :type name: str
+        :type name: Union[str, unicode]
         :rtype: Robot
         """
         return self.km_model.get_data(name)
@@ -283,14 +283,14 @@ class World(object):
     def has_object(self, name):
         """
         Checks for objects with the same name.
-        :type name: str
+        :type name: Union[str, unicode]
         :rtype: bool
         """
         return name in self.get_object_names()
 
     def set_object_joint_state(self, name, joint_state):
         """
-        :type name: str
+        :type name: Union[str, unicode]
         :param joint_state: joint name -> SingleJointState
         :type joint_state: dict
         """
@@ -588,9 +588,9 @@ class World(object):
         for link1, link2 in collision_matrix:
             # FIXME should I use the minimum of both distances?
             if self.robot.link_order(link1, link2):
-                collision_matrix2[link1, robot_name, link2] = min_dist[link1][u'zero_weight_distance']
+                collision_matrix2[link1, robot_name, link2] = min_dist[link1]
             else:
-                collision_matrix2[link2, robot_name, link1] = min_dist[link1][u'zero_weight_distance']
+                collision_matrix2[link2, robot_name, link1] = min_dist[link1]
         return collision_matrix2
 
     def collision_goals_to_collision_matrix(self, collision_goals, min_dist):
@@ -600,7 +600,7 @@ class World(object):
         :return: dict mapping (robot_link, body_b, link_b) -> min allowed distance
         :rtype: dict
         """
-        collision_goals = self.verify_collision_entries(collision_goals, min_dist)
+        collision_goals = self.verify_collision_entries(collision_goals)
         min_allowed_distance = {}
         for collision_entry in collision_goals:  # type: CollisionEntry
             if self.is_avoid_all_self_collision(collision_entry):
@@ -621,12 +621,12 @@ class World(object):
                     del min_allowed_distance[r_key]
 
             elif self.is_avoid_collision(collision_entry):
-                min_allowed_distance[key] = min_dist[key[0]][u'zero_weight_distance']
+                min_allowed_distance[key] = min_dist[key[0]]
             else:
                 raise Exception('todo')
         return min_allowed_distance
 
-    def verify_collision_entries(self, collision_goals, min_dist):
+    def verify_collision_entries(self, collision_goals):
         for ce in collision_goals:  # type: CollisionEntry
             if ce.type in [CollisionEntry.ALLOW_ALL_COLLISIONS,
                            CollisionEntry.AVOID_ALL_COLLISIONS]:
@@ -831,16 +831,6 @@ class World(object):
     def is_allow_collision(self, collision_entry):
         return collision_entry.type in [CollisionEntry.ALLOW_COLLISION, CollisionEntry.ALLOW_ALL_COLLISIONS]
 
-    def is_avoid_all_collision(self, collision_entry):
-        """
-        :type collision_entry: CollisionEntry
-        :return: bool
-        """
-        return self.is_avoid_collision(collision_entry) \
-               and self.all_robot_links(collision_entry) \
-               and self.all_body_bs(collision_entry) \
-               and self.all_link_bs(collision_entry)
-
     def is_avoid_all_self_collision(self, collision_entry):
         """
         :type collision_entry: CollisionEntry
@@ -849,6 +839,26 @@ class World(object):
         return self.is_avoid_collision(collision_entry) \
                and self.all_robot_links(collision_entry) \
                and collision_entry.body_b == self.robot.get_name() \
+               and self.all_link_bs(collision_entry)
+
+    def is_allow_all_self_collision(self, collision_entry):
+        """
+        :type collision_entry: CollisionEntry
+        :return: bool
+        """
+        return self.is_allow_collision(collision_entry) \
+               and self.all_robot_links(collision_entry) \
+               and collision_entry.body_b == self.robot.get_name() \
+               and self.all_link_bs(collision_entry)
+
+    def is_avoid_all_collision(self, collision_entry):
+        """
+        :type collision_entry: CollisionEntry
+        :return: bool
+        """
+        return self.is_avoid_collision(collision_entry) \
+               and self.all_robot_links(collision_entry) \
+               and self.all_body_bs(collision_entry) \
                and self.all_link_bs(collision_entry)
 
     def is_allow_all_collision(self, collision_entry):

@@ -130,6 +130,8 @@ class URDFObject(ArticulatedObject):
         :type fixed: bool
         :rtype: list
         """
+        if root == tip:
+            return [root]
         root_chain, connection, tip_chain = self.get_split_chain(root, tip, joints, links, fixed)
         return root_chain + connection + tip_chain
 
@@ -443,19 +445,19 @@ class URDFObject(ArticulatedObject):
                 return link_name
 
     @memoize
-    def get_first_link_with_collision(self):
-        l = self.get_root()
-        while not self.has_link_collision(l):
-            children = self.get_child_links_of_link(l)
+    def get_first_child_links_with_collision(self, link_name):
+        while not self.has_link_collision(link_name):
+            children = self.get_child_links_of_link(link_name)
             children_with_collision = [x for x in children if self.has_link_collision(x)]
             if len(children_with_collision) > 1 or len(children) > 1:
                 raise TypeError(u'first collision link is not unique')
             elif len(children_with_collision) == 1:
-                l = children_with_collision[0]
+                link_name = children_with_collision[0]
                 break
             else:
-                l = children[0]
-        return l
+                link_name = children[0]
+        return link_name
+
 
     @memoize
     def get_non_base_movement_root(self):
@@ -586,7 +588,7 @@ class URDFObject(ArticulatedObject):
     @memoize
     def get_movable_parent_joint(self, link_name):
         joint = self.get_parent_joint_of_link(link_name)
-        while self.is_joint_fixed(joint):
+        while not self.is_joint_controllable(joint):
             joint = self.get_parent_joint_of_joint(joint)
         return joint
 
@@ -647,6 +649,7 @@ class URDFObject(ArticulatedObject):
         return link_a == self.get_parent_link_of_link(link_b) or \
                (link_b == self.get_parent_link_of_link(link_a))
 
+
     @memoize
     def get_controllable_joints(self):
         # TODO test me pls
@@ -705,6 +708,7 @@ class URDFObject(ArticulatedObject):
             marker.scale.y = geometry.scale[0]
             marker.scale.z = geometry.scale[0]
         else:
+            # TODO implement mesh
             raise Exception(u'world body type {} can\'t be converted to marker'.format(geometry.__class__.__name__))
         marker.color = ColorRGBA(0, 1, 0, 0.5)
         return marker
