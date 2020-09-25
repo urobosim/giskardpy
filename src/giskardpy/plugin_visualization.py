@@ -18,7 +18,7 @@ class VisualizationBehavior(GiskardBehavior):
         subworld = self.get_world().pb_subworld
         if subworld is not None:
             self.visualizer.begin_draw_cycle(self.namespace)
-            self.visualizer.draw_world(self.namespace, subworld)
+            self.visualizer.draw_world(self.namespace, subworld, a=0.6)
             self.visualizer.render()
         if self.ensure_publish:
             rospy.sleep(0.1)
