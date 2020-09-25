@@ -23,3 +23,7 @@ class VisualizationBehavior(GiskardBehavior):
         if self.ensure_publish:
             rospy.sleep(0.1)
         return py_trees.common.Status.SUCCESS
+
+    def clear_marker(self):
+        self.visualizer.begin_draw_cycle()
+        self.visualizer.render()
