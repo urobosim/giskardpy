@@ -174,7 +174,7 @@ def kitchen_setup(better_pose):
     object_name = u'kitchen'
     better_pose.add_urdf(object_name, rospy.get_param(u'kitchen_description'),
                               tf.lookup_pose(u'map', u'iai_kitchen/world'), u'/kitchen/joint_states')
-    js = {k: 0.0 for k in better_pose.get_world().get_object(object_name).get_movable_joints()}
+    js = {k: 0.0 for k in better_pose.get_world().get_object(object_name).get_controllable_joints()}
     better_pose.set_kitchen_js(js)
     return better_pose
 
@@ -190,6 +190,74 @@ class TestJointGoals(object):
 
 
 class TestConstraints(object):
+
+    def test_open_close_oven(self, kitchen_setup):
+        """
+        :type kitchen_setup: Boxy
+        """
+        hand = kitchen_setup.l_tip
+        goal_angle = 0.5
+        handle_frame_id = u'iai_kitchen/oven_area_oven_door_handle'
+        handle_name = u'oven_area_oven_door_handle'
+
+        base_pose = PoseStamped()
+        base_pose.header.frame_id = u'map'
+        base_pose.pose.position.y = 1
+        base_pose.pose.orientation.w = 1
+        kitchen_setup.teleport_base(base_pose)
+
+        bar_axis = Vector3Stamped()
+        bar_axis.header.frame_id = handle_frame_id
+        bar_axis.vector.y = 1
+
+        bar_center = PointStamped()
+        bar_center.header.frame_id = handle_frame_id
+
+        tip_grasp_axis = Vector3Stamped()
+        tip_grasp_axis.header.frame_id = hand
+        tip_grasp_axis.vector.y = -1
+
+        kitchen_setup.add_json_goal(u'GraspBar',
+                                    root=kitchen_setup.default_root,
+                                    tip=hand,
+                                    tip_grasp_axis=tip_grasp_axis,
+                                    bar_center=bar_center,
+                                    bar_axis=bar_axis,
+                                    bar_length=.3)
+        # kitchen_setup.allow_collision([], u'kitchen', [handle_name])
+        kitchen_setup.allow_all_collisions()
+
+        x_gripper = Vector3Stamped()
+        x_gripper.header.frame_id = hand
+        x_gripper.vector.z = 1
+
+        x_goal = Vector3Stamped()
+        x_goal.header.frame_id = handle_frame_id
+        x_goal.vector.x = -1
+        kitchen_setup.align_planes(hand, x_gripper, root_normal=x_goal)
+        # kitchen_setup.allow_all_collisions()
+
+        kitchen_setup.send_and_check_goal()
+
+        kitchen_setup.add_json_goal(u'Open1Dof',
+                                    tip=hand,
+                                    object_name=u'kitchen',
+                                    handle_link=handle_name,
+                                    goal_joint_state=goal_angle)
+        kitchen_setup.allow_all_collisions()
+        kitchen_setup.send_and_check_goal()
+        kitchen_setup.set_kitchen_js({u'oven_area_oven_door_joint': goal_angle})
+
+        kitchen_setup.add_json_goal(u'Open1Dof',
+                                    tip=hand,
+                                    object_name=u'kitchen',
+                                    handle_link=handle_name,
+                                    goal_joint_state=0)
+        kitchen_setup.allow_all_collisions()
+        kitchen_setup.send_and_check_goal()
+        kitchen_setup.set_kitchen_js({u'oven_area_oven_door_joint': 0})
+
+
     def test_pointing(self, better_pose):
         #fixme
         tip = u'head_mount_kinect2_rgb_optical_frame'
