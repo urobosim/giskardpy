@@ -21,11 +21,11 @@ from giskardpy.constraints import WEIGHT_ABOVE_CA, WEIGHT_BELOW_CA, WEIGHT_COLLI
 from giskardpy.identifier import fk_pose
 from giskardpy.tfwrapper import init as tf_init
 from giskardpy.utils import normalize
-from kineverse.model.paths import Path
-from utils_for_tests import PR2, compare_poses, update_world_error_code
 from giskardpy.utils import to_joint_state_position_dict, publish_marker_vector
+from kineverse.model.paths import Path
 from rospy_message_converter.message_converter import convert_dictionary_to_ros_message
 from utils_for_tests import PR2, compare_poses
+from utils_for_tests import update_world_error_code
 
 # TODO roslaunch iai_pr2_sim ros_control_sim_with_base.launch
 # TODO roslaunch iai_kitchen upload_kitchen_obj.launch
@@ -373,7 +373,6 @@ class TestConstraints(object):
         new_pose = tf.lookup_pose('map', tip)
         compare_poses(expected.pose, new_pose.pose)
 
-
     def test_CartesianPoseStraight(self, zero_pose):
         zero_pose.close_l_gripper()
         goal_position = PoseStamped()
@@ -622,6 +621,7 @@ class TestConstraints(object):
 
     def test_pointing(self, kitchen_setup):
         # fixme
+        kitchen_setup.set_kitchen_js({u'iai_fridge_door_joint': np.pi / 6})
         base_goal = PoseStamped()
         base_goal.header.frame_id = u'base_footprint'
         base_goal.pose.position.y = -1
@@ -901,7 +901,7 @@ class TestConstraints(object):
         handle_frame_id = u'iai_kitchen/sink_area_dish_washer_door_handle'
         handle_name = u'sink_area_dish_washer_door_handle'
         hand = kitchen_setup.r_tip
-        goal_angle = np.pi / 2.5
+        goal_angle = np.pi / 3.5
 
         p = PoseStamped()
         p.header.frame_id = u'map'
@@ -910,18 +910,25 @@ class TestConstraints(object):
         p.pose.position.y = 0.2
         kitchen_setup.teleport_base(p)
 
-        kitchen_setup.set_kitchen_js({u'sink_area_dish_washer_door_joint': 0.35})
+        kitchen_setup.set_kitchen_js({u'sink_area_dish_washer_door_joint': 0.})
 
         hand_goal = PoseStamped()
         hand_goal.header.frame_id = handle_frame_id
-        hand_goal.pose.position.x -= 0.13
-        hand_goal.pose.position.z = 0.08
+        hand_goal.pose.position.x -= 0.03
+        hand_goal.pose.position.z = 0.03
         hand_goal.pose.orientation = Quaternion(*quaternion_from_matrix([[0, 0, 1, 0],
-                                                                         [0,-1, 0, 0],
+                                                                         [0, -1, 0, 0],
                                                                          [1, 0, 0, 0],
-                                                                         [0,0,0,1]]))
-        kitchen_setup.allow_all_collisions()
-        kitchen_setup.set_and_check_cart_goal(hand_goal, hand)
+                                                                         [0, 0, 0, 1]]))
+        # kitchen_setup.allow_all_collisions()
+        kitchen_setup.add_json_goal(u'CartesianVelocityLimit',
+                                    root_link=u'odom_combined',
+                                    tip_link='base_footprint',
+                                    max_linear_velocity=0.05,
+                                    max_angular_velocity=0.08,
+                                    )
+        kitchen_setup.set_cart_goal(hand_goal, hand)
+        kitchen_setup.send_and_check_goal(goal_type=MoveGoal.PLAN_AND_EXECUTE_AND_CUT_OFF_SHAKING)
 
         kitchen_setup.add_json_goal(u'Open1Dof',
                                     tip=hand,
@@ -929,10 +936,51 @@ class TestConstraints(object):
                                     handle_link=handle_name,
                                     goal_joint_state=goal_angle,
                                     )
-        kitchen_setup.allow_all_collisions()
+
+        kitchen_setup.add_json_goal(u'CartesianVelocityLimit',
+                                    root_link=u'odom_combined',
+                                    tip_link='base_footprint',
+                                    max_linear_velocity=0.05,
+                                    max_angular_velocity=0.1,
+                                    )
+
+        kitchen_setup.add_json_goal(u'CartesianVelocityLimit',
+                                    root_link=u'odom_combined',
+                                    tip_link='r_forearm_link',
+                                    max_linear_velocity=0.1,
+                                    max_angular_velocity=0.5,
+                                    )
+
+        # kitchen_setup.allow_all_collisions()
         kitchen_setup.send_and_check_goal()
         kitchen_setup.set_kitchen_js({u'sink_area_dish_washer_door_joint': goal_angle})
 
+        kitchen_setup.add_json_goal(u'Open1Dof',
+                                    tip=hand,
+                                    object_name=u'kitchen',
+                                    handle_link=handle_name,
+                                    goal_joint_state=0,
+                                    )
+
+        kitchen_setup.add_json_goal(u'CartesianVelocityLimit',
+                                    root_link=u'odom_combined',
+                                    tip_link='base_footprint',
+                                    max_linear_velocity=0.05,
+                                    max_angular_velocity=0.1,
+                                    )
+
+        kitchen_setup.add_json_goal(u'CartesianVelocityLimit',
+                                    root_link=u'odom_combined',
+                                    tip_link='r_forearm_link',
+                                    max_linear_velocity=0.05,
+                                    max_angular_velocity=0.1,
+                                    )
+
+        # kitchen_setup.allow_all_collisions()
+        kitchen_setup.send_and_check_goal()
+        kitchen_setup.set_kitchen_js({u'sink_area_dish_washer_door_joint': 0})
+
+        kitchen_setup.send_and_check_joint_goal(gaya_pose)
 
     def test_align_planes1(self, zero_pose):
         """
@@ -1047,7 +1095,6 @@ class TestConstraints(object):
         kitchen_setup.align_planes(kitchen_setup.r_tip, x_gripper, root_normal=x_goal)
         # kitchen_setup.allow_all_collisions()
         kitchen_setup.send_and_check_goal()
-
 
     def test_open_close_fridge2(self, kitchen_setup):
         """
@@ -1202,7 +1249,6 @@ class TestConstraints(object):
         kitchen_setup.send_and_check_goal()
         kitchen_setup.set_kitchen_js({u'oven_area_oven_door_joint': 0})
 
-
     def test_grasp_dishwasher_handle(self, kitchen_setup):
         """
         :type kitchen_setup: PR2
@@ -1229,7 +1275,6 @@ class TestConstraints(object):
         kitchen_setup.allow_collision([], u'kitchen', [u'sink_area_dish_washer_door_handle'])
         # kitchen_setup.allow_all_collisions()
         kitchen_setup.send_and_check_goal()
-
 
 
 class TestCartGoals(object):
@@ -3370,30 +3415,30 @@ class TestCollisionAvoidanceGoals(object):
 
     def test_bug2020_09_24_12_42_38_dump_cereal_shaking(self, kitchen_setup):
         map_T_odom = utils.pose_to_kdl(convert_dictionary_to_ros_message(u'geometry_msgs/PoseStamped',
-                                                                      {
-                                                                          "header": {
-                                                                              "frame_id": "map",
-                                                                              "seq": 0,
-                                                                              "stamp": {
-                                                                                  "nsecs": 0,
-                                                                                  "secs": 0
-                                                                              }
-                                                                          },
-                                                                          "pose": {
-                                                                              "orientation": {
-                                                                                  "w": 0.9244367729204006,
-                                                                                  "x": 0.0030363552712611747,
-                                                                                  "y": -0.0011548192616205582,
-                                                                                  "z": 0.3813215176352568
-                                                                              },
-                                                                              "position": {
-                                                                                  "x": 0.33601843640452117,
-                                                                                  "y": 0.6726240499464146,
-                                                                                  "z": -0.002390805709227884
-                                                                              }
-                                                                          }
-                                                                      }
-                                                                      ).pose)
+                                                                         {
+                                                                             "header": {
+                                                                                 "frame_id": "map",
+                                                                                 "seq": 0,
+                                                                                 "stamp": {
+                                                                                     "nsecs": 0,
+                                                                                     "secs": 0
+                                                                                 }
+                                                                             },
+                                                                             "pose": {
+                                                                                 "orientation": {
+                                                                                     "w": 0.9244367729204006,
+                                                                                     "x": 0.0030363552712611747,
+                                                                                     "y": -0.0011548192616205582,
+                                                                                     "z": 0.3813215176352568
+                                                                                 },
+                                                                                 "position": {
+                                                                                     "x": 0.33601843640452117,
+                                                                                     "y": 0.6726240499464146,
+                                                                                     "z": -0.002390805709227884
+                                                                                 }
+                                                                             }
+                                                                         }
+                                                                         ).pose)
 
         odom_T_base_footprint = PoseStamped()
         odom_T_base_footprint.pose.position = Point(
@@ -4402,7 +4447,7 @@ class TestCollisionAvoidanceGoals(object):
 
         kitchen_setup.avoid_all_collisions(0.2)
         kitchen_setup.set_cart_goal(map_T_cart_goal, 'base_footprint', linear_velocity=0.5,
-                                              weight=WEIGHT_BELOW_CA)
+                                    weight=WEIGHT_BELOW_CA)
         kitchen_setup.send_and_check_goal(goal_type=MoveGoal.PLAN_AND_EXECUTE_AND_CUT_OFF_SHAKING)
 
     def test_bug2020_09_15_10_41_17_dump_wiggling(self, kitchen_setup):
@@ -5767,6 +5812,7 @@ class TestCollisionAvoidanceGoals(object):
 
         box_setup.check_cpi_leq(box_setup.get_l_gripper_links(), u'box', 0.0)
         box_setup.check_cpi_leq(box_setup.get_r_gripper_links(), u'box', 0.0)
+
     def test_avoid_collision3(self, pocky_pose_setup):
         """
         :type pocky_pose_setup: PR2
@@ -5903,7 +5949,8 @@ class TestCollisionAvoidanceGoals(object):
         pocky_pose_setup.add_cylinder('br', [0.2, 0.01], p)
 
         pocky_pose_setup.send_and_check_goal(goal_type=MoveGoal.PLAN_AND_EXECUTE_AND_CUT_OFF_SHAKING,
-expected_error_codes=[MoveResult.SHAKING])
+                                             expected_error_codes=[MoveResult.SHAKING])
+
     def test_avoid_collision6(self, fake_table_setup):
         """
         :type fake_table_setup: PR2
@@ -5926,6 +5973,7 @@ expected_error_codes=[MoveResult.SHAKING])
         fake_table_setup.send_and_check_goal()
         fake_table_setup.check_cpi_geq(fake_table_setup.get_l_gripper_links(), u'box', 0.048)
         fake_table_setup.check_cpi_geq(fake_table_setup.get_r_gripper_links(), u'box', 0.048)
+
     def test_avoid_collision7(self, kitchen_setup):
         """
         :type kitchen_setup: PR2
@@ -7395,6 +7443,7 @@ class TestReachability():
         js['r_shoulder_lift_joint'] = 10
         zero_pose.set_joint_goal(js)
         zero_pose.check_reachability(expected_error_codes=[MoveResult.UNREACHABLE])
+
     def test_unreachable_goal_1(self, zero_pose):
         pose = PoseStamped()
         pose.header.frame_id = zero_pose.r_tip
@@ -7402,6 +7451,7 @@ class TestReachability():
         pose.pose.orientation.w = 1
         zero_pose.set_cart_goal(root=zero_pose.default_root, tip=zero_pose.r_tip, goal_pose=pose)
         zero_pose.check_reachability(expected_error_codes=[MoveResult.UNREACHABLE])
+
     def test_unreachable_goal_2(self, zero_pose):
         pose = PoseStamped()
         pose.pose.position.z = 5

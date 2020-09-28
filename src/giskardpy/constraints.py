@@ -2057,6 +2057,7 @@ class Pointing(Constraint):
 # Fixme: The name of this constraint is not informative. Should maybe be something like "Move1DofFixed"
 class Open1Dof(Constraint):
     handle_T_tip_id = u'handle_T_tip'
+    weight_id = u'weight'
 
     def __init__(self, god_map, tip, object_name, handle_link, root=None, goal_joint_state=None,
                  weight=WEIGHT_ABOVE_CA):
@@ -2065,7 +2066,6 @@ class Open1Dof(Constraint):
 
         self.root = self.get_robot().get_root() if root is None else root
         self.tip = tip
-        self.weight = weight
 
         self.handle_link = handle_link
 
@@ -2082,9 +2082,11 @@ class Open1Dof(Constraint):
             self.goal_joint_state = max(min_limit, min(max_limit, goal_joint_state))
         else:
             self.goal_joint_state = max_limit
-        self.save_params_on_god_map({self.handle_T_tip_id: handle_T_tip})
+        self.save_params_on_god_map({self.handle_T_tip_id: handle_T_tip,
+                                     self.weight_id: weight})
 
     def make_constraints(self):
+        base_weight = self.get_input_float(self.weight_id)
         handle_T_tip_evaluated = self.get_input_PoseStamped(self.handle_T_tip_id)
         goal_joint_symbol = self.get_input_joint_position(self.joint_name, self.object_name)
 
@@ -2105,7 +2107,7 @@ class Open1Dof(Constraint):
         asdf = w.save_division(r_P_error, trans_error)
         r_P_intermediate_error = asdf * trans_scale
 
-        weight = self.normalize_weight(max_translation_velocity, WEIGHT_ABOVE_CA)
+        weight = self.normalize_weight(max_translation_velocity, base_weight)
         # self.add_debug_constraint(u'/real_error/x', r_P_error[0])
         # self.add_debug_constraint(u'/real_error/y', r_P_error[1])
         # self.add_debug_constraint(u'/real_error/z', r_P_error[2])
@@ -2163,8 +2165,7 @@ class Open1Dof(Constraint):
 
         c_R_g_intermediate_aa = intermediate_error_axis * intermediate_error_angle
 
-        weight = WEIGHT_ABOVE_CA
-        weight = self.normalize_weight(max_angular_velocity, weight)
+        weight = self.normalize_weight(max_angular_velocity, base_weight)
 
         self.add_constraint(u'/0',
                             lower=c_R_g_intermediate_aa[0],
@@ -2187,8 +2188,9 @@ class Open1Dof(Constraint):
 
         # joint goal for kitchen
 
-        err = self.limit_velocity(self.goal_joint_state - goal_joint_symbol, 0.1)
-        weight = self.normalize_weight(0.1, self.weight)
+        max_vel = 0.5
+        err = self.limit_velocity(self.goal_joint_state - goal_joint_symbol, max_vel)
+        weight = self.normalize_weight(max_vel, base_weight)
 
         # Fixme: This is a very short version of this
         self.add_constraint(u'/object_joint_goal',

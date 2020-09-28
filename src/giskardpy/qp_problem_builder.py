@@ -247,8 +247,9 @@ class QProblemBuilder(object):
         if len(p_filtered) > 0:
             logging.logerr(u'{} has the following nans:'.format(name))
             self.print_pandas_array(p_filtered)
-        else:
-            logging.loginfo(u'{} has no nans'.format(name))
+            return True
+        logging.loginfo(u'{} has no nans'.format(name))
+        return False
 
     def print_pandas_array(self, array):
         import pandas as pd
@@ -308,7 +309,7 @@ class QProblemBuilder(object):
         if xdot_full is None:
             return None
         # TODO enable debug print in an elegant way, preferably without slowing anything down
-        # self.debug_print(np_H, A, lb, ub, lbA, ubA, g, xdot_full)
+        self.debug_print(np_H, A, lb, ub, lbA, ubA, g, xdot_full)
         return OrderedDict((observable, xdot_full[i]) for i, observable in enumerate(self.controlled_joint_symbols)), \
                np_H, np_A, np_lb, np_ub, np_lbA, np_ubA, xdot_full
 

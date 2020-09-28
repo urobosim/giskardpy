@@ -196,7 +196,7 @@ class TestConstraints(object):
         :type kitchen_setup: Boxy
         """
         hand = kitchen_setup.l_tip
-        goal_angle = 0.5
+        goal_angle = np.pi/3
         handle_frame_id = u'iai_kitchen/oven_area_oven_door_handle'
         handle_name = u'oven_area_oven_door_handle'
 
@@ -255,6 +255,131 @@ class TestConstraints(object):
                                     goal_joint_state=0)
         kitchen_setup.allow_all_collisions()
         kitchen_setup.send_and_check_goal()
+        kitchen_setup.set_kitchen_js({u'oven_area_oven_door_joint': 0})
+
+    def test_turn_knob(self, kitchen_setup):
+        """
+        :type kitchen_setup: Boxy
+        """
+        hand = kitchen_setup.l_tip
+        goal_angle = np.pi/2
+        handle_frame_id = u'iai_kitchen/oven_area_oven_knob_oven'
+        handle_name = u'oven_area_oven_knob_oven'
+        handle_joint = u'oven_area_oven_knob_oven_joint'
+
+        base_pose = PoseStamped()
+        base_pose.header.frame_id = u'map'
+        base_pose.pose.position.y = 1
+        base_pose.pose.orientation.w = 1
+        kitchen_setup.teleport_base(base_pose)
+
+        hand_goal = PoseStamped()
+        hand_goal.header.frame_id = handle_frame_id
+        hand_goal.pose.position.z = -0.02
+        # hand_goal.pose.orientation.w = 1
+        hand_goal.pose.orientation = Quaternion(*quaternion_from_matrix([[0,-1, 0, 0],
+                                                                         [1, 0, 0, 0],
+                                                                         [0, 0, 1, 0],
+                                                                         [0,0,0,1]]))
+        kitchen_setup.allow_all_collisions()
+        kitchen_setup.set_and_check_cart_goal(hand_goal, hand)
+
+        kitchen_setup.add_json_goal(u'Open1Dof',
+                                    tip=hand,
+                                    object_name=u'kitchen',
+                                    handle_link=handle_name,
+                                    goal_joint_state=goal_angle)
+        kitchen_setup.allow_all_collisions()
+        kitchen_setup.send_and_check_goal()
+        kitchen_setup.set_kitchen_js({handle_joint: goal_angle})
+
+        kitchen_setup.add_json_goal(u'Open1Dof',
+                                    tip=hand,
+                                    object_name=u'kitchen',
+                                    handle_link=handle_name,
+                                    goal_joint_state=0)
+        kitchen_setup.allow_all_collisions()
+        kitchen_setup.send_and_check_goal()
+        kitchen_setup.set_kitchen_js({handle_joint: 0})
+
+    def test_turn_knob_and_close_oven(self, kitchen_setup):
+        """
+        :type kitchen_setup: Boxy
+        """
+        knob_hand = kitchen_setup.r_tip
+        knob_goal_angle = np.pi/2
+        knob_frame_id = u'iai_kitchen/oven_area_oven_knob_oven'
+        knob_name = u'oven_area_oven_knob_oven'
+        knob_joint = u'oven_area_oven_knob_oven_joint'
+        kitchen_setup.set_kitchen_js({knob_joint: knob_goal_angle})
+
+        oven_hand = kitchen_setup.l_tip
+        goal_angle = np.pi / 3
+        handle_frame_id = u'iai_kitchen/oven_area_oven_door_handle'
+        handle_name = u'oven_area_oven_door_handle'
+        kitchen_setup.set_kitchen_js({u'oven_area_oven_door_joint': goal_angle})
+
+        base_pose = PoseStamped()
+        base_pose.header.frame_id = u'map'
+        base_pose.pose.position.y = 2
+        base_pose.pose.orientation.w = 1
+        kitchen_setup.teleport_base(base_pose)
+
+        bar_axis = Vector3Stamped()
+        bar_axis.header.frame_id = handle_frame_id
+        bar_axis.vector.y = 1
+
+        bar_center = PointStamped()
+        bar_center.header.frame_id = handle_frame_id
+
+        tip_grasp_axis = Vector3Stamped()
+        tip_grasp_axis.header.frame_id = oven_hand
+        tip_grasp_axis.vector.y = -1
+
+        kitchen_setup.add_json_goal(u'GraspBar',
+                                    root=kitchen_setup.default_root,
+                                    tip=oven_hand,
+                                    tip_grasp_axis=tip_grasp_axis,
+                                    bar_center=bar_center,
+                                    bar_axis=bar_axis,
+                                    bar_length=.3)
+        # kitchen_setup.allow_collision([], u'kitchen', [handle_name])
+
+        x_gripper = Vector3Stamped()
+        x_gripper.header.frame_id = oven_hand
+        x_gripper.vector.z = 1
+
+        x_goal = Vector3Stamped()
+        x_goal.header.frame_id = handle_frame_id
+        x_goal.vector.x = -1
+        kitchen_setup.align_planes(oven_hand, x_gripper, root_normal=x_goal)
+
+
+        hand_goal = PoseStamped()
+        hand_goal.header.frame_id = knob_frame_id
+        hand_goal.pose.position.z = -0.02
+        # hand_goal.pose.orientation.w = 1
+        hand_goal.pose.orientation = Quaternion(*quaternion_from_matrix([[0,-1, 0, 0],
+                                                                         [1, 0, 0, 0],
+                                                                         [0, 0, 1, 0],
+                                                                         [0,0,0,1]]))
+        kitchen_setup.allow_all_collisions()
+        kitchen_setup.set_and_check_cart_goal(hand_goal, knob_hand)
+
+        kitchen_setup.add_json_goal(u'Open1Dof',
+                                    tip=knob_hand,
+                                    object_name=u'kitchen',
+                                    handle_link=knob_name,
+                                    goal_joint_state=0)
+        kitchen_setup.add_json_goal(u'Open1Dof',
+                                    tip=oven_hand,
+                                    object_name=u'kitchen',
+                                    handle_link=handle_name,
+                                    goal_joint_state=0)
+        kitchen_setup.allow_all_collisions()
+        kitchen_setup.send_and_check_goal()
+
+        kitchen_setup.set_kitchen_js({knob_joint: 0})
         kitchen_setup.set_kitchen_js({u'oven_area_oven_door_joint': 0})
 
 

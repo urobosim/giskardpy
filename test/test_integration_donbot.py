@@ -363,15 +363,18 @@ class TestConstraints(object):
         :type kitchen_setup: Donbot
         """
         eef = u'base_link'
-        handle_frame_id = u'iai_kitchen/sink_area_left_middle_drawer_handle'
-        handle_name = u'sink_area_left_middle_drawer_handle'
+        handle_frame_id = u'iai_kitchen/sink_area_left_bottom_drawer_handle'
+        handle_name = u'sink_area_left_bottom_drawer_handle'
+        joint_name = u'sink_area_left_bottom_drawer_main_joint'
 
         base_goal = PoseStamped()
         base_goal.header.frame_id = handle_frame_id
         base_goal.pose.position.x = 0.955
+        # base_goal.pose.orientation = Quaternion(*quaternion_about_axis(np.pi, [0,0,1]))
+        # kitchen_setup.move_base(base_goal)
         kitchen_setup.teleport_base(base_goal)
+        kitchen_setup.set_kitchen_js({joint_name: 0.48})
 
-        kitchen_setup.set_kitchen_js({u'sink_area_left_middle_drawer_main_joint': 0.48})
 
         # # Close drawer partially
         # kitchen_setup.add_json_goal(u'Open1Dof',
@@ -388,11 +391,11 @@ class TestConstraints(object):
                                     tip=eef,
                                     object_name=u'kitchen',
                                     handle_link=handle_name,
-                                    goal_joint_state=0)
+                                    goal_joint_state=0,)
         kitchen_setup.allow_all_collisions()  # makes execution faster
         kitchen_setup.send_and_check_goal()  # send goal to Giskard
         # Update kitchen object
-        kitchen_setup.set_kitchen_js({u'sink_area_left_middle_drawer_main_joint': 0.0})
+        kitchen_setup.set_kitchen_js({joint_name: 0.0})
 
         # TODO: calculate real and desired value and compare
 
