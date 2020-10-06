@@ -5191,6 +5191,50 @@ class TestCollisionAvoidanceGoals(object):
         # compare_poses(m.pose, p.pose)
         pass
 
+    def test_add_mesh2(self, kitchen_setup):
+        """
+        :type zero_pose: PR2
+        """
+        table_frame_id = u'iai_kitchen/dining_area_jokkmokk_table_main'
+        bowl_fake = u'bowl_fake'
+        bowl_real = u'bowl_real'
+        offset = 0.07
+        p_fake = PoseStamped()
+        p_fake.header.frame_id = table_frame_id
+        p_fake.pose.position = Point(0.5, -0.2, 0.45+offset)
+        p_fake.pose.orientation = Quaternion(*quaternion_about_axis(np.pi/2, [1,0,0]))
+        with open(u'urdfs/bowl.urdf', u'r') as f:
+            urdf = f.read()
+        kitchen_setup.add_urdf(bowl_fake, urdf=urdf, pose=p_fake, js_topic=u'')
+        p_real = PoseStamped()
+        p_real.header.frame_id = table_frame_id
+        p_real.pose.position = Point(0.5, -0.2, 0.45)
+        p_real.pose.orientation.w = 1
+        kitchen_setup.add_mesh(bowl_real, path=u'package://giskardpy/test/urdfs/meshes/bowl_39.obj', pose=p_real)
+        # m = zero_pose.get_world().get_object(object_name).as_marker_msg()
+        # compare_poses(m.pose, p.pose)
+
+        base_pose = PoseStamped()
+        base_pose.header.frame_id = table_frame_id
+        base_pose.pose.position.x = 0.6
+        base_pose.pose.position.y = -0.75
+        base_pose.pose.position.z = - 0.35
+        base_pose.pose.orientation = Quaternion(*quaternion_about_axis(np.pi/1.5, [0,0,1]))
+        kitchen_setup.teleport_base(base_pose)
+
+        hand_goal = PoseStamped()
+        hand_goal.header.frame_id = table_frame_id
+        hand_goal.pose.position = Point(0.5, -0.2, 0.475)
+        hand_goal.pose.orientation = Quaternion(*quaternion_from_matrix([[ 0,-1, 0, 0],
+                                                                         [ 0, 0, 1, 0],
+                                                                         [-1, 0, 0, 0],
+                                                                         [0,0,0,1]]))
+        kitchen_setup.avoid_all_collisions(0.1)
+        kitchen_setup.allow_collision([], bowl_fake, [])
+        kitchen_setup.set_and_check_cart_goal(hand_goal, kitchen_setup.l_tip)
+
+        pass
+
     def test_add_non_existing_mesh(self, zero_pose):
         """
         :type zero_pose: PR2

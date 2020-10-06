@@ -1,15 +1,16 @@
 from copy import deepcopy
-import giskardpy.tfwrapper as tf
+
 import numpy as np
 import pytest
 import roslaunch
 import rospy
 from geometry_msgs.msg import PoseStamped, Point, Quaternion, Vector3Stamped, Pose, PointStamped
-from giskard_msgs.msg import MoveActionGoal, MoveResult, MoveGoal, CollisionEntry, MoveCmd, JointConstraint,  \
+from giskard_msgs.msg import MoveActionGoal, MoveResult, MoveGoal, CollisionEntry, MoveCmd, JointConstraint, \
     Constraint as Constraint_msg
 from tf.transformations import quaternion_from_matrix, quaternion_about_axis
-from giskardpy import logging
+
 import giskardpy.tfwrapper as tf
+from giskardpy import logging
 from utils_for_tests import Donbot, compare_poses
 
 # TODO roslaunch iai_donbot_sim ros_control_sim.launch
@@ -202,7 +203,7 @@ def shelf_setup(better_pose):
 def kitchen_setup(better_pose):
     object_name = u'kitchen'
     better_pose.add_urdf(object_name, rospy.get_param(u'kitchen_description'),
-                              tf.lookup_pose(u'map', u'iai_kitchen/world'), u'/kitchen/joint_states')
+                         tf.lookup_pose(u'map', u'iai_kitchen/world'), u'/kitchen/joint_states')
     js = {k: 0.0 for k in better_pose.get_world().get_object(object_name).get_controllable_joints()}
     better_pose.set_kitchen_js(js)
     return better_pose
@@ -256,8 +257,8 @@ class TestJointGoals(object):
         """
         :type zero_pose: Donbot
         """
-        #fixme
-        #zero_pose.allow_self_collision()
+        # fixme
+        # zero_pose.allow_self_collision()
         goal = MoveActionGoal()
         move_cmd = MoveCmd()
         joint_goal1 = JointConstraint()
@@ -312,7 +313,7 @@ class TestJointGoals(object):
         """
         :type zero_pose: Donbot
         """
-        #fixme
+        # fixme
         js = {
             u'odom_x_joint': 1,
             u'odom_y_joint': 1,
@@ -358,6 +359,71 @@ class TestJointGoals(object):
 
 class TestConstraints(object):
 
+    def test_open_fridge(self, kitchen_setup):
+        """
+        :type kitchen_setup: Donbot
+        """
+        handle_frame_id = u'iai_kitchen/iai_fridge_door_handle'
+        handle_name = u'iai_fridge_door_handle'
+        tip = u'refills_tool_frame'
+        kitchen_setup.open_gripper()
+
+        base_goal = PoseStamped()
+        base_goal.header.frame_id = u'map'
+        base_goal.pose.position = Point(0.3, -0.5, 0)
+        base_goal.pose.orientation = Quaternion(*quaternion_about_axis(np.pi / 2, [0, 0, 1]))
+        kitchen_setup.move_base(base_goal)
+
+        bar_axis = Vector3Stamped()
+        bar_axis.header.frame_id = handle_frame_id
+        bar_axis.vector.z = 1
+
+        bar_center = PointStamped()
+        bar_center.header.frame_id = handle_frame_id
+
+        tip_grasp_axis = Vector3Stamped()
+        tip_grasp_axis.header.frame_id = tip
+        tip_grasp_axis.vector.y = -1
+
+        kitchen_setup.add_json_goal(u'GraspBar',
+                                    root=kitchen_setup.default_root,
+                                    tip=tip,
+                                    tip_grasp_axis=tip_grasp_axis,
+                                    bar_center=bar_center,
+                                    bar_axis=bar_axis,
+                                    bar_length=.65)
+        x_gripper = Vector3Stamped()
+        x_gripper.header.frame_id = tip
+        x_gripper.vector.z = 1
+
+        x_goal = Vector3Stamped()
+        x_goal.header.frame_id = handle_frame_id
+        x_goal.vector.x = -1
+        kitchen_setup.align_planes(tip, x_gripper, root_normal=x_goal)
+        # kitchen_setup.allow_all_collisions()
+        # kitchen_setup.add_json_goal(u'AvoidJointLimits', percentage=10)
+        kitchen_setup.send_and_check_goal()
+
+        kitchen_setup.add_json_goal(u'Open1Dof',
+                                    tip=tip,
+                                    object_name=u'kitchen',
+                                    handle_link=handle_name,
+                                    goal_joint_state=1)
+        # kitchen_setup.allow_all_collisions()
+        kitchen_setup.allow_self_collision()
+        # kitchen_setup.add_json_goal(u'AvoidJointLimits')
+        kitchen_setup.send_and_check_goal()
+        kitchen_setup.set_kitchen_js({u'iai_fridge_door_joint': 1.5})
+
+        kitchen_setup.add_json_goal(u'Open1Dof',
+                                    tip=tip,
+                                    object_name=u'kitchen',
+                                    handle_link=handle_name,
+                                    goal_joint_state=0)
+        # kitchen_setup.allow_all_collisions()
+        kitchen_setup.send_and_check_goal()
+        kitchen_setup.set_kitchen_js({u'iai_fridge_door_joint': 0})
+
     def test_open_drawer(self, kitchen_setup):
         """"
         :type kitchen_setup: Donbot
@@ -375,6 +441,57 @@ class TestConstraints(object):
         kitchen_setup.teleport_base(base_goal)
         kitchen_setup.set_kitchen_js({joint_name: 0.48})
 
+        # # Close drawer partially
+        # kitchen_setup.add_json_goal(u'Open1Dof',
+        #                             tip=eef,
+        #                             object_name=u'kitchen',
+        #                             handle_link=handle_name,
+        #                             goal_joint_state=0.2)
+        # kitchen_setup.allow_all_collisions()  # makes execution faster
+        # kitchen_setup.send_and_check_goal()  # send goal to Giskard
+        # # Update kitchen object
+        # kitchen_setup.set_kitchen_js({u'sink_area_left_middle_drawer_main_joint': 0.2})
+
+        kitchen_setup.add_json_goal(u'Open1Dof',
+                                    tip=eef,
+                                    object_name=u'kitchen',
+                                    handle_link=handle_name,
+                                    goal_joint_state=0, )
+        kitchen_setup.allow_all_collisions()  # makes execution faster
+        kitchen_setup.send_and_check_goal()  # send goal to Giskard
+        # Update kitchen object
+        kitchen_setup.set_kitchen_js({joint_name: 0.0})
+
+        # TODO: calculate real and desired value and compare
+
+        pass
+
+    def test_open_drawer_hand(self, kitchen_setup):
+        """"
+        :type kitchen_setup: Donbot
+        """
+        eef = u'refills_tool_frame'
+        handle_frame_id = u'iai_kitchen/oven_area_area_right_drawer_handle'
+        handle_name = u'oven_area_area_right_drawer_handle'
+        joint_name = u'oven_area_area_right_drawer_main_joint'
+
+        base_goal = PoseStamped()
+        base_goal.header.frame_id = u'map'
+        base_goal.pose.position.y = 1.5
+        base_goal.pose.orientation = Quaternion(*quaternion_about_axis(np.pi / 2, [0, 0, 1]))
+        # kitchen_setup.move_base(base_goal)
+        kitchen_setup.teleport_base(base_goal)
+        kitchen_setup.set_kitchen_js({joint_name: 0.48})
+
+        hand_goal = PoseStamped()
+        hand_goal.header.frame_id = handle_frame_id
+        hand_goal.pose.orientation = Quaternion(*quaternion_from_matrix([[0, 0, -1, 0],
+                                                                         [0, 1, 0, 0],
+                                                                         [1, 0, 0, 0],
+                                                                         [0, 0, 0, 1]]))
+        # hand_goal.pose.orientation = Quaternion(*quaternion_about_axis(np.pi, [0,0,1]))
+        # kitchen_setup.move_base(base_goal)
+        kitchen_setup.set_and_check_cart_goal(hand_goal, tip=eef)
 
         # # Close drawer partially
         # kitchen_setup.add_json_goal(u'Open1Dof',
@@ -391,7 +508,7 @@ class TestConstraints(object):
                                     tip=eef,
                                     object_name=u'kitchen',
                                     handle_link=handle_name,
-                                    goal_joint_state=0,)
+                                    goal_joint_state=0, )
         kitchen_setup.allow_all_collisions()  # makes execution faster
         kitchen_setup.send_and_check_goal()  # send goal to Giskard
         # Update kitchen object
@@ -492,6 +609,7 @@ class TestConstraints(object):
         # expected_x = tf.lookup_point(tip, better_pose.r_tip)
         # np.testing.assert_almost_equal(expected_x.point.y, 0, 2)
         # np.testing.assert_almost_equal(expected_x.point.x, 0, 2)
+
 
 class TestCartGoals(object):
     def test_CartesianPosition(self, zero_pose):

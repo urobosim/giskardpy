@@ -2,8 +2,8 @@ import numpy as np
 import pytest
 import roslaunch
 import rospy
-from geometry_msgs.msg import PoseStamped, Quaternion, Vector3Stamped, PointStamped
-from tf.transformations import quaternion_from_matrix
+from geometry_msgs.msg import PoseStamped, Quaternion, Vector3Stamped, PointStamped, Point
+from tf.transformations import quaternion_from_matrix, quaternion_about_axis
 import giskardpy.tfwrapper as tf
 from giskardpy import logging
 from giskardpy.tfwrapper import lookup_transform, init as tf_init, lookup_point, transform_point, \
@@ -261,7 +261,7 @@ class TestConstraints(object):
         """
         :type kitchen_setup: Boxy
         """
-        hand = kitchen_setup.l_tip
+        hand = kitchen_setup.r_tip
         goal_angle = np.pi/2
         handle_frame_id = u'iai_kitchen/oven_area_oven_knob_oven'
         handle_name = u'oven_area_oven_knob_oven'
@@ -269,7 +269,7 @@ class TestConstraints(object):
 
         base_pose = PoseStamped()
         base_pose.header.frame_id = u'map'
-        base_pose.pose.position.y = 1
+        base_pose.pose.position.y = 1.5
         base_pose.pose.orientation.w = 1
         kitchen_setup.teleport_base(base_pose)
 
@@ -381,6 +381,72 @@ class TestConstraints(object):
 
         kitchen_setup.set_kitchen_js({knob_joint: 0})
         kitchen_setup.set_kitchen_js({u'oven_area_oven_door_joint': 0})
+
+
+    def test_open_fridge(self, kitchen_setup):
+        """
+        :type kitchen_setup: Boxy
+        """
+        handle_frame_id = u'iai_kitchen/iai_fridge_door_handle'
+        handle_name = u'iai_fridge_door_handle'
+        joint_goal = 1
+        tip = kitchen_setup.r_tip
+
+        base_goal = PoseStamped()
+        base_goal.header.frame_id = u'map'
+        base_goal.pose.position = Point(-0.3, -0.5, 0)
+        base_goal.pose.orientation.w = 1
+        kitchen_setup.move_base(base_goal)
+
+        bar_axis = Vector3Stamped()
+        bar_axis.header.frame_id = handle_frame_id
+        bar_axis.vector.z = 1
+
+        bar_center = PointStamped()
+        bar_center.header.frame_id = handle_frame_id
+
+        tip_grasp_axis = Vector3Stamped()
+        tip_grasp_axis.header.frame_id = tip
+        tip_grasp_axis.vector.y = -1
+
+        kitchen_setup.add_json_goal(u'GraspBar',
+                                    root=kitchen_setup.default_root,
+                                    tip=tip,
+                                    tip_grasp_axis=tip_grasp_axis,
+                                    bar_center=bar_center,
+                                    bar_axis=bar_axis,
+                                    bar_length=.65)
+        x_gripper = Vector3Stamped()
+        x_gripper.header.frame_id = tip
+        x_gripper.vector.z = 1
+
+        x_goal = Vector3Stamped()
+        x_goal.header.frame_id = handle_frame_id
+        x_goal.vector.x = -1
+        kitchen_setup.align_planes(tip, x_gripper, root_normal=x_goal)
+        kitchen_setup.allow_all_collisions()
+        # kitchen_setup.add_json_goal(u'AvoidJointLimits', percentage=10)
+        kitchen_setup.send_and_check_goal()
+
+        kitchen_setup.add_json_goal(u'Open1Dof',
+                                    tip=tip,
+                                    object_name=u'kitchen',
+                                    handle_link=handle_name,
+                                    goal_joint_state=joint_goal)
+        kitchen_setup.allow_all_collisions()
+        kitchen_setup.allow_self_collision()
+        # kitchen_setup.add_json_goal(u'AvoidJointLimits')
+        kitchen_setup.send_and_check_goal()
+        kitchen_setup.set_kitchen_js({u'iai_fridge_door_joint': joint_goal})
+
+        kitchen_setup.add_json_goal(u'Open1Dof',
+                                    tip=tip,
+                                    object_name=u'kitchen',
+                                    handle_link=handle_name,
+                                    goal_joint_state=0)
+        # kitchen_setup.allow_all_collisions()
+        kitchen_setup.send_and_check_goal()
+        kitchen_setup.set_kitchen_js({u'iai_fridge_door_joint': 0})
 
 
     def test_pointing(self, better_pose):

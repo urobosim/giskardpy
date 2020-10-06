@@ -262,7 +262,7 @@ class TestConstraints(object):
                                     tip=kitchen_setup.tip,
                                     object_name=u'kitchen',
                                     handle_link=handle_name,
-                                    goal_joint_state=1.5)
+                                    goal_joint_state=1)
         # kitchen_setup.allow_all_collisions()
         kitchen_setup.allow_self_collision()
         # kitchen_setup.add_json_goal(u'AvoidJointLimits')
