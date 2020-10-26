@@ -1,9 +1,11 @@
 # giskardpy
 The core python library of the Giskard framework for constraint- and optimization-based robot motion control.
 
-## Kineverse:
-Install this first:
-https://github.com/ARoefer/kineverse/tree/giskard_merge
+## pybullet:
+Kineverse is a new lib used by Giskard. It uses a custom pybullet wrapper. 
+Install as described here: https://github.com/ARoefer/kineverse/tree/giskard_merge#installing-bullet
+Ignore the kineverse installation!
+It is part of the rosinstall below.
 
 ## Installation instructions. Tested with Ubuntu 16.04 + ROS kinetic and 18.04 + melodic
 
@@ -14,8 +16,12 @@ sudo pip install scipy==1.2.2 # this is the last version for python 2.7
 sudo pip install casadi
 sudo pip install sortedcontainers
 sudo pip install hypothesis==4.34.0 # only needed if you want to run tests
-sudo pip install pandas
-sudo pip install numpy==1.16
+sudo pip install pandas==0.24.2
+sudo pip install numpy==1.16.6
+sudo pip install matplotlib<=2.2.5
+sudo pip install simplejson 
+sudo pip install tqdm
+sudo pip install jinja2
 ```
 
 Now create the workspace
