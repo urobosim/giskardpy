@@ -1,6 +1,10 @@
 # giskardpy
 The core python library of the Giskard framework for constraint- and optimization-based robot motion control.
 
+## Kineverse:
+Install this first:
+https://github.com/ARoefer/kineverse/tree/giskard_merge
+
 ## Installation instructions. Tested with Ubuntu 16.04 + ROS kinetic and 18.04 + melodic
 
 Install the following python packages:
