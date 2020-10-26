@@ -3,6 +3,7 @@ from copy import deepcopy
 import numpy as np
 import pytest
 import rospy
+from giskard_msgs.msg import MoveGoal, MoveResult
 from geometry_msgs.msg import PoseStamped, Point, Quaternion, Vector3Stamped, PointStamped
 from numpy import pi
 from tf.transformations import quaternion_from_matrix, quaternion_about_axis
@@ -163,7 +164,7 @@ class TestCollisionAvoidanceGoals(object):
 
         goal_pose = PoseStamped()
         goal_pose.header.frame_id = u'hand_palm_link'
-        goal_pose.pose.position.x = 0.9177
+        goal_pose.pose.position.x = 0.5
         goal_pose.pose.orientation.w = 1
         zero_pose.set_and_check_cart_goal(goal_pose, zero_pose.tip)
 
@@ -211,7 +212,7 @@ class TestCollisionAvoidanceGoals(object):
         zero_pose.add_box(size=[1, 1, 0.01], pose=p)
 
         js = {u'arm_flex_joint': 0}
-        zero_pose.send_and_check_joint_goal(js)
+        zero_pose.send_and_check_joint_goal(js, expected_error_codes=[MoveResult.SHAKING])
 
 class TestConstraints(object):
     def test_open_fridge(self, kitchen_setup):

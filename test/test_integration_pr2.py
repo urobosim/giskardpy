@@ -7,8 +7,8 @@ import numpy as np
 import pytest
 import roslaunch
 import rospy
-from geometry_msgs.msg import PoseStamped, Point, Quaternion, Vector3Stamped, PointStamped
-from giskard_msgs.msg import CollisionEntry, MoveActionGoal, MoveResult, WorldBody, MoveGoal
+from geometry_msgs.msg import PoseStamped, Point, Quaternion, Vector3Stamped, PointStamped, Transform
+from giskard_msgs.msg import CollisionEntry, MoveActionGoal, MoveResult, WorldBody, MoveGoal, MoveCmd
 from giskard_msgs.srv import UpdateWorldResponse, UpdateWorldRequest
 from numpy import pi
 from sensor_msgs.msg import JointState
@@ -25,6 +25,8 @@ from giskardpy.utils import to_joint_state_position_dict, publish_marker_vector
 from kineverse.model.paths import Path
 from rospy_message_converter.message_converter import convert_dictionary_to_ros_message
 from utils_for_tests import PR2, compare_poses
+from iai_naive_kinematics_sim.srv import UpdateTransform
+
 from utils_for_tests import update_world_error_code
 
 # TODO roslaunch iai_pr2_sim ros_control_sim_with_base.launch
@@ -234,7 +236,8 @@ def kitchen_setup(resetted_giskard):
     resetted_giskard.send_and_check_joint_goal(gaya_pose)
     object_name = u'kitchen'
     resetted_giskard.add_urdf(object_name, rospy.get_param(u'kitchen_description'),
-                              tf.lookup_pose(u'map', u'iai_kitchen/world'), u'/kitchen/joint_states')
+                              tf.lookup_pose(u'map', u'iai_kitchen/world'), u'/kitchen/joint_states',
+                              set_js_topic=u'/kitchen/cram_joint_states')
     js = {k: 0.0 for k in resetted_giskard.get_world().get_object(object_name).get_controllable_joints()}
     resetted_giskard.set_kitchen_js(js)
     return resetted_giskard
@@ -647,6 +650,7 @@ class TestConstraints(object):
                                     max_linear_velocity=0.1,
                                     max_angular_velocity=0.2
                                     )
+        kitchen_setup.set_joint_goal(gaya_pose)
         kitchen_setup.move_base(base_goal)
 
         current_x = Vector3Stamped()
@@ -711,8 +715,8 @@ class TestConstraints(object):
         tip_grasp_axis.vector.z = 1
 
         kitchen_setup.add_json_goal(u'GraspBar',
-                                    root=kitchen_setup.default_root,
-                                    tip=kitchen_setup.r_tip,
+                                    root_link=kitchen_setup.default_root,
+                                    tip_link=kitchen_setup.r_tip,
                                     tip_grasp_axis=tip_grasp_axis,
                                     bar_center=bar_center,
                                     bar_axis=bar_axis,
@@ -730,7 +734,7 @@ class TestConstraints(object):
         kitchen_setup.send_and_check_goal()
 
         kitchen_setup.add_json_goal(u'Open1Dof',
-                                    tip=kitchen_setup.r_tip,
+                                    tip_link=kitchen_setup.r_tip,
                                     object_name=u'kitchen',
                                     handle_link=handle_name,
                                     goal_joint_state=1.5)
@@ -741,7 +745,7 @@ class TestConstraints(object):
         kitchen_setup.set_kitchen_js({u'iai_fridge_door_joint': 1.5})
 
         kitchen_setup.add_json_goal(u'Open1Dof',
-                                    tip=kitchen_setup.r_tip,
+                                    tip_link=kitchen_setup.r_tip,
                                     object_name=u'kitchen',
                                     handle_link=handle_name,
                                     goal_joint_state=0)
@@ -772,8 +776,8 @@ class TestConstraints(object):
         tip_grasp_axis.vector.z = 1
 
         kitchen_setup.add_json_goal(u'GraspBar',
-                                    root=kitchen_setup.default_root,
-                                    tip=kitchen_setup.l_tip,
+                                    root_link=kitchen_setup.default_root,
+                                    tip_link=kitchen_setup.l_tip,
                                     tip_grasp_axis=tip_grasp_axis,
                                     bar_center=bar_center,
                                     bar_axis=bar_axis,
@@ -793,7 +797,7 @@ class TestConstraints(object):
         kitchen_setup.send_and_check_goal()
 
         kitchen_setup.add_json_goal(u'Open1Dof',
-                                    tip=kitchen_setup.l_tip,
+                                    tip_link=kitchen_setup.l_tip,
                                     object_name=u'kitchen',
                                     handle_link=handle_name)
         kitchen_setup.allow_all_collisions()  # makes execution faster
@@ -803,7 +807,7 @@ class TestConstraints(object):
 
         # Close drawer partially
         kitchen_setup.add_json_goal(u'Open1Dof',
-                                    tip=kitchen_setup.l_tip,
+                                    tip_link=kitchen_setup.l_tip,
                                     object_name=u'kitchen',
                                     handle_link=handle_name,
                                     goal_joint_state=0.2)
@@ -813,7 +817,7 @@ class TestConstraints(object):
         kitchen_setup.set_kitchen_js({u'sink_area_left_middle_drawer_main_joint': 0.2})
 
         kitchen_setup.add_json_goal(u'Open1Dof',
-                                    tip=kitchen_setup.l_tip,
+                                    tip_link=kitchen_setup.l_tip,
                                     object_name=u'kitchen',
                                     handle_link=handle_name,
                                     goal_joint_state=0)
@@ -854,8 +858,8 @@ class TestConstraints(object):
         tip_grasp_axis.vector.z = 1
 
         kitchen_setup.add_json_goal(u'GraspBar',
-                                    root=kitchen_setup.default_root,
-                                    tip=hand,
+                                    root_link=kitchen_setup.default_root,
+                                    tip_link=hand,
                                     tip_grasp_axis=tip_grasp_axis,
                                     bar_center=bar_center,
                                     bar_axis=bar_axis,
@@ -876,7 +880,7 @@ class TestConstraints(object):
         kitchen_setup.send_and_check_goal()
 
         kitchen_setup.add_json_goal(u'Open1Dof',
-                                    tip=hand,
+                                    tip_link=hand,
                                     object_name=u'kitchen',
                                     handle_link=handle_name,
                                     goal_joint_state=goal_angle,
@@ -886,7 +890,7 @@ class TestConstraints(object):
         kitchen_setup.set_kitchen_js({u'sink_area_dish_washer_door_joint': goal_angle})
 
         kitchen_setup.add_json_goal(u'Open1Dof',
-                                    tip=hand,
+                                    tip_link=hand,
                                     object_name=u'kitchen',
                                     handle_link=handle_name,
                                     goal_joint_state=0)
@@ -931,7 +935,7 @@ class TestConstraints(object):
         kitchen_setup.send_and_check_goal(goal_type=MoveGoal.PLAN_AND_EXECUTE_AND_CUT_OFF_SHAKING)
 
         kitchen_setup.add_json_goal(u'Open1Dof',
-                                    tip=hand,
+                                    tip_link=hand,
                                     object_name=u'kitchen',
                                     handle_link=handle_name,
                                     goal_joint_state=goal_angle,
@@ -956,7 +960,7 @@ class TestConstraints(object):
         kitchen_setup.set_kitchen_js({u'sink_area_dish_washer_door_joint': goal_angle})
 
         kitchen_setup.add_json_goal(u'Open1Dof',
-                                    tip=hand,
+                                    tip_link=hand,
                                     object_name=u'kitchen',
                                     handle_link=handle_name,
                                     goal_joint_state=0,
@@ -5690,7 +5694,7 @@ class TestCollisionAvoidanceGoals(object):
         :type zero_pose: PR2
         """
         req = UpdateWorldRequest(42, WorldBody(), True, PoseStamped())
-        assert zero_pose.wrapper.update_world.call(req).error_codes == UpdateWorldResponse.INVALID_OPERATION
+        assert zero_pose.wrapper._update_world_srv.call(req).error_codes == UpdateWorldResponse.INVALID_OPERATION
 
     def test_missing_body_error(self, zero_pose):
         """
@@ -5707,7 +5711,7 @@ class TestCollisionAvoidanceGoals(object):
         p.pose.orientation.w = 1
         req = UpdateWorldRequest(UpdateWorldRequest.ADD, WorldBody(type=WorldBody.PRIMITIVE_BODY,
                                                                    shape=SolidPrimitive(type=42)), False, p)
-        result = zero_pose.wrapper.update_world.call(req)
+        result = zero_pose.wrapper._update_world_srv.call(req)
         assert result.error_codes == UpdateWorldResponse.CORRUPT_SHAPE_ERROR, \
             u'got: {}, expected: {}'.format(update_world_error_code(result.error_codes),
                                             update_world_error_code(UpdateWorldResponse.CORRUPT_SHAPE_ERROR))
@@ -5731,7 +5735,7 @@ class TestCollisionAvoidanceGoals(object):
         wb.type = WorldBody.URDF_BODY
 
         req = UpdateWorldRequest(UpdateWorldRequest.ADD, wb, False, pose)
-        result = kitchen_setup.wrapper.update_world.call(req)
+        result = kitchen_setup.wrapper._update_world_srv.call(req)
         assert result.error_codes == UpdateWorldResponse.UNSUPPORTED_OPTIONS, \
             u'got: {}, expected: {}'.format(update_world_error_code(result.error_codes),
                                             update_world_error_code(UpdateWorldResponse.UNSUPPORTED_OPTIONS))
