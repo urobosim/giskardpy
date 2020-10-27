@@ -78,17 +78,21 @@ class World(object):
         self.soft_reset()
         self.remove_robot()
 
+    @profile
     def sync_bullet_world(self):
+        # self.get_fk_np.memo.clear()
         symbols = self.pb_subworld.pose_generator.str_params
         data = self.god_map.get_values(symbols)
         pb.batch_set_transforms(self.pb_subworld.collision_objects, self.pb_subworld.pose_generator.call2(data))
 
+    @profile
     def in_collision(self, body_a, link_a, body_b, link_b, distance):
         obj_a = self.pb_subworld.named_objects[self.get_link_path(body_a, link_a)]
         obj_b = self.pb_subworld.named_objects[self.get_link_path(body_b, link_b)]
         result = self.pb_subworld.world.get_distance(obj_a, obj_b, distance)
         return len(result) > 0 and result[0].distance < distance
 
+    @profile
     def get_closest_distances(self, object_name, link_name, object_b, distance):
         obj_a = self.pb_subworld.named_objects[self.get_link_path(object_name, link_name)]
         world_object_b = self.get_object(object_b)
@@ -110,6 +114,7 @@ class World(object):
                 result[path] = p.distance
         return OrderedDict(sorted([(key, value) for key, value in result.items()], key=lambda x: x[1]))
 
+    @profile
     def init_collision_avoidance_data_structures(self, cut_off_distances):
         self.reverse_map_a = {}
         self.reverse_map_b = {}
@@ -447,6 +452,7 @@ class World(object):
         chain.reverse()
         return chain
 
+    @profile
     def get_fk_expression(self, root_path, tip_path):
         """
         :type root_link: str
@@ -463,6 +469,7 @@ class World(object):
         # FIXME there is some reference fuckup going on, but i don't know where; deepcopy is just a quick fix
         return deepcopy(fk)
 
+    @profile
     def get_fk_pose(self, root_path, tip_path):
         # try:
         homo_m = self.get_fk_np(root_path, tip_path)
@@ -482,6 +489,7 @@ class World(object):
     def get_attached_object_names(self):
         return [path[-1] for path in self.attached_objects]
 
+    @profile
     def init_fast_fks(self, *args, **kwargs):
         def f(key):
             root, tip = key

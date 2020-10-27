@@ -1,4 +1,4 @@
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 from copy import deepcopy
 
 from py_trees import Status
@@ -28,13 +28,31 @@ class KinSimPlugin(GiskardBehavior):
         # current_js = self.get_god_map().get_data(identifier.joint_states)
         # next_js = None
         if motor_commands:
+            # next_object_positions = defaultdict # name to position dict
+            # next_object_velocities = {} # name to velocity dict
+            # for joint_position_identifier, joint_velocity in motor_commands.items():
+            #     object_name = joint_position_identifier[-4]
+            #     joint_velocity_identifier = list(joint_position_identifier[:-1]) + [u'velocity']
+            #     current_position = self.get_god_map().get_data(joint_position_identifier)
+            #     current_position += joint_velocity
+
+            next_object_state = defaultdict(OrderedDict)  # name to position dict
             for joint_position_identifier, joint_velocity in motor_commands.items():
-                joint_velocity_identifier = list(joint_position_identifier[:-1]) + [u'velocity']
+                object_name = joint_position_identifier[-4]
+                joint_name = joint_position_identifier[-2]
+                # joint_velocity_identifier = list(joint_position_identifier[:-1]) + [u'velocity']
+
                 current_position = self.get_god_map().get_data(joint_position_identifier)
-                current_position += joint_velocity
-                self.get_god_map().set_data(joint_position_identifier, current_position)
-                self.get_god_map().set_data(joint_velocity_identifier, joint_velocity/self.sample_period)
-                pass
+                next_object_state[object_name][joint_name] = SingleJointState(joint_name,
+                                                                              current_position + joint_velocity,
+                                                                              velocity=joint_velocity/self.sample_period)
+                # next_object_velocities[object_name][joint_name] = joint_velocity/self.sample_period
+                # self.get_god_map().set_data(joint_position_identifier, current_position)
+                # self.get_god_map().set_data(joint_velocity_identifier, joint_velocity/self.sample_period)
+                # pass
+            for object_name, next_state in next_object_state.items():
+                self.get_world().get_object(object_name).joint_state = next_state
+
             # next_js = OrderedDict()
             # for joint_name, sjs in current_js.items():
             #     if joint_name in motor_commands:

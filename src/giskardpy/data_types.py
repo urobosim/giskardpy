@@ -188,7 +188,7 @@ class Collision(object):
 
 class Collisions(object):
 
-
+    @profile
     def __init__(self, world, collision_list_size):
         """
         :type world: giskardpy.world.World
@@ -218,7 +218,7 @@ class Collisions(object):
         self.number_of_self_collisions = defaultdict(int)
         self.number_of_external_collisions = defaultdict(int)
 
-
+    @profile
     def add(self, collision):
         """
         :type collision: Collision
@@ -244,9 +244,7 @@ class Collisions(object):
                 self.external_collision_long_key[key_long] = min(collision, self.external_collision_long_key[key_long],
                                                             key=lambda x: x.get_contact_distance())
 
-
-
-
+    @profile
     def transform_closest_point(self, collision):
         """
         :type collision: Collision
@@ -257,7 +255,7 @@ class Collisions(object):
         else:
             return self.transform_external_collision(collision)
 
-
+    @profile
     def transform_self_collision(self, collision):
         """
         :type collision: Collision
@@ -286,7 +284,7 @@ class Collisions(object):
         collision.set_new_b_V_n(new_b_V_n)
         return collision
 
-
+    @profile
     def transform_external_collision(self, collision):
         """
         :type collision: Collision
@@ -305,7 +303,7 @@ class Collisions(object):
         collision.set_root_V_n(r_V_n)
         return collision
 
-
+    @profile
     def _default_collision(self, link_a, body_b, link_b):
         c = Collision(link_a, body_b, link_b, [0, 0, 0, 1], [0, 0, 0, 1], [0, 0, 1, 0], 100)
         c.set_new_a_P_a([0,0,0, 1])
