@@ -12,6 +12,9 @@ from kineverse.model.geometry_model import ArticulatedObject, GEOM_TYPE_MESH, GE
 from kineverse.model.paths import Path
 
 
+def robot_name_from_urdf_string(urdf_string):
+    return urdf_string.split('robot name="')[1].split('"')[0]
+
 def hacky_urdf_parser_fix(urdf_str):
     # TODO this function is inefficient but the tested urdfs's aren't big enough for it to be a problem
     fixed_urdf = ''
@@ -43,6 +46,7 @@ LIMITED_JOINTS = [PRISMATIC_JOINT, REVOLUTE_JOINT]
 
 class URDFObject(ArticulatedObject):
 
+    @profile
     def __init__(self, name):
         super(URDFObject, self).__init__(name)
         self.attached_objects = set()
@@ -569,6 +573,9 @@ class URDFObject(ArticulatedObject):
 
     # def __str__(self):
     #     return self.get_urdf_str()
+
+    def __hash__(self):
+        return hash(id(self))
 
     # def reinitialize(self):
     #     self._urdf_robot = up.URDF.from_xml_string(self.get_urdf_str())

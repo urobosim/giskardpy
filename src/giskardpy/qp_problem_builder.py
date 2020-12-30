@@ -4,7 +4,7 @@ import numbers
 import numpy  as np
 import pandas as pd
 
-from giskardpy import logging, cas_wrapper as w
+from giskardpy import logging, casadi_wrapper as w
 from giskardpy.data_types import SoftConstraint
 from giskardpy.exceptions import QPSolverException, InfeasibleException, OutOfJointLimitsException, \
     HardConstraintsViolatedException
@@ -58,6 +58,7 @@ class QProblemBuilder(object):
         self.soft_constraints_dict = OrderedDict(sorted((k, v) for k, v in self.soft_constraints_dict.items()))
         self.hard_constraints_dict = OrderedDict(sorted((k, v) for k, v in self.hard_constraints_dict.items()))
 
+    @profile
     def construct_big_ass_M(self):
         # TODO cpu intensive
         weights = []
@@ -110,7 +111,7 @@ class QProblemBuilder(object):
         self.set_linear_weights(w.Matrix(linear_weight))
 
 
-
+    @profile
     def compile_big_ass_M(self):
         t = time()
         self.free_symbols = w.free_symbols(self.big_ass_M)

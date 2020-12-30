@@ -7,7 +7,6 @@ from tf2_msgs.msg import TFMessage
 from giskardpy import logging
 from giskardpy.plugin import GiskardBehavior
 from giskardpy.utils import normalize_quaternion_msg
-from kineverse.model.paths import Path
 
 
 class TFPlugin(GiskardBehavior):
@@ -23,16 +22,18 @@ class TFPlugin(GiskardBehavior):
     def update(self):
         try:
             with self.get_god_map():
-                if self.get_world().attached_objects:
+                robot_links = set(self.unsafe_get_robot().get_link_names())
+                attached_links = robot_links - self.original_links
+                if attached_links:
                     tf_msg = TFMessage()
-                    for object_name in self.get_robot().attached_objects:
-                        object_link = self.get_world().get_object(object_name).get_root()
-                        robot_link = self.get_robot().get_parent_link_of_link(object_link)
-                        fk = self.get_robot().get_fk_pose(robot_link, object_link)
+                    get_fk = self.unsafe_get_robot().get_fk_pose
+                    for link_name in attached_links:
+                        parent_link_name = self.unsafe_get_robot().get_parent_link_of_link(link_name)
+                        fk = get_fk(parent_link_name, link_name)
                         tf = TransformStamped()
                         tf.header = fk.header
                         tf.header.stamp = rospy.get_rostime()
-                        tf.child_frame_id = object_link
+                        tf.child_frame_id = link_name
                         tf.transform.translation.x = fk.pose.position.x
                         tf.transform.translation.y = fk.pose.position.y
                         tf.transform.translation.z = fk.pose.position.z

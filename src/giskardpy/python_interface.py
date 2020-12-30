@@ -53,7 +53,7 @@ class GiskardWrapper(object):
         """
         return self.robot_urdf.get_root()
 
-    def set_cart_goal(self, root_link, tip_link, goal_pose, max_linear_velocity=None, max_angular_velocity=None, weight=None):
+    def set_cart_goal(self, goal_pose, tip_link, root_link, max_linear_velocity=None, max_angular_velocity=None, weight=None):
         """
         This goal will use the kinematic chain between root and tip link to move tip link into the goal pose
         :param root_link: name of the root link of the kin chain
@@ -69,10 +69,10 @@ class GiskardWrapper(object):
         :param weight: default WEIGHT_ABOVE_CA
         :type weight: float
         """
-        self.set_translation_goal(root_link, tip_link, goal_pose, max_velocity=max_linear_velocity, weight=weight)
-        self.set_rotation_goal(root_link, tip_link, goal_pose, max_velocity=max_angular_velocity, weight=weight)
+        self.set_translation_goal(goal_pose, tip_link, root_link, weight=weight, max_velocity=max_linear_velocity)
+        self.set_rotation_goal(goal_pose, tip_link, root_link, weight=weight, max_velocity=max_angular_velocity)
 
-    def set_translation_goal(self, root_link, tip_link, goal_pose, weight=None, max_velocity=None):
+    def set_translation_goal(self, goal_pose, tip_link, root_link, weight=None, max_velocity=None):
         """
         This goal will use the kinematic chain between root and tip link to move tip link into the goal position
         :param root_link: name of the root link of the kin chain
@@ -107,7 +107,7 @@ class GiskardWrapper(object):
             constraint.parameter_value_pair = json.dumps(params)
             self.cmd_seq[-1].constraints.append(constraint)
 
-    def set_rotation_goal(self, root_link, tip_link, goal_pose, weight=None, max_velocity=None):
+    def set_rotation_goal(self, goal_pose, tip_link, root_link, weight=None, max_velocity=None):
         """
         This goal will use the kinematic chain between root and tip link to move tip link into the goal orientation
         :param root_link: name of the root link of the kin chain
@@ -168,10 +168,11 @@ class GiskardWrapper(object):
             if isinstance(goal_state, JointState):
                 goal_state = goal_state
             else:
-                goal_state = JointState()
+                goal_state2 = JointState()
                 for joint_name, joint_position in goal_state.items():
-                    goal_state.name.append(joint_name)
-                    goal_state.position.append(joint_position)
+                    goal_state2.name.append(joint_name)
+                    goal_state2.position.append(joint_position)
+                goal_state = goal_state2
             params = {}
             params[u'goal_state'] = convert_ros_message_to_dictionary(goal_state)
             if weight is not None:
@@ -441,7 +442,7 @@ class GiskardWrapper(object):
         :return: result from giskard
         :rtype: MoveResult
         """
-        self.send_goal(MoveGoal.PLAN_AND_EXECUTE, wait)
+        return self.send_goal(MoveGoal.PLAN_AND_EXECUTE, wait)
 
     def check_reachability(self, wait=True):
         """
@@ -451,7 +452,7 @@ class GiskardWrapper(object):
         :return: result from giskard
         :rtype: MoveResult
         """
-        self.send_goal(MoveGoal.CHECK_REACHABILITY, wait)
+        return self.send_goal(MoveGoal.CHECK_REACHABILITY, wait)
 
     def plan(self, wait=True):
         """
@@ -461,7 +462,7 @@ class GiskardWrapper(object):
         :return: result from giskard
         :rtype: MoveResult
         """
-        self.send_goal(MoveGoal.PLAN_ONLY, wait)
+        return self.send_goal(MoveGoal.PLAN_ONLY, wait)
 
     def send_goal(self, goal_type, wait=True):
         goal = self._get_goal()

@@ -10,11 +10,11 @@
     local-name: giskard_msgs
     uri: https://github.com/SemRoCo/giskard_msgs.git
     version: devel
-- git: 
+- git:
     local-name: kineverse
     uri: https://github.com/SemRoCo/kineverse.git
     version: giskard_merge
-- git: 
+- git:
     local-name: kineverse_msgs
     uri: https://github.com/SemRoCo/kineverse_msgs.git
     version: master

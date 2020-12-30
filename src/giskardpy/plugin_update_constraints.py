@@ -14,7 +14,7 @@ import giskardpy.constraints
 import giskardpy.identifier as identifier
 import kineverse.gradients.common_math as cm
 # import kineverse.gradients.gradient_math as gm
-from giskardpy import cas_wrapper as w
+from giskardpy import casadi_wrapper as w
 from giskardpy.constraints import SelfCollisionAvoidance, ExternalCollisionAvoidance
 from giskardpy.data_types import JointConstraint, SoftConstraint
 from giskardpy.exceptions import ImplementationException, UnknownConstraintException, InvalidGoalException, \
@@ -48,6 +48,7 @@ class GoalToConstraints(GetGoal):
         self.get_god_map().set_data(identifier.collision_goal, None)
         self.clear_blackboard_exception()
 
+    @profile
     def update(self):
         # TODO make this interruptable
         # TODO try catch everything

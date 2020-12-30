@@ -158,6 +158,7 @@ class WorldObject(URDFObject):
         # TODO computational expansive because of too many collision checks
         logging.loginfo(u'calculating self collision matrix')
         self._world.reset_pb_subworld()
+        joint_state_tmp = self.joint_state
         t = time()
         np.random.seed(1337)
         always = set()
@@ -190,6 +191,7 @@ class WorldObject(URDFObject):
                 sometimes = sometimes.union(sometimes2)
         sometimes = sometimes.union(self._added_pairs)
         logging.loginfo(u'calculated self collision matrix in {:.3f}s'.format(time() - t))
+        self.joint_state = joint_state_tmp
         return sometimes
 
     def get_possible_collisions(self, link):
@@ -294,10 +296,13 @@ class WorldObject(URDFObject):
         """
         path = u'{}/{}/{}'.format(path, self.get_name(), self.get_hash())
         if os.path.isfile(path):
-            with open(path) as f:
-                self._self_collision_matrix = pickle.load(f)
-                logging.loginfo(u'loaded self collision matrix {}'.format(path))
-                return True
+            try:
+                with open(path, 'rb') as f:
+                    self._self_collision_matrix = pickle.load(f)
+                    logging.loginfo(u'loaded self collision matrix {}'.format(path))
+                    return True
+            except Exception:
+                logging.loginfo('failed to load collision matrix at {}'.format(path))
         return False
 
     def safe_self_collision_matrix(self, path):
@@ -311,7 +316,7 @@ class WorldObject(URDFObject):
             except OSError as exc:  # Guard against race condition
                 if exc.errno != errno.EEXIST:
                     raise
-        with open(path, u'w') as file:
+        with open(path, u'wb') as file:
             logging.loginfo(u'saved self collision matrix {}'.format(path))
             pickle.dump(self._self_collision_matrix, file)
 

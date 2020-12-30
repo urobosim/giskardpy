@@ -68,8 +68,9 @@ class InstantaneousController(object):
     def compile(self):
         self.qp_problem_builder = QProblemBuilder(self.joint_constraints,
                                                   self.soft_constraints,
-                                                  self.joint_to_symbols_str.values())
+                                                  list(self.joint_to_symbols_str.values()))
 
+    @profile
     def get_cmd(self, substitutions, nWSR=None):
         """
         Computes joint commands that satisfy constrains given substitutions.

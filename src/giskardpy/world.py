@@ -11,7 +11,7 @@ from betterpybullet import ContactPoint
 from geometry_msgs.msg import PoseStamped, Pose, Quaternion
 from giskard_msgs.msg import CollisionEntry, WorldBody
 
-from giskardpy import cas_wrapper as w
+from giskardpy import casadi_wrapper as w
 from giskardpy import identifier
 from giskardpy import logging
 from giskardpy.data_types import Collisions, Collision
@@ -335,6 +335,7 @@ class World(object):
 
     # Robot ------------------------------------------------------------------------------------------------------------
 
+    @profile
     def add_robot(self, robot_urdf, base_pose, controlled_joints, ignored_pairs, added_pairs):
         """
         :type robot: giskardpy.world_object.WorldObject
