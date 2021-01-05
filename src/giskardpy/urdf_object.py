@@ -646,7 +646,10 @@ class URDFObject(ArticulatedObject):
         for object_name in self.attached_objects:
             try:
                 obj = self._world.get_object(object_name)
-                return getattr(obj, f.im_func.func_name)(**kwargs)
+                try:
+                    return getattr(obj, f.im_func.func_name)(**kwargs)
+                except AttributeError:
+                    return getattr(obj, f.__name__)(**kwargs)
             except KeyError:
                 pass
         raise KeyError(error_msg)
@@ -686,7 +689,7 @@ class URDFObject(ArticulatedObject):
         marker = Marker()
         marker.ns = u'{}/{}'.format(ns, self.get_name())
         marker.id = id
-        geometry = self.links[self.get_link_names()[0]].geometry.values()[0]
+        geometry = list(self.links[self.get_link_names()[0]].geometry.values())[0]
         if geometry.type == GEOM_TYPE_MESH:
             marker.type = Marker.MESH_RESOURCE
             marker.mesh_resource = geometry.mesh

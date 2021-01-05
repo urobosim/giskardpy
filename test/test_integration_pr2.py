@@ -714,7 +714,7 @@ class TestConstraints(object):
         tip_grasp_axis.header.frame_id = kitchen_setup.r_tip
         tip_grasp_axis.vector.z = 1
 
-        kitchen_setup.add_json_goal(u'GraspBar',
+        kitchen_setup.set_json_goal(u'GraspBar',
                                     root_link=kitchen_setup.default_root,
                                     tip_link=kitchen_setup.r_tip,
                                     tip_grasp_axis=tip_grasp_axis,
@@ -733,24 +733,24 @@ class TestConstraints(object):
         # kitchen_setup.add_json_goal(u'AvoidJointLimits', percentage=10)
         kitchen_setup.send_and_check_goal()
 
-        kitchen_setup.add_json_goal(u'Open1Dof',
+        kitchen_setup.set_json_goal(u'Open1Dof',
                                     tip_link=kitchen_setup.r_tip,
                                     object_name=u'kitchen',
                                     handle_link=handle_name,
                                     goal_joint_state=1.5)
-        kitchen_setup.add_json_goal(u'AvoidJointLimits', percentage=40)
+        kitchen_setup.set_json_goal(u'AvoidJointLimits', percentage=40)
         kitchen_setup.allow_all_collisions()
         # kitchen_setup.add_json_goal(u'AvoidJointLimits')
         kitchen_setup.send_and_check_goal()
         kitchen_setup.set_kitchen_js({u'iai_fridge_door_joint': 1.5})
 
-        kitchen_setup.add_json_goal(u'Open1Dof',
+        kitchen_setup.set_json_goal(u'Open1Dof',
                                     tip_link=kitchen_setup.r_tip,
                                     object_name=u'kitchen',
                                     handle_link=handle_name,
                                     goal_joint_state=0)
         kitchen_setup.allow_all_collisions()
-        kitchen_setup.add_json_goal(u'AvoidJointLimits', percentage=40)
+        kitchen_setup.set_json_goal(u'AvoidJointLimits', percentage=40)
         kitchen_setup.send_and_check_goal()
         kitchen_setup.set_kitchen_js({u'iai_fridge_door_joint': 0})
 
@@ -5533,7 +5533,7 @@ class TestCollisionAvoidanceGoals(object):
         zero_pose.send_and_check_goal()
         p2 = zero_pose.get_robot().get_fk_pose(zero_pose.default_root, pocky)
         compare_poses(p2.pose, p.pose)
-        zero_pose.detach_object(pocky)
+ But you should merge with devel first.        zero_pose.detach_object(pocky)
         p = PoseStamped()
         p.header.frame_id = zero_pose.r_tip
         p.pose.orientation.w = 1

@@ -1,7 +1,8 @@
 import py_trees
 import rospy
+
+from giskardpy.plugin import GiskardBehavior
 from kineverse.visualization.bpb_visualizer import ROSBPBVisualizer
-from plugin import GiskardBehavior
 
 class VisualizationBehavior(GiskardBehavior):
     def __init__(self, name, ensure_publish=False):

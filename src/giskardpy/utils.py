@@ -39,6 +39,9 @@ from giskardpy.plugin import PluginBehavior
 r = rospkg.RosPack()
 
 
+def is_string(s):
+    return isinstance(s, ("".__class__, u"".__class__))
+
 @contextmanager
 def suppress_stderr():
     with open(os.devnull, "w") as devnull:

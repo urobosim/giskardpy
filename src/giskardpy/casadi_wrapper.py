@@ -8,6 +8,7 @@ from casadi import sign, cos, acos, sin, sqrt, atan2
 from numpy import pi
 
 from giskardpy import logging
+from giskardpy.utils import is_string
 from kineverse.gradients.common_math import Symbol as KineverseSymbol
 import kineverse.gradients.gradient_math as gm
 
@@ -23,7 +24,7 @@ def diag(*args):
 
 
 def Symbol(data):
-    if isinstance(data, str) or isinstance(data, unicode):
+    if is_string(data):
         return KineverseSymbol(data)
     return ca.SX(data)
 

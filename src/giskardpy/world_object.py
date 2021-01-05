@@ -276,7 +276,7 @@ class WorldObject(URDFObject):
 
     def get_hash(self):
         history = self._world.km_model.get_history_of(Path(self.get_name()))
-        return hashlib.md5(str([x.tag for x in history])).hexdigest()
+        return hashlib.md5(str([x.tag for x in history]).encode('utf-8')).hexdigest()
 
     def update_self_collision_matrix(self, added_links=None, removed_links=None):
         # return

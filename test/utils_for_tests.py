@@ -18,7 +18,6 @@ from giskard_msgs.srv import UpdateWorldResponse
 from hypothesis import assume
 from hypothesis.strategies import composite
 from iai_naive_kinematics_sim.srv import SetJointState, SetJointStateRequest
-from iai_wsg_50_msgs.msg import PositionCmd
 from numpy import pi
 from py_trees import Blackboard
 from sensor_msgs.msg import JointState
@@ -865,6 +864,7 @@ class PR2(GiskardTestWrapper):
 
 class Donbot(GiskardTestWrapper):
     def __init__(self):
+        from iai_wsg_50_msgs.msg import PositionCmd
         self.camera_tip = u'camera_link'
         self.gripper_tip = u'gripper_tool_frame'
         self.gripper_pub = rospy.Publisher(u'/wsg_50_driver/goal_position', PositionCmd, queue_size=10)
@@ -892,6 +892,7 @@ class Donbot(GiskardTestWrapper):
         :param width: goal width in m
         :type width: float
         """
+        from iai_wsg_50_msgs.msg import PositionCmd
         width = max(0.0065, min(0.109, width))
         goal = PositionCmd()
         goal.pos = width * 1000
