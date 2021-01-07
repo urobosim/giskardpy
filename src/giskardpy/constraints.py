@@ -2510,3 +2510,25 @@ class Close(Constraint):
     def make_constraints(self):
         for constraint in self.constraints:
             self.soft_constraints.update(constraint.get_constraints())
+
+
+class Saw(Constraint):
+    def __init__(self, god_map, tip_link, object_name, frequency, root_link=None):
+        super(Saw, self).__init__(god_map)
+
+        self.constraints = []  # init empty list
+
+        # Process input parameters
+        if root_link is None:
+            self.root = self.get_robot().get_root()
+        else:
+            self.root = root_link
+        self.tip = tip_link
+        pass
+
+    def make_constraints(self):
+        pass
+
+    def __str__(self):
+        s = super(Saw, self).__str__()
+        return u'{}/{}/{}'.format(s, self.root, self.tip)
