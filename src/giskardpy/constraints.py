@@ -2513,7 +2513,8 @@ class Close(Constraint):
 
 
 class Saw(Constraint):
-    def __init__(self, god_map, tip_link, object_name, frequency, root_link=None):
+    def __init__(self, god_map, tip_link, frequency, amplitude,
+                 root_link=None, weight=WEIGHT_ABOVE_CA, goal_constraint=False):
         super(Saw, self).__init__(god_map)
 
         self.constraints = []  # init empty list
@@ -2524,6 +2525,10 @@ class Saw(Constraint):
         else:
             self.root = root_link
         self.tip = tip_link
+
+        # TODO: get axis which will be used for sawing
+
+
         pass
 
     def make_constraints(self):
