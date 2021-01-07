@@ -5533,7 +5533,7 @@ class TestCollisionAvoidanceGoals(object):
         zero_pose.send_and_check_goal()
         p2 = zero_pose.get_robot().get_fk_pose(zero_pose.default_root, pocky)
         compare_poses(p2.pose, p.pose)
- But you should merge with devel first.        zero_pose.detach_object(pocky)
+        zero_pose.detach_object(pocky)
         p = PoseStamped()
         p.header.frame_id = zero_pose.r_tip
         p.pose.orientation.w = 1
