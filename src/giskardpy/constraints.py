@@ -2528,7 +2528,6 @@ class Saw(Constraint):
 
         # TODO: get axis which will be used for sawing
 
-
         pass
 
     def make_constraints(self):

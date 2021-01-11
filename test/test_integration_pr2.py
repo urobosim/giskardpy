@@ -399,6 +399,20 @@ class TestConstraints(object):
         zero_pose.set_straight_cart_goal(goal_position, zero_pose.l_tip)
         zero_pose.send_and_check_goal()
 
+    def test_sawing(self, zero_pose):
+        # goal = PoseStamped()
+        # goal.header.frame_id =
+
+        # Move into some position
+        zero_pose.set_joint_goal(gaya_pose)
+        zero_pose.send_and_check_goal()
+
+        # Starting cutting
+        # zero_pose.set_joint_goal(u'Sawing',
+        #                          root=zero_pose.default_root,
+        #                          tip_link=zero_pose.r_tip)
+
+        pass
 
     def test_CartesianVelocityLimit(self, zero_pose):
         linear_velocity = 1
@@ -421,7 +435,6 @@ class TestConstraints(object):
                                           angular_velocity=angular_velocity,
                                           weight=WEIGHT_BELOW_CA
                                           )
-
 
     def test_AvoidJointLimits1(self, zero_pose):
         """
