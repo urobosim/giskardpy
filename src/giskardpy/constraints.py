@@ -2529,23 +2529,36 @@ class Saw(Constraint):
         else:
             self.root = root_link
         self.tip = tip_link
-        self.cutting_frequency = frequency
-        self.cutting_amplitude = amplitude
+        cutting_frequency = frequency
+        cutting_amplitude = amplitude
 
         # TODO: get axis which will be used for sawing
         tip_cut_axis = Vector3Stamped()
         tip_cut_axis.header.frame_id = tip_link
-        tip_cut_axis.vector.z = 1
-        tip_cut_axis = self.parse_and_transform_Vector3Stamped(tip_cut_axis, self.tip, normalized=True)
+        tip_cut_axis.vector.x = 1
+        # tip_cut_axis = self.parse_and_transform_Vector3Stamped(tip_cut_axis, self.tip, normalized=True)
 
         # TODO: save all params to the god_map
         params = {self.tip_cut_axis_id: tip_cut_axis,
-                  self.cutting_frequency_id: self.cutting_frequency,
-                  self.cutting_amplitude_id: self.cutting_amplitude}
+                  self.cutting_frequency_id: cutting_frequency,
+                  self.cutting_amplitude_id: cutting_amplitude}
         self.save_params_on_god_map(params)
 
     def make_constraints(self):
+
+        # retrieve params
+        cutting_frequency = self.get_input_float(self.cutting_frequency_id)
+        cutting_amplitude = self.get_input_float(self.cutting_amplitude_id)
+        tip_cutting_axis = self.get_input_Vector3Stamped(self.tip_cut_axis_id)  # get axis as frame
+        tip_cutting_axis_kdl = tf.msg_to_kdl(w.vector3(tip_cutting_axis))  # get axis in kdl
+
         # TODO: define expression
+        root_T_tip = self.get_fk(self.root, self.tip)
+        #traj =
+        lower_limit = deepcopy(root_T_tip) # get current position to start from, must not change
+        tip_current_V_tip_goal = tip_cutting_axis * cutting_amplitude
+        root_V_cutting_axis = tip_cutting_axis.M * tip_current_V_tip_goal
+        # upper_limit =
 
         # TODO: execute
 

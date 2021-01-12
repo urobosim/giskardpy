@@ -408,9 +408,12 @@ class TestConstraints(object):
         zero_pose.send_and_check_goal()
 
         # Starting cutting
-        # zero_pose.set_joint_goal(u'Sawing',
-        #                          root=zero_pose.default_root,
-        #                          tip_link=zero_pose.r_tip)
+        zero_pose.set_json_goal(u'Saw',
+                                root_link=zero_pose.default_root,
+                                tip_link=zero_pose.r_tip,
+                                frequency=1,
+                                amplitude=0.1)
+        zero_pose.send_and_check_goal()
 
         pass
 
