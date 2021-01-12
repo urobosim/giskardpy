@@ -2513,6 +2513,10 @@ class Close(Constraint):
 
 
 class Saw(Constraint):
+    tip_cut_axis_id = u'tip_cut_axis'
+    cutting_frequency_id = u'cutting_frequency'
+    cutting_amplitude_id = u'cutting_amplitude'
+
     def __init__(self, god_map, tip_link, frequency, amplitude,
                  root_link=None, weight=WEIGHT_ABOVE_CA, goal_constraint=False):
         super(Saw, self).__init__(god_map)
@@ -2525,12 +2529,26 @@ class Saw(Constraint):
         else:
             self.root = root_link
         self.tip = tip_link
+        self.cutting_frequency = frequency
+        self.cutting_amplitude = amplitude
 
         # TODO: get axis which will be used for sawing
+        tip_cut_axis = Vector3Stamped()
+        tip_cut_axis.header.frame_id = tip_link
+        tip_cut_axis.vector.z = 1
+        tip_cut_axis = self.parse_and_transform_Vector3Stamped(tip_cut_axis, self.tip, normalized=True)
 
-        pass
+        # TODO: save all params to the god_map
+        params = {self.tip_cut_axis_id: tip_cut_axis,
+                  self.cutting_frequency_id: self.cutting_frequency,
+                  self.cutting_amplitude_id: self.cutting_amplitude}
+        self.save_params_on_god_map(params)
 
     def make_constraints(self):
+        # TODO: define expression
+
+        # TODO: execute
+
         pass
 
     def __str__(self):
