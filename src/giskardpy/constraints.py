@@ -2560,8 +2560,8 @@ class Saw(Constraint):
 
         # TODO: execute
         self.add_constraint(u'saw',
-                            lower=w.sin(time),
-                            upper=w.sin(time),
+                            lower=cutting_amplitude*w.cos(2*np.pi*cutting_frequency*time),
+                            upper=cutting_amplitude*w.cos(2*np.pi*cutting_frequency*time),
                             weight=WEIGHT_BELOW_CA,
                             expression=root_P_tip[0])
 
