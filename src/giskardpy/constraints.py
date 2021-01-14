@@ -2554,12 +2554,14 @@ class Saw(Constraint):
         # TODO: define expression
         root_T_tip = self.get_fk(self.root, self.tip)
         root_P_tip = w.position_of(root_T_tip)
-        time = self.get_god_map().to_symbol([u'time'])
+        time = self.god_map.to_symbol([u'time'])
+        # print self.get_god_map().get_registered_symbols()
+        # print self.get_input_float([u'time'])
 
         # TODO: execute
         self.add_constraint(u'saw',
-                            lower=1.,
-                            upper=1.,
+                            lower=w.sin(time),
+                            upper=w.sin(time),
                             weight=WEIGHT_BELOW_CA,
                             expression=root_P_tip[0])
 
