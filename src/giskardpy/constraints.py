@@ -2551,19 +2551,20 @@ class Saw(Constraint):
         cutting_amplitude = self.get_input_float(self.cutting_amplitude_id)
         tip_cutting_axis = self.get_input_Vector3Stamped(self.tip_cut_axis_id)  # get axis as frame
 
-        # TODO: define expression
         root_T_tip = self.get_fk(self.root, self.tip)
         root_P_tip = w.position_of(root_T_tip)
         time = self.god_map.to_symbol([u'time'])
         # print self.get_god_map().get_registered_symbols()
         # print self.get_input_float([u'time'])
 
-        # TODO: execute
+        # TODO: add limit base velocity to 0
+
         self.add_constraint(u'saw',
-                            lower=cutting_amplitude*w.sin(2*np.pi*cutting_frequency*time),
-                            upper=cutting_amplitude*w.sin(2*np.pi*cutting_frequency*time),
-                            weight=WEIGHT_BELOW_CA,
-                            expression=root_P_tip[0])
+                            expression=root_P_tip[0],
+                            lower=cutting_amplitude*w.sin(2*np.pi*cutting_frequency*time)-root_P_tip[0],
+                            upper=cutting_amplitude*w.sin(2*np.pi*cutting_frequency*time)-root_P_tip[0],
+                            weight=WEIGHT_BELOW_CA
+                            )
 
         pass
 
