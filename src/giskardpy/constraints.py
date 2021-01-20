@@ -2553,6 +2553,8 @@ class Saw(Constraint):
 
         root_T_tip = self.get_fk(self.root, self.tip)
         root_P_tip = w.position_of(root_T_tip)
+        root_R_tip = w.rotation_of(root_T_tip)
+        root_R_tip_fix = deepcopy(root_R_tip)
         time = self.god_map.to_symbol([u'time'])
         # print self.get_god_map().get_registered_symbols()
         # print self.get_input_float([u'time'])
@@ -2565,6 +2567,9 @@ class Saw(Constraint):
                             upper=cutting_amplitude*w.sin(2*np.pi*cutting_frequency*time)-root_P_tip[0],
                             weight=WEIGHT_BELOW_CA
                             )
+        self.add_minimize_rotation_constraints(root_R_tipGoal=root_R_tip_fix,
+                                               root=self.root,
+                                               tip=self.tip)
 
         pass
 
