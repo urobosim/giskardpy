@@ -2525,7 +2525,7 @@ class Saw(Constraint):
 
         # Process input parameters
         if root_link is None:
-            self.root = self.get_robot().get_root()
+            self.root = self.get_robot().get_non_base_movement_root()
         else:
             self.root = root_link
         self.tip = tip_link
@@ -2565,11 +2565,11 @@ class Saw(Constraint):
                             expression=root_P_tip[0],
                             lower=cutting_amplitude*w.sin(2*np.pi*cutting_frequency*time)-root_P_tip[0],
                             upper=cutting_amplitude*w.sin(2*np.pi*cutting_frequency*time)-root_P_tip[0],
-                            weight=WEIGHT_BELOW_CA
-                            )
-        self.add_minimize_rotation_constraints(root_R_tipGoal=root_R_tip_fix,
-                                               root=self.root,
-                                               tip=self.tip)
+                            weight=WEIGHT_BELOW_CA)
+
+        # self.add_minimize_rotation_constraints(root_R_tipGoal=root_R_tip_fix,
+        #                                        root=self.root,
+        #                                        tip=self.tip)
 
         pass
 
