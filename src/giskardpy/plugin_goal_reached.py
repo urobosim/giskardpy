@@ -44,6 +44,10 @@ class GoalReachedPlugin(GiskardBehavior):
         self.thresholds = make_velocity_threshold(self.get_god_map())
         self.number_of_controlled_joints = len(self.thresholds)
 
+    def initialise(self):
+        self.window_size = self.get_god_map().get_data(identifier.GoalReached_window_size)
+        super(GoalReachedPlugin, self).initialise()
+
     @profile
     def update(self):
         # current_js = self.get_god_map().get_data(identifier.joint_states)

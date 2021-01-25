@@ -410,8 +410,9 @@ class TestConstraints(object):
         # Starting cutting
         zero_pose.set_json_goal(u'Saw',
                                 tip_link=zero_pose.r_tip,
-                                frequency=0.01,
-                                amplitude=0.001)
+                                amplitude=1,
+                                frequency=0.5)
+        zero_pose.allow_all_collisions()
         zero_pose.send_and_check_goal()
 
         pass

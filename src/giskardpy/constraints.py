@@ -2570,7 +2570,7 @@ class Saw(Constraint):
         weight = self.normalize_weight(0.1, WEIGHT_BELOW_CA)
         self.add_debug_vector(u'root_V_axis', root_V_axis)
 
-        # TODO: add limit base velocity to 0
+        self.get_god_map().set_data(identifier.GoalReached_window_size, 5/self.get_god_map().get_data(identifier.sample_period))
 
         self.add_constraint(u'saw_x',
                             expression=root_P_tip[0],
