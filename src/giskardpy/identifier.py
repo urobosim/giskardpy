@@ -86,24 +86,26 @@ nWSR = qp_solver + [u'nWSR']
 
 # plugins
 plugins = rosparam + [u'plugins']
-enable_VisualizationBehavior = plugins + [u'VisualizationBehavior', u'enabled']
-enable_CPIMarker = plugins + [u'CPIMarker', u'enabled']
+enable_VisualizationBehavior1 = plugins + [u'VisualizationBehavior1', u'enabled']
+enable_VisualizationBehavior2 = plugins + [u'VisualizationBehavior2', u'enabled']
+enable_CPIMarker1 = plugins + [u'CPIMarker1', u'enabled']
+enable_CPIMarker2 = plugins + [u'CPIMarker2', u'enabled']
 enable_PlotTrajectory = plugins + [u'PlotTrajectory', u'enabled']
-PlotTrajectory_velocity_threshold = plugins + [u'PlotTrajectory', u'velocity_threshold']
-PlotTrajectory_scaling = plugins + [u'PlotTrajectory', u'scaling']
-PlotTrajectory_normalize_position = plugins + [u'PlotTrajectory', u'normalize_position']
-PlotTrajectory_tick_stride = plugins + [u'PlotTrajectory', u'tick_stride']
-fft_duration = plugins + [u'WiggleCancel', u'fft_duration']
-amplitude_threshold = plugins + [u'WiggleCancel', u'amplitude_threshold']
-num_samples_in_fft = plugins + [u'WiggleCancel', u'window_size']
-frequency_range = plugins + [u'WiggleCancel', u'frequency_range']
-
-joint_convergence_threshold = plugins + [u'GoalReached', u'joint_convergence_threshold']
-GoalReached_window_size = plugins + [u'GoalReached', u'window_size']
-
-publish_attached_objects = plugins + [u'tf_publisher', u'publish_attached_objects']
-publish_world_objects = plugins + [u'tf_publisher', u'publish_world_objects']
-tf_topic = plugins + [u'tf_publisher', u'tf_topic']
+# PlotTrajectory_velocity_threshold = plugins + [u'PlotTrajectory', u'velocity_threshold']
+# PlotTrajectory_scaling = plugins + [u'PlotTrajectory', u'scaling']
+# PlotTrajectory_normalize_position = plugins + [u'PlotTrajectory', u'normalize_position']
+# PlotTrajectory_tick_stride = plugins + [u'PlotTrajectory', u'tick_stride']
+# fft_duration = plugins + [u'WiggleCancel', u'fft_duration']
+# amplitude_threshold = plugins + [u'WiggleCancel', u'amplitude_threshold']
+# num_samples_in_fft = plugins + [u'WiggleCancel', u'window_size']
+# frequency_range = plugins + [u'WiggleCancel', u'frequency_range']
+#
+# joint_convergence_threshold = plugins + [u'GoalReached', u'joint_convergence_threshold']
+# GoalReached_window_size = plugins + [u'GoalReached', u'window_size']
+#
+# publish_attached_objects = plugins + [u'TFPlugin', u'publish_attached_objects']
+# publish_world_objects = plugins + [u'TFPlugin', u'publish_world_objects']
+# tf_topic = plugins + [u'TFPlugin', u'tf_topic']
 
 # reachability check
 reachability_check = rosparam + [u'reachability_check']

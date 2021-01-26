@@ -8,7 +8,7 @@ import rospy
 from py_trees import Behaviour, Blackboard, Status
 
 from giskardpy.identifier import world, robot
-from giskardpy import logging
+from giskardpy import logging, identifier
 import time
 
 
@@ -18,6 +18,18 @@ class GiskardBehavior(Behaviour):
         self.world = None
         self.robot = None
         super(GiskardBehavior, self).__init__(name)
+        self.sync_param_with_god_map()
+
+    def sync_param_with_god_map(self):
+        try:
+            for param_name, value in self.get_god_map().get_data(identifier.plugins + [self.name]).items():
+                setattr(self, param_name, value)
+        except AttributeError as e:
+            pass # no params are set and god map returns 0
+
+    def initialise(self):
+        super(GiskardBehavior, self).initialise()
+        self.sync_param_with_god_map()
 
     def get_god_map(self):
         """

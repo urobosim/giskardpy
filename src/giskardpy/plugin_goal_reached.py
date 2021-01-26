@@ -11,11 +11,11 @@ from giskardpy.plugin import GiskardBehavior
 # fast
 
 def make_velocity_threshold(god_map,
+                            joint_convergence_threshold=0.2,
                             min_translation_cut_off=0.003,
                             min_rotation_cut_off=0.02,
                             max_translation_cut_off=0.01,
                             max_rotation_cut_off=0.13):
-    joint_convergence_threshold = god_map.get_data(identifier.joint_convergence_threshold)
     robot = god_map.get_data(identifier.robot)
     sample_period = god_map.get_data(identifier.sample_period)
     thresholds = []
@@ -34,14 +34,16 @@ def make_velocity_threshold(god_map,
 
 
 class GoalReachedPlugin(GiskardBehavior):
+    window_size = 21 # TODO better default based on sample period?
+    joint_convergence_threshold = 0.02
+
     def __init__(self, name):
         super(GoalReachedPlugin, self).__init__(name)
-        self.window_size = self.get_god_map().get_data(identifier.GoalReached_window_size)
         self.sample_period = self.get_god_map().get_data(identifier.sample_period)
 
         self.above_threshold_time = 0
-
-        self.thresholds = make_velocity_threshold(self.get_god_map())
+        self.thresholds = make_velocity_threshold(self.get_god_map(),
+                                                  joint_convergence_threshold=self.joint_convergence_threshold)
         self.number_of_controlled_joints = len(self.thresholds)
 
     @profile

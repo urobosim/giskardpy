@@ -150,36 +150,36 @@ def grow_tree():
     god_map = initialize_god_map()
     # ----------------------------------------------
     wait_for_goal = Sequence(u'wait for goal')
-    wait_for_goal.add_child(TFPlugin(u'tf'))
-    wait_for_goal.add_child(ConfigurationPlugin(u'js1'))
-    wait_for_goal.add_child(WorldUpdatePlugin(u'pybullet updater'))
-    wait_for_goal.add_child(GoalReceived(u'has goal', action_server_name, MoveAction))
-    wait_for_goal.add_child(ConfigurationPlugin(u'js2'))
+    wait_for_goal.add_child(TFPlugin(u'TFPlugin'))
+    wait_for_goal.add_child(ConfigurationPlugin(u'ConfigurationPlugin1'))
+    wait_for_goal.add_child(WorldUpdatePlugin(u'WorldUpdatePlugin'))
+    wait_for_goal.add_child(GoalReceived(u'GoalReceived', action_server_name, MoveAction))
+    wait_for_goal.add_child(ConfigurationPlugin(u'ConfigurationPlugin2'))
     # ----------------------------------------------
     planning_3 = PluginBehavior(u'planning III', sleep=0)
-    planning_3.add_plugin(CollisionChecker(u'coll'))
+    planning_3.add_plugin(CollisionChecker(u'CollisionChecker'))
     # if god_map.safe_get_data(identifier.enable_collision_marker):
     #     planning_3.add_plugin(success_is_running(CPIMarker)(u'cpi marker'))
-    planning_3.add_plugin(ControllerPlugin(u'controller'))
-    planning_3.add_plugin(KinSimPlugin(u'kin sim'))
-    planning_3.add_plugin(LogTrajPlugin(u'log'))
-    planning_3.add_plugin(WiggleCancel(u'wiggle'))
-    planning_3.add_plugin(LoopDetector(u'loop detector'))
-    planning_3.add_plugin(GoalReachedPlugin(u'goal reached'))
-    planning_3.add_plugin(TimePlugin(u'time'))
+    planning_3.add_plugin(ControllerPlugin(u'ControllerPlugin'))
+    planning_3.add_plugin(KinSimPlugin(u'KinSimPlugin'))
+    planning_3.add_plugin(LogTrajPlugin(u'LogTrajPlugin1'))
+    planning_3.add_plugin(WiggleCancel(u'WiggleCancel'))
+    planning_3.add_plugin(LoopDetector(u'LoopDetector'))
+    planning_3.add_plugin(GoalReachedPlugin(u'GoalReachedPlugin'))
+    planning_3.add_plugin(TimePlugin(u'TimePlugin1'))
     # planning_3.add_plugin(MaxTrajLength(u'traj length check'))
     # ----------------------------------------------
     publish_result = failure_is_success(Selector)(u'monitor execution')
-    publish_result.add_child(GoalCanceled(u'goal canceled', action_server_name))
-    publish_result.add_child(SendTrajectory(u'send traj'))
+    publish_result.add_child(GoalCanceled(u'GoalCanceled1', action_server_name))
+    publish_result.add_child(SendTrajectory(u'SendTrajectory'))
     # ----------------------------------------------
     # ----------------------------------------------
     planning_2 = failure_is_success(Selector)(u'planning II')
-    planning_2.add_child(GoalCanceled(u'goal canceled', action_server_name))
-    if god_map.get_data(identifier.enable_VisualizationBehavior):
-        planning_2.add_child(success_is_failure(VisualizationBehavior)(u'visualization'))
-    if god_map.get_data(identifier.enable_CPIMarker):
-        planning_2.add_child(success_is_failure(CollisionMarker)(u'cpi marker'))
+    planning_2.add_child(GoalCanceled(u'GoalCanceled2', action_server_name))
+    if god_map.get_data(identifier.enable_VisualizationBehavior1):
+        planning_2.add_child(success_is_failure(VisualizationBehavior)(u'VisualizationBehavior1'))
+    if god_map.get_data(identifier.enable_CPIMarker2):
+        planning_2.add_child(success_is_failure(CollisionMarker)(u'CollisionMarker1'))
     planning_2.add_child(planning_3)
     # ----------------------------------------------
     move_robot = failure_is_success(Sequence)(u'move robot')
@@ -188,24 +188,24 @@ def grow_tree():
     # ----------------------------------------------
     # ----------------------------------------------
     planning_1 = Sequence(u'planning I')
-    planning_1.add_child(GoalToConstraints(u'update constraints', action_server_name))
+    planning_1.add_child(GoalToConstraints(u'GoalToConstraints', action_server_name))
     planning_1.add_child(planning_2)
-    planning_1.add_child(running_is_success(TimePlugin)(u'time for zero velocity'))
+    planning_1.add_child(running_is_success(TimePlugin)(u'TimePlugin2'))
     planning_1.add_child(AppendZeroVelocity(u'append zero velocity'))
-    planning_1.add_child(running_is_success(LogTrajPlugin)(u'log zero velocity'))
+    planning_1.add_child(running_is_success(LogTrajPlugin)(u'LogTrajPlugin2'))
     # planning_1.add_child(running_is_success(TimePlugin)(u'time for zero velocity'))
     # planning_1.add_child(AppendZeroVelocity(u'append zero velocity'))
     # planning_1.add_child(running_is_success(LogTrajPlugin)(u'log zero velocity'))
-    if god_map.get_data(identifier.enable_VisualizationBehavior):
-        planning_1.add_child(VisualizationBehavior(u'visualization', ensure_publish=True))
-    if god_map.get_data(identifier.enable_CPIMarker):
-        planning_1.add_child(CollisionMarker(u'cpi marker'))
+    if god_map.get_data(identifier.enable_VisualizationBehavior2):
+        planning_1.add_child(VisualizationBehavior(u'VisualizationBehavior2', ensure_publish=True))
+    if god_map.get_data(identifier.enable_CPIMarker2):
+        planning_1.add_child(CollisionMarker(u'CollisionMarker2'))
     # ----------------------------------------------
     post_processing = failure_is_success(Sequence)(u'post planning')
     # post_processing.add_child(WiggleCancel(u'final wiggle detection', final_detection=True))
     if god_map.get_data(identifier.enable_PlotTrajectory):
-        post_processing.add_child(PlotTrajectory(u'plot trajectory', order=3))
-    post_processing.add_child(PostProcessing(u'evaluate result'))
+        post_processing.add_child(PlotTrajectory(u'PlotTrajectory2', order=3))
+    post_processing.add_child(PostProcessing(u'PostProcessing'))
     # post_processing.add_child(PostProcessing(u'check reachability'))
     # ----------------------------------------------
     planning = success_is_failure(Sequence)(u'planning')
@@ -227,10 +227,10 @@ def grow_tree():
     # ----------------------------------------------
     root = Sequence(u'root')
     root.add_child(wait_for_goal)
-    root.add_child(CleanUp(u'cleanup'))
+    root.add_child(CleanUp(u'CleanUp'))
     root.add_child(process_move_goal)
     root.add_child(move_robot)
-    root.add_child(SendResult(u'send result', action_server_name, MoveAction))
+    root.add_child(SendResult(u'SendResult', action_server_name, MoveAction))
 
     tree = BehaviourTree(root)
 

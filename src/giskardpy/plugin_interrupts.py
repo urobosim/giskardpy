@@ -11,13 +11,11 @@ from giskardpy.plugin_goal_reached import make_velocity_threshold
 
 
 class WiggleCancel(GiskardBehavior):
-    def __init__(self, name):
-        super(WiggleCancel, self).__init__(name)
-        self.amplitude_threshold = self.get_god_map().get_data(identifier.amplitude_threshold)
-        self.num_samples_in_fft = self.get_god_map().get_data(identifier.num_samples_in_fft)
-        self.frequency_range = self.get_god_map().get_data(identifier.frequency_range)
-        self.max_angular_velocity = 10.5
-        self.max_linear_velocity = 10.5
+    amplitude_threshold = 0.28
+    window_size = 21 # TODO better default based on sample period?
+    frequency_range = 0.4
+    max_angular_velocity = 10.5
+    max_linear_velocity = 10.5
 
     def initialise(self):
         super(WiggleCancel, self).initialise()
@@ -50,10 +48,10 @@ class WiggleCancel(GiskardBehavior):
         for i, key in enumerate(self.keys):
             self.js_samples[i].append(latest_points[key].velocity)
 
-        if len(self.js_samples[0]) < self.num_samples_in_fft:
+        if len(self.js_samples[0]) < self.window_size:
             return Status.RUNNING
 
-        if len(self.js_samples[0]) > self.num_samples_in_fft:
+        if len(self.js_samples[0]) > self.window_size:
             for i in range(len(self.js_samples)):
                 self.js_samples[i].pop(0)
 
@@ -65,11 +63,11 @@ class WiggleCancel(GiskardBehavior):
         except ShakingException as e:
             if self.get_god_map().get_data(identifier.cut_off_shaking):
                 trajectory = self.get_god_map().get_data(identifier.trajectory)
-                for i in range(self.num_samples_in_fft):
+                for i in range(self.window_size):
                     trajectory.delete_last()
                 # time = self.get_god_map().get_data(identifier.time)
                 # self.get_god_map().set_data(identifier.time, len(trajectory.keys()))
-                if len(trajectory.keys()) >= self.num_samples_in_fft:
+                if len(trajectory.keys()) >= self.window_size:
                     logging.loginfo(str(e))
                     logging.loginfo(u'cutting off last second')
                     return Status.SUCCESS

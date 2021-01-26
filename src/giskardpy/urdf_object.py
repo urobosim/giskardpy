@@ -112,11 +112,15 @@ class URDFObject(object):
             try:
                 link = up.Link(world_body.name)
                 link.add_aggregate(u'visual', up.Visual(geometry,
-                                                        material=up.Material(u'green', color=up.Color(0, 1, 0, 1))))
-                link.add_aggregate(u'collision', up.Collision(geometry))
+                                                        material=up.Material(u'gray', color=up.Color(0.5, 0.5, 0.5, 1))))
+                if u'obj_hack' in kwargs:
+                    collision_geometry = up.Mesh(kwargs[u'obj_hack'])
+                    link.add_aggregate(u'collision', up.Collision(collision_geometry))
+                else:
+                    link.add_aggregate(u'collision', up.Collision(geometry))
             except AssertionError:
                 link = up.Link(world_body.name,
-                               visual=up.Visual(geometry, material=up.Material(u'green', color=up.Color(0, 1, 0, 1))),
+                               visual=up.Visual(geometry, material=up.Material(u'gray', color=up.Color(0.5, 0.5, 0.5, 1))),
                                collision=up.Collision(geometry))
             links.append(link)
         elif world_body.type == world_body.URDF_BODY:
