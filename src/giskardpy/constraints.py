@@ -2549,19 +2549,12 @@ class Saw(Constraint):
         # Retrieve params
         cutting_frequency = self.get_input_float(self.cutting_frequency_id)
         cutting_amplitude = self.get_input_float(self.cutting_amplitude_id)
-        tip_cutting_axis = self.get_input_Vector3Stamped(self.tip_cut_axis_id)  # get axis as frame
-
 
         root_T_tip = self.get_fk(self.root, self.tip)
         tip_V_axis = w.vector3(1, 0, 0)
         root_P_tip = w.position_of(root_T_tip)
-        root_R_tip = w.rotation_of(root_T_tip)
         root_V_axis = w.dot(root_T_tip, tip_V_axis)
-        root_R_tip_fix = deepcopy(root_R_tip)
-        tip_T_root = self.get_fk(self.tip, self.root)
-        tip_P_root = w.position_of(tip_T_root)
         time = self.god_map.to_symbol(identifier.time)
-        # root_T_tip = self.get_fk_evaluated(root=self.root, tip=self.tip)
 
         sample_rate = self.god_map.to_symbol(identifier.sample_period)
         limits = self.limit_velocity(error=cutting_amplitude*w.sin(2*np.pi*cutting_frequency*time*sample_rate),
@@ -2591,10 +2584,6 @@ class Saw(Constraint):
                             lower=tip_V_limit[2],
                             upper=tip_V_limit[2],
                             weight=weight)
-
-        # self.add_minimize_rotation_constraints(root_R_tipGoal=root_R_tip_fix,
-        #                                        root=self.root,
-        #                                        tip=self.tip)
 
         pass
 
