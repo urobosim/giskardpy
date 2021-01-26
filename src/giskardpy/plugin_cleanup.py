@@ -15,6 +15,7 @@ class CleanUp(GiskardBehavior):
         # FIXME this is the smallest hack to reverse (some) update godmap changes, constraints need some kind of finalize
         self.general_options = deepcopy(self.get_god_map().get_data(identifier.general_options))
         self.window_size = deepcopy(self.get_god_map().get_data(identifier.GoalReached_window_size))
+        self.enable_loop_detector = deepcopy(self.get_god_map().get_data(identifier.enable_LoopDetector))
 
     def initialise(self):
         self.get_god_map().clear_cache()
@@ -31,6 +32,7 @@ class CleanUp(GiskardBehavior):
         tree_manager = self.get_god_map().get_data(identifier.tree_manager) # type: TreeManager
         tree_manager.get_node(u'visualization').clear_marker()
         self.get_god_map().set_data(identifier.GoalReached_window_size, deepcopy(self.window_size))
+        self.get_god_map().set_data(identifier.enable_LoopDetector, deepcopy(self.enable_loop_detector))
 
     def update(self):
         return Status.SUCCESS

@@ -104,6 +104,7 @@ GoalReached_window_size = plugins + [u'GoalReached', u'window_size']
 publish_attached_objects = plugins + [u'tf_publisher', u'publish_attached_objects']
 publish_world_objects = plugins + [u'tf_publisher', u'publish_world_objects']
 tf_topic = plugins + [u'tf_publisher', u'tf_topic']
+enable_LoopDetector = plugins + [u'LoopDetector', u'enabled']
 
 # reachability check
 reachability_check = rosparam + [u'reachability_check']

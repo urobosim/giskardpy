@@ -22,8 +22,13 @@ class LoopDetector(GiskardBehavior):
     def update(self):
         current_js = self.get_god_map().get_data(identifier.joint_states)
         planning_time = self.get_god_map().get_data(identifier.time)
+        enable_loop_detector = self.get_god_map().get_data(identifier.enable_LoopDetector)
+        if enable_loop_detector:
+            print("Yay")
+        else:
+            print("Nay")
         rounded_js = self.round_js(current_js)
-        if planning_time >= self.window_size and rounded_js in self.past_joint_states:
+        if planning_time >= self.window_size and rounded_js in self.past_joint_states and enable_loop_detector:
             sample_period = self.get_god_map().get_data(identifier.sample_period)
             logging.loginfo(u'found loop, stopped planning.')
             logging.loginfo(u'found goal trajectory with length {}s in {}s'.format(planning_time * sample_period,
