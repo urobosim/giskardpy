@@ -7,6 +7,46 @@ from giskard_msgs.msg import MoveGoal
 import actionlib
 from giskard_msgs.msg import MoveResult
 
+gaya_pose_name = [u'r_shoulder_pan_joint',
+                  u'r_shoulder_lift_joint',
+                  u'r_upper_arm_roll_joint',
+                  u'r_elbow_flex_joint',
+                  u'r_forearm_roll_joint',
+                  u'r_wrist_flex_joint',
+                  u'r_wrist_roll_joint',
+                  u'l_shoulder_pan_joint',
+                  u'l_shoulder_lift_joint',
+                  u'l_upper_arm_roll_joint',
+                  u'l_elbow_flex_joint',
+                  u'l_forearm_roll_joint',
+                  u'l_wrist_flex_joint',
+                  u'l_wrist_roll_joint',
+                  u'torso_lift_joint',
+                  #
+                  u'head_pan_joint',
+                  u'head_tilt_joint',
+                  ]
+
+gaya_pose_position = [-1.7125,
+                      -0.25672,
+                      -1.46335,
+                      -2.12,
+                      1.76632,
+                      -0.10001,
+                      0.05106,
+                      1.9652,
+                      - 0.26499,
+                      1.3837,
+                      -2.12,
+                      16.99,
+                      - 0.10001,
+                      0,
+                      0.2,
+                      #
+                      0,
+                      0
+                      ]
+
 
 def execute_joint_goal():
     # Creates the SimpleActionClient, passing the type of the action
@@ -30,10 +70,8 @@ def execute_joint_goal():
     joint_goal.type = JointConstraint.JOINT
     # this can be any subset of the robots joints
     # joint_goal.goal_state is a normal sensor_msgs/JointState
-    joint_goal.goal_state.name = ["l_upper_arm_roll_joint", "l_shoulder_pan_joint", "l_shoulder_lift_joint",
-                                  "l_forearm_roll_joint", "l_elbow_flex_joint", "l_wrist_flex_joint",
-                                  "l_wrist_roll_joint"]
-    joint_goal.goal_state.position = [1, 0.5, 0.2, 0, -0.8, -1, 0]
+    joint_goal.goal_state.name = gaya_pose_name
+    joint_goal.goal_state.position = gaya_pose_position
 
     goal.joint_constraints.append(joint_goal)
     action_goal.cmd_seq.append(goal)
