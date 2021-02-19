@@ -2,6 +2,12 @@ import rospy
 from giskard_msgs.msg import MoveCmd, JointConstraint
 from giskard_msgs.msg import MoveAction
 from giskard_msgs.msg import MoveGoal
+from giskardpy.python_interface import GiskardWrapper
+from geometry_msgs.msg import PoseStamped
+from giskard_msgs.srv import UpdateWorld, UpdateWorldRequest
+from giskard_msgs.msg import WorldBody
+from shape_msgs.msg import SolidPrimitive
+from geometry_msgs.msg import Point, Quaternion
 
 # Brings in the SimpleActionClient
 import actionlib
@@ -47,46 +53,75 @@ gaya_pose_position = [-1.7125,
                       0
                       ]
 
+gaya_pose = {u'r_shoulder_pan_joint': -1.7125,
+             u'r_shoulder_lift_joint': -0.25672,
+             u'r_upper_arm_roll_joint': -1.46335,
+             u'r_elbow_flex_joint': -2.12,
+             u'r_forearm_roll_joint': 1.76632,
+             u'r_wrist_flex_joint': -0.10001,
+             u'r_wrist_roll_joint': 0.05106,
+             u'l_shoulder_pan_joint': 1.9652,
+             u'l_shoulder_lift_joint': - 0.26499,
+             u'l_upper_arm_roll_joint': 1.3837,
+             u'l_elbow_flex_joint': -2.12,
+             u'l_forearm_roll_joint': 16.99,
+             u'l_wrist_flex_joint': - 0.10001,
+             u'l_wrist_roll_joint': 0,
+             u'torso_lift_joint': 0.2,
+
+             u'head_pan_joint': 0,
+             u'head_tilt_joint': 0,
+             }
+
 
 def execute_joint_goal():
     # Creates the SimpleActionClient, passing the type of the action
     # (MoveAction) to the constructor.
-    client = actionlib.SimpleActionClient("/giskard/command", MoveAction)
+    giskard = GiskardWrapper()
+    giskard.set_joint_goal(gaya_pose)
+    giskard.plan_and_execute()
 
-    # Waits until the action server has started up and started
-    # listening for goals.
-    print('waiting for giskard')
-    client.wait_for_server()
-    print('connected to giskard')
+    p = PoseStamped()
+    p.header.frame_id = u'cucumber'
+    # p.pose.position.z = 0.1
 
-    # Creates a goal to send to the action server.
-    action_goal = MoveGoal()
-    action_goal.type = MoveGoal.PLAN_AND_EXECUTE
+    giskard.set_cart_goal(goal_pose=p,
+                          tip_link=u'r_gripper_tool_frame',
+                          root_link=giskard.get_root())
+    giskard.plan_and_execute()
 
-    goal = MoveCmd()
+def add_cucumber():
+    giskard = GiskardWrapper()
 
-    joint_goal = JointConstraint()
+    cucumber = WorldBody()
+    cucumber.type = WorldBody.PRIMITIVE_BODY
+    cucumber.name = u'cucumber'
 
-    joint_goal.type = JointConstraint.JOINT
-    # this can be any subset of the robots joints
-    # joint_goal.goal_state is a normal sensor_msgs/JointState
-    joint_goal.goal_state.name = gaya_pose_name
-    joint_goal.goal_state.position = gaya_pose_position
+    cucumber_T_table = PoseStamped()
+    cucumber_T_table.header.frame_id = u'iai_kitchen/dining_area_jokkmokk_table_main'
+    cucumber_T_table.pose.position.x = 0
+    cucumber_T_table.pose.position.y = 0
+    cucumber_T_table.pose.position.z = 0.3
+    cucumber_T_table.pose.orientation. = 0
+    cucumber_T_table.pose.orientation.y = 0
+    cucumber_T_table.pose.orientation.z = 0
+    cucumber_T_table.pose.orientation.w = 0
 
-    goal.joint_constraints.append(joint_goal)
-    action_goal.cmd_seq.append(goal)
+    res = giskard.add_cylinder(u'cucumber',
+                               height=0.4,  # length 40 cm
+                               radius=0.03,  # radius 3 cm -> diameter 6 cm
+                               frame_id=u'iai_kitchen/dining_area_jokkmokk_table_main',
+                               pose=cucumber_T_table
+                               )
+    print('Adding returns:')
+    print(res)
 
-    # Sends the goal to the action server.
-    client.send_goal(action_goal)
 
-    # Waits for the server to finish performing the action.
-    client.wait_for_result()
-
-    result = client.get_result()  # type: MoveResult
-    if result.error_codes[0] == MoveResult.SUCCESS:
-        print('giskard returned success')
-    else:
-        print('something went wrong')
+def attach_cucumber():
+    giskard = GiskardWrapper()
+    res = giskard.attach_object(u'cucumber', u'l_gripper_tool_frame')
+    print('Attaching returns:')
+    print(res)
 
 
 if __name__ == '__main__':
@@ -94,6 +129,11 @@ if __name__ == '__main__':
         # Initializes a rospy node so that the SimpleActionClient can
         # publish and subscribe over ROS.
         rospy.init_node('joint_space_client')
+        giskard = GiskardWrapper()
+        giskard.clear_world()
+        add_cucumber()
         execute_joint_goal()
+        attach_cucumber()
+        giskard.clear_world()
     except rospy.ROSInterruptException:
         print("program interrupted before completion")
