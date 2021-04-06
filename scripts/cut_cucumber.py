@@ -102,7 +102,7 @@ def add_cucumber():
     cucumber_T_table.pose.position.x = 0
     cucumber_T_table.pose.position.y = 0
     cucumber_T_table.pose.position.z = 0.3
-    cucumber_T_table.pose.orientation. = 0
+    cucumber_T_table.pose.orientation.x = 0
     cucumber_T_table.pose.orientation.y = 0
     cucumber_T_table.pose.orientation.z = 0
     cucumber_T_table.pose.orientation.w = 0
