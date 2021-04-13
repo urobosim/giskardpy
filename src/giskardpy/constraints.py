@@ -2592,14 +2592,14 @@ class Saw(Constraint):
         return u'{}/{}/{}'.format(s, self.root, self.tip)
 
 
-class Saw(Constraint):
+class Cut(Constraint):
     tip_cut_axis_id = u'tip_cut_axis'
     cutting_frequency_id = u'cutting_frequency'
     cutting_amplitude_id = u'cutting_amplitude'
 
     def __init__(self, god_map, tip_link, frequency, amplitude,
                  root_link=None, weight=WEIGHT_ABOVE_CA, goal_constraint=False):
-        super(Saw, self).__init__(god_map)
+        super(Cut, self).__init__(god_map)
 
         self.constraints = []  # init empty list
 
@@ -2636,6 +2636,10 @@ class Saw(Constraint):
         root_V_axis = w.dot(root_T_tip, tip_V_axis)
         time = self.god_map.to_symbol(identifier.time)
 
+        root_T_tip_current = tf.msg_to_kdl(tf.lookup_pose(self.root, self.tip))
+        root_T_tip_goal = deepcopy(root_T_tip_current)  # copy object to manipulate it
+        root_T_tip_goal += w.scale(tip_V_axis, cutting_amplitude)
+
         sample_rate = self.god_map.to_symbol(identifier.sample_period)
         limits = self.limit_velocity(error=cutting_amplitude*w.sin(2*np.pi*cutting_frequency*time*sample_rate),
                                      max_velocity=0.1)
@@ -2647,26 +2651,29 @@ class Saw(Constraint):
                                     5/self.get_god_map().get_data(identifier.sample_period))
         self.get_god_map().set_data(identifier.enable_LoopDetector, False)
 
-        self.add_constraint(u'saw_x',
-                            expression=root_P_tip[0],
-                            lower=tip_V_limit[0],
-                            upper=tip_V_limit[0],
-                            weight=weight)
-
-        self.add_constraint(u'saw_y',
-                            expression=root_P_tip[1],
-                            lower=tip_V_limit[1],
-                            upper=tip_V_limit[1],
-                            weight=weight)
-
-        self.add_constraint(u'saw_z',
-                            expression=root_P_tip[2],
-                            lower=tip_V_limit[2],
-                            upper=tip_V_limit[2],
-                            weight=weight)
+        self.add_minimize_position_constraints(root_T_tip_goal,
+                                               root=self.root,
+                                               tip=self.tip)
+        # self.add_constraint(u'saw_x',
+        #                     expression=root_P_tip[0],
+        #                     lower=tip_V_limit[0],
+        #                     upper=tip_V_limit[0],
+        #                     weight=weight)
+        #
+        # self.add_constraint(u'saw_y',
+        #                     expression=root_P_tip[1],
+        #                     lower=tip_V_limit[1],
+        #                     upper=tip_V_limit[1],
+        #                     weight=weight)
+        #
+        # self.add_constraint(u'saw_z',
+        #                     expression=root_P_tip[2],
+        #                     lower=tip_V_limit[2],
+        #                     upper=tip_V_limit[2],
+        #                     weight=weight)
 
         pass
 
     def __str__(self):
-        s = super(Saw, self).__str__()
+        s = super(Cut, self).__str__()
         return u'{}/{}/{}'.format(s, self.root, self.tip)
