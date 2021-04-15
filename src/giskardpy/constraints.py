@@ -2628,17 +2628,17 @@ class Cut(Constraint):
 
         # Retrieve params
         cutting_frequency = self.get_input_float(self.cutting_frequency_id)
-        cutting_amplitude = self.get_input_float(self.cutting_amplitude_id)
+        cutting_amplitude = tf.msg_to_kdl(self.get_input_float(self.cutting_amplitude_id))
 
         root_T_tip = self.get_fk(self.root, self.tip)
-        tip_V_axis = w.vector3(1, 0, 0)
+        tip_V_axis = kdl.Vector(1, 0, 0)
         root_P_tip = w.position_of(root_T_tip)
         root_V_axis = w.dot(root_T_tip, tip_V_axis)
         time = self.god_map.to_symbol(identifier.time)
 
         root_T_tip_current = tf.msg_to_kdl(tf.lookup_pose(self.root, self.tip))
         root_T_tip_goal = deepcopy(root_T_tip_current)  # copy object to manipulate it
-        root_T_tip_goal += w.scale(tip_V_axis, cutting_amplitude)
+        root_T_tip_goal += cutting_amplitude * tip_V_axis
 
         sample_rate = self.god_map.to_symbol(identifier.sample_period)
         limits = self.limit_velocity(error=cutting_amplitude*w.sin(2*np.pi*cutting_frequency*time*sample_rate),
