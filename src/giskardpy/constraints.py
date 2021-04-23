@@ -2596,12 +2596,15 @@ class Cut(Constraint):
     tip_cut_axis_id = u'tip_cut_axis'
     cutting_frequency_id = u'cutting_frequency'
     cutting_amplitude_id = u'cutting_amplitude'
+    goal_id = u'goal'
+    gripper_current_id = u'gripper_current'
 
     def __init__(self, god_map, tip_link, frequency, amplitude,
-                 root_link=None, weight=WEIGHT_ABOVE_CA, goal_constraint=False):
+                 root_link=None, weight=WEIGHT_ABOVE_CA, goal_constraint=True):
         super(Cut, self).__init__(god_map)
 
         self.constraints = []  # init empty list
+        self.goal_constraint = goal_constraint
 
         # Process input parameters
         if root_link is None:
@@ -2618,27 +2621,30 @@ class Cut(Constraint):
         tip_cut_axis.vector.x = 1
         # tip_cut_axis = self.parse_and_transform_Vector3Stamped(tip_cut_axis, self.tip, normalized=True)
 
+        root_T_tip_current = tf.lookup_pose(self.root, self.tip)
+        root_T_tip_goal = deepcopy(root_T_tip_current)  # copy object to manipulate it
+
         # Save all params to the god_map
         params = {self.tip_cut_axis_id: tip_cut_axis,
                   self.cutting_frequency_id: cutting_frequency,
-                  self.cutting_amplitude_id: cutting_amplitude}
+                  self.cutting_amplitude_id: cutting_amplitude,
+                  self.goal_id: root_T_tip_goal}
         self.save_params_on_god_map(params)
 
     def make_constraints(self):
 
         # Retrieve params
         cutting_frequency = self.get_input_float(self.cutting_frequency_id)
-        cutting_amplitude = tf.msg_to_kdl(self.get_input_float(self.cutting_amplitude_id))
+        cutting_amplitude = self.get_input_float(self.cutting_amplitude_id)
+        root_T_tip_goal = self.get_input_PoseStamped(self.goal_id)
 
         root_T_tip = self.get_fk(self.root, self.tip)
-        tip_V_axis = kdl.Vector(1, 0, 0)
+        tip_V_axis = w.vector3(1, 0, 0)
         root_P_tip = w.position_of(root_T_tip)
         root_V_axis = w.dot(root_T_tip, tip_V_axis)
         time = self.god_map.to_symbol(identifier.time)
 
-        root_T_tip_current = tf.msg_to_kdl(tf.lookup_pose(self.root, self.tip))
-        root_T_tip_goal = deepcopy(root_T_tip_current)  # copy object to manipulate it
-        root_T_tip_goal += cutting_amplitude * tip_V_axis
+        cutting_amplitude_scale = cutting_amplitude * root_V_axis
 
         sample_rate = self.god_map.to_symbol(identifier.sample_period)
         limits = self.limit_velocity(error=cutting_amplitude*w.sin(2*np.pi*cutting_frequency*time*sample_rate),
@@ -2647,30 +2653,14 @@ class Cut(Constraint):
         weight = self.normalize_weight(0.1, WEIGHT_BELOW_CA)
         self.add_debug_vector(u'root_V_axis', root_V_axis)
 
-        self.get_god_map().set_data(identifier.GoalReached_window_size,
-                                    5/self.get_god_map().get_data(identifier.sample_period))
-        self.get_god_map().set_data(identifier.enable_LoopDetector, False)
-
+        # this is wrong, only position valid, try with way points
         self.add_minimize_position_constraints(root_T_tip_goal,
                                                root=self.root,
-                                               tip=self.tip)
-        # self.add_constraint(u'saw_x',
-        #                     expression=root_P_tip[0],
-        #                     lower=tip_V_limit[0],
-        #                     upper=tip_V_limit[0],
-        #                     weight=weight)
-        #
-        # self.add_constraint(u'saw_y',
-        #                     expression=root_P_tip[1],
-        #                     lower=tip_V_limit[1],
-        #                     upper=tip_V_limit[1],
-        #                     weight=weight)
-        #
-        # self.add_constraint(u'saw_z',
-        #                     expression=root_P_tip[2],
-        #                     lower=tip_V_limit[2],
-        #                     upper=tip_V_limit[2],
-        #                     weight=weight)
+                                               tip=self.tip,
+                                               max_velocity=0.1,
+                                               max_acceleration=0.1,
+                                               goal_constraint=self.goal_constraint,
+                                               weight=weight)
 
         pass
 
