@@ -2618,11 +2618,13 @@ class Cut(Constraint):
         # Get axis which will be used for sawing
         tip_cut_axis = Vector3Stamped()
         tip_cut_axis.header.frame_id = tip_link
-        tip_cut_axis.vector.x = 1
+        tip_cut_axis.vector.x = 0.1
         # tip_cut_axis = self.parse_and_transform_Vector3Stamped(tip_cut_axis, self.tip, normalized=True)
 
         root_T_tip_current = tf.lookup_pose(self.root, self.tip)
-        root_T_tip_goal = deepcopy(root_T_tip_current)  # copy object to manipulate it
+        root_T_tip_goal = tf.msg_to_kdl(deepcopy(root_T_tip_current)) # copy object to manipulate it
+        tip_cut_axis_kdl = tf.msg_to_kdl(tip_cut_axis)
+        root_T_tip_goal.p += tip_cut_axis_kdl
 
         # Save all params to the god_map
         params = {self.tip_cut_axis_id: tip_cut_axis,
@@ -2654,7 +2656,7 @@ class Cut(Constraint):
         self.add_debug_vector(u'root_V_axis', root_V_axis)
 
         # this is wrong, only position valid, try with way points
-        self.add_minimize_position_constraints(root_T_tip_goal,
+        self.add_minimize_position_constraints(w.position_of(root_T_tip_goal),
                                                root=self.root,
                                                tip=self.tip,
                                                max_velocity=0.1,
