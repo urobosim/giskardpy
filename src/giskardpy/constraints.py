@@ -2622,47 +2622,56 @@ class Cut(Constraint):
         # tip_cut_axis = self.parse_and_transform_Vector3Stamped(tip_cut_axis, self.tip, normalized=True)
 
         root_T_tip_current = tf.lookup_pose(self.root, self.tip)
-        root_T_tip_goal = tf.msg_to_kdl(deepcopy(root_T_tip_current)) # copy object to manipulate it
+        root_T_tip_goal = tf.msg_to_kdl(deepcopy(root_T_tip_current))  # copy object to manipulate it
         tip_cut_axis_kdl = tf.msg_to_kdl(tip_cut_axis)
         root_T_tip_goal.p += tip_cut_axis_kdl
 
+        root_T_tip_goal_dict = convert_ros_message_to_dictionary(
+            tf.kdl_to_pose_stamped(root_T_tip_goal, self.root))
+
         # Save all params to the god_map
-        params = {self.tip_cut_axis_id: tip_cut_axis,
-                  self.cutting_frequency_id: cutting_frequency,
-                  self.cutting_amplitude_id: cutting_amplitude,
-                  self.goal_id: root_T_tip_goal}
-        self.save_params_on_god_map(params)
+        # params = {self.tip_cut_axis_id: tip_cut_axis,
+        #           self.cutting_frequency_id: cutting_frequency,
+        #           self.cutting_amplitude_id: cutting_amplitude,
+        #           self.goal_id: root_T_tip_goal}
+        # self.save_params_on_god_map(params)
+
+        self.constraints.append(
+            CartesianPoseStraight(
+                god_map,
+                self.root,
+                self.tip,
+                root_T_tip_goal_dict,
+                weight=weight)
+        )
 
     def make_constraints(self):
 
-        # Retrieve params
-        cutting_frequency = self.get_input_float(self.cutting_frequency_id)
-        cutting_amplitude = self.get_input_float(self.cutting_amplitude_id)
-        root_T_tip_goal = self.get_input_PoseStamped(self.goal_id)
+        # self.constraints = []
+        #
+        # # Retrieve params
+        # cutting_frequency = self.get_input_float(self.cutting_frequency_id)
+        # cutting_amplitude = self.get_input_float(self.cutting_amplitude_id)
+        # root_T_tip_goal = self.get_input_PoseStamped(self.goal_id)
+        #
+        # root_T_tip = self.get_fk(self.root, self.tip)
+        # tip_V_axis = w.vector3(1, 0, 0)
+        # root_P_tip = w.position_of(root_T_tip)
+        # root_V_axis = w.dot(root_T_tip, tip_V_axis)
+        # time = self.god_map.to_symbol(identifier.time)
+        #
+        # cutting_amplitude_scale = cutting_amplitude * root_V_axis
+        #
+        # sample_rate = self.god_map.to_symbol(identifier.sample_period)
+        # limits = self.limit_velocity(error=cutting_amplitude*w.sin(2*np.pi*cutting_frequency*time*sample_rate),
+        #                              max_velocity=0.1)
+        # tip_V_limit = root_V_axis * limits
+        # weight = self.normalize_weight(0.1, WEIGHT_BELOW_CA)
+        # self.add_debug_vector(u'root_V_axis', root_V_axis)
 
-        root_T_tip = self.get_fk(self.root, self.tip)
-        tip_V_axis = w.vector3(1, 0, 0)
-        root_P_tip = w.position_of(root_T_tip)
-        root_V_axis = w.dot(root_T_tip, tip_V_axis)
-        time = self.god_map.to_symbol(identifier.time)
-
-        cutting_amplitude_scale = cutting_amplitude * root_V_axis
-
-        sample_rate = self.god_map.to_symbol(identifier.sample_period)
-        limits = self.limit_velocity(error=cutting_amplitude*w.sin(2*np.pi*cutting_frequency*time*sample_rate),
-                                     max_velocity=0.1)
-        tip_V_limit = root_V_axis * limits
-        weight = self.normalize_weight(0.1, WEIGHT_BELOW_CA)
-        self.add_debug_vector(u'root_V_axis', root_V_axis)
-
-        # this is wrong, only position valid, try with way points
-        self.add_minimize_position_constraints(w.position_of(root_T_tip_goal),
-                                               root=self.root,
-                                               tip=self.tip,
-                                               max_velocity=0.1,
-                                               max_acceleration=0.1,
-                                               goal_constraint=self.goal_constraint,
-                                               weight=weight)
+        # Execute constraints
+        for constraint in self.constraints:
+            self.soft_constraints.update(constraint.get_constraints())
 
         pass
 
