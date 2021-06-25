@@ -1950,9 +1950,9 @@ class BasePointingForward(Constraint):
             self.velocity_tip = velocity_tip
         if base_forward_axis is not None:
             self.base_forward_axis = base_forward_axis
-            base_forward_axis = convert_dictionary_to_ros_message(u'geometry_msgs/Vector3Stamped', base_forward_axis)
-            base_forward_axis = tf.transform_vector(self.base_footprint, base_forward_axis)
-            tmp = np.array([base_forward_axis.vector.x, base_forward_axis.vector.y, base_forward_axis.vector.z])
+            self.base_forward_axis = convert_dictionary_to_ros_message(u'geometry_msgs/Vector3Stamped', self.base_forward_axis)
+            self.base_forward_axis = tf.transform_vector(self.base_footprint, self.base_forward_axis)
+            tmp = np.array([self.base_forward_axis.vector.x, self.base_forward_axis.vector.y, self.base_forward_axis.vector.z])
             tmp = tmp / np.linalg.norm(tmp)
             self.base_forward_axis.vector = Vector3(*tmp)
         else:
