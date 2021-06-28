@@ -160,12 +160,22 @@ class CutCucumber():
         tip_grasp_axis.header.frame_id = self.support_hand
         tip_grasp_axis.vector.z = 1
 
+        gripper_pose = PoseStamped()
+        gripper_pose.header = self.cucumber_frame
+        gripper_pose.pose.orientation.x = 0
+        gripper_pose.pose.orientation.y = 0
+        gripper_pose.pose.orientation.z = 0
+        gripper_pose.pose.orientation.w = 0
+
         self.giskard.grasp_bar(tip_link=self.support_hand,
                           root_link=self.giskard.get_root(),
                           tip_grasp_axis=tip_grasp_axis,
                           bar_axis=bar_axis,
                           bar_center=bar_center,
                           bar_length=self.cucumber_length)
+        self.giskard.set_rotation_goal(goal_pose=gripper_pose,
+                                       tip_link=self.support_hand,
+                                       root_link=self.giskard.get_root())
         self.giskard.plan_and_execute()
 
         # res = self.giskard.attach_object(self.cucumber_frame, self.support_hand)
