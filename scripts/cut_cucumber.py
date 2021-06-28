@@ -22,6 +22,7 @@ from giskardpy.robot import Robot
 from giskardpy.tfwrapper import transform_pose, lookup_pose
 from giskardpy.utils import msg_to_list, KeyDefaultDict, position_dict_to_joint_states, get_ros_pkg_path, \
     to_joint_state_position_dict
+from py_trees import Blackboard
 
 # Brings in the SimpleActionClient
 import actionlib
@@ -97,13 +98,16 @@ class CutCucumber():
 
     def __init__(self):
         self.giskard = GiskardWrapper()
-        self.default_root = self.get_robot().get_root()
+        self.default_root = u'odom_combined'
 
-    def get_god_map(self):
-        """
-        :rtype: giskardpy.god_map.GodMap
-        """
-        return self.giskard.god_map
+    def move_base(self, goal_pose):
+        goal_pose = transform_pose(self.default_root, goal_pose)
+        js = {u'odom_x_joint': goal_pose.pose.position.x,
+              u'odom_y_joint': goal_pose.pose.position.y,
+              u'odom_z_joint': rotation_from_matrix(quaternion_matrix([goal_pose.pose.orientation.x,
+                                                                       goal_pose.pose.orientation.y,
+                                                                       goal_pose.pose.orientation.z,
+                                                                       goal_pose.pose.orientation.w]))[0]}
 
     def add_cucumber_on_table(self):
         cucumber = WorldBody()
@@ -128,21 +132,6 @@ class CutCucumber():
                                         )
         print('Adding returns:')
         print(res)
-
-    def get_robot(self):
-        """
-        :rtype: Robot
-        """
-        return self.get_god_map().get_data(robot)
-
-    def move_base(self, goal_pose):
-        goal_pose = transform_pose(self.default_root, goal_pose)
-        js = {u'odom_x_joint': goal_pose.pose.position.x,
-              u'odom_y_joint': goal_pose.pose.position.y,
-              u'odom_z_joint': rotation_from_matrix(quaternion_matrix([goal_pose.pose.orientation.x,
-                                                                       goal_pose.pose.orientation.y,
-                                                                       goal_pose.pose.orientation.z,
-                                                                       goal_pose.pose.orientation.w]))[0]}
 
     def grasp_cucumber(self):
         # Creates the SimpleActionClient, passing the type of the action
