@@ -1,14 +1,43 @@
-from collections import OrderedDict, defaultdict, namedtuple
+from collections import OrderedDict, defaultdict, deque
 
 import numpy as np
+from sensor_msgs.msg import JointState
 from sortedcontainers import SortedKeyList
 
-SoftConstraint = namedtuple(u'SoftConstraint', [u'lbA', u'ubA',
-                                                u'weight', u'expression', u'goal_constraint',
-                                                u'lower_slack_limit',
-                                                u'upper_slack_limit',
-                                                u'linear_weight'])
-JointConstraint = namedtuple(u'JointConstraint', [u'lower', u'upper', u'weight', u'linear_weight'])
+from giskardpy.utils.tfwrapper import kdl_to_np, np_vector, np_point
+
+
+class KeyDefaultDict(defaultdict):
+    """
+    A default dict where the key is passed as parameter to the factory function.
+    """
+
+    def __missing__(self, key):
+        if self.default_factory is None:
+            raise KeyError(key)
+        else:
+            ret = self[key] = self.default_factory(key)
+            return ret
+
+
+class FIFOSet(set):
+    def __init__(self, data, max_length=None):
+        if len(data) > max_length:
+            raise ValueError('len(data) > max_length')
+        super(FIFOSet, self).__init__(data)
+        self.max_length = max_length
+        self._data_queue = deque(data)
+
+    def add(self, item):
+        if len(self._data_queue) == self.max_length:
+            to_delete = self._data_queue.popleft()
+            super(FIFOSet, self).remove(to_delete)
+            self._data_queue.append(item)
+        super(FIFOSet, self).add(item)
+
+    def remove(self, item):
+        self.remove(item)
+        self._data_queue.remove(item)
 
 
 def to_joint_state_dict(msg):
@@ -35,34 +64,72 @@ def to_joint_state_dict(msg):
         mjs[joint_name] = sjs
     return mjs
 
-class SingleJointState(object):
-    def __init__(self, name='', position=0.0, velocity=0.0, effort=0.0):
-        self.name = name
-        self.position = position
-        self.velocity = velocity
-        self.effort = effort
+class JointStates(defaultdict):
+    class _JointState(object):
+        derivative_to_name = {
+            0: 'position',
+            1: 'velocity',
+            2: 'acceleration',
+            3: 'jerk',
+            4: 'snap',
+            5: 'crackle',
+            6: 'pop',
+        }
 
-    # @classmethod
+        def __init__(self, position=0, velocity=0, acceleration=0, jerk=0, snap=0, crackle=0, pop=0):
+            self.position = position
+            self.velocity = velocity
+            self.acceleration = acceleration
+            self.jerk = jerk
+            self.snap = snap
+            self.crackle = crackle
+            self.pop = pop
+
+        def set_derivative(self, d, item):
+            setattr(self, self.derivative_to_name[d], item)
+
+        # @classmethod
     # def from_urdf_file(cls, urdf_file, *args, **kwargs):
 
 
 
     def __str__(self):
-        return u'{}: {}, {}, {}'.format(self.name, self.position, self.velocity, self.effort)
+        return '{}'.format(self.position)
+
+        def __repr__(self):
+            return str(self)
+
+    def __init__(self):
+        super(JointStates, self).__init__(self._JointState)
+
+    @classmethod
+    def from_msg(cls, msg):
+        """
+        :type msg: JointState
+        :rtype: JointStates
+        """
+        self = cls()
+        for i, joint_name in enumerate(msg.name):
+            sjs = cls._JointState(position=msg.position[i],
+                                  velocity=msg.velocity[i] if msg.velocity else 0,
+                                  acceleration=0,
+                                  jerk=0,
+                                  snap=0,
+                                  crackle=0,
+                                  pop=0)
+            self[joint_name] = sjs
+        return self
 
 
 class Trajectory(object):
     def __init__(self):
+        self.clear()
+
+    def clear(self):
         self._points = OrderedDict()
 
     def get_exact(self, time):
         return self._points[time]
-
-    def get_closest(self, time):
-        pass
-
-    def get_sub_trajectory(self, start_time, end_time):
-        pass
 
     def set(self, time, point):
         if len(self._points) > 0 and list(self._points.keys())[-1] > time:
@@ -213,7 +280,7 @@ class Collisions(object):
 
         self.self_collisions = defaultdict(default_f)
         self.external_collision = defaultdict(default_f)
-        self.external_collision_long_key = defaultdict(lambda : self._default_collision('', '', ''))
+        self.external_collision_long_key = defaultdict(lambda: self._default_collision('', '', ''))
         self.all_collisions = set()
         self.number_of_self_collisions = defaultdict(int)
         self.number_of_external_collisions = defaultdict(int)
@@ -237,12 +304,12 @@ class Collisions(object):
             self.external_collision[key].add(collision)
             self.number_of_external_collisions[key] = min(self.collision_list_size,
                                                           self.number_of_external_collisions[key] + 1)
-            key_long = (collision.get_original_link_a(),collision.get_body_b(), collision.get_original_link_b())
+            key_long = (collision.get_original_link_a(), collision.get_body_b(), collision.get_original_link_b())
             if key_long not in self.external_collision_long_key:
                 self.external_collision_long_key[key_long] = collision
             else:
                 self.external_collision_long_key[key_long] = min(collision, self.external_collision_long_key[key_long],
-                                                            key=lambda x: x.get_contact_distance())
+                                                                 key=lambda x: x.get_contact_distance())
 
     @profile
     def transform_closest_point(self, collision):
@@ -337,6 +404,7 @@ class Collisions(object):
     def get_number_of_external_collisions(self, joint_name):
         return self.number_of_external_collisions[joint_name]
 
+    # @profile
     def get_self_collisions(self, link_a, link_b):
         """
         Make sure that link_a < link_b, the reverse collision is not saved.
@@ -355,10 +423,29 @@ class Collisions(object):
     def get_number_of_self_collisions(self, link_a, link_b):
         return self.number_of_self_collisions[link_a, link_b]
 
-
     def __contains__(self, item):
         return item in self.self_collisions or item in self.external_collision
 
-
     def items(self):
         return self.all_collisions
+
+
+class BiDict(dict):
+    # TODO test me
+    def __init__(self, *args, **kwargs):
+        super(BiDict, self).__init__(*args, **kwargs)
+        self.inverse = {}
+        for key, value in self.items():
+            self.inverse[value] = key
+
+    def __setitem__(self, key, value):
+        if key in self:
+            self.inverse[self[key]].remove(key)
+        super(BiDict, self).__setitem__(key, value)
+        self.inverse[value] = key
+
+    def __delitem__(self, key):
+        self.inverse.setdefault(self[key], []).remove(key)
+        if self[key] in self.inverse and not self.inverse[self[key]]:
+            del self.inverse[self[key]]
+        super(BiDict, self).__delitem__(key)

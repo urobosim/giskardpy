@@ -4,12 +4,6 @@ import numbers
 import numpy  as np
 import pandas as pd
 
-from giskardpy import logging, casadi_wrapper as w
-from giskardpy.data_types import SoftConstraint
-from giskardpy.exceptions import QPSolverException, InfeasibleException, OutOfJointLimitsException, \
-    HardConstraintsViolatedException
-from giskardpy.qp_solver import QPSolver
-from giskardpy.utils import make_filter_masks, create_path
 
 
 class QProblemBuilder(object):

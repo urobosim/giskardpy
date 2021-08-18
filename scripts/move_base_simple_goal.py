@@ -1,9 +1,11 @@
+#!/usr/bin/env python
+
 import rospy
 from geometry_msgs.msg import PoseStamped
 from tf.transformations import rotation_from_matrix, quaternion_matrix
 
 from giskardpy.python_interface import GiskardWrapper
-from giskardpy.tfwrapper import transform_pose, init
+from giskardpy.utils.tfwrapper import transform_pose, init
 
 
 def call_back(pose_stamped):

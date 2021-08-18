@@ -5,7 +5,7 @@ from actionlib import SimpleActionClient
 from genpy import Message
 from geometry_msgs.msg import PoseStamped, Point, Quaternion, Vector3Stamped, PointStamped
 from giskard_msgs.msg import MoveAction, MoveGoal, WorldBody, CollisionEntry, MoveResult, Constraint, \
-    MoveCmd, JointConstraint, CartesianConstraint
+    MoveCmd, JointConstraint
 from giskard_msgs.srv import UpdateWorld, UpdateWorldRequest, UpdateWorldResponse, GetObjectInfo, GetObjectNames, \
     UpdateRvizMarkers, GetAttachedObjects, GetAttachedObjectsResponse, GetObjectNamesResponse
 from urdf_parser_py.urdf import URDF
@@ -15,10 +15,10 @@ from sensor_msgs.msg import JointState
 from shape_msgs.msg import SolidPrimitive
 from visualization_msgs.msg import MarkerArray
 
-from giskardpy.constraints import WEIGHT_BELOW_CA, WEIGHT_ABOVE_CA
-from giskardpy.urdf_object import URDFObject, hacky_urdf_parser_fix
-from giskardpy.utils import position_dict_to_joint_states, make_world_body_box, make_world_body_cylinder
-from rospy_message_converter.message_converter import convert_ros_message_to_dictionary
+from giskardpy.goals.goal import WEIGHT_BELOW_CA, WEIGHT_ABOVE_CA
+from giskardpy.model.urdf_object import URDFObject, hacky_urdf_parser_fix
+from giskardpy.model.utils import make_world_body_box, make_world_body_cylinder
+from giskardpy.utils.utils import position_dict_to_joint_states, convert_ros_message_to_dictionary
 
 
 class GiskardWrapper(object):
@@ -60,8 +60,8 @@ class GiskardWrapper(object):
         :type root_link: str
         :param tip_link: name of the tip link of the kin chain
         :type tip_link: str
-        :param goal: the goal pose
-        :type goal: PoseStamped
+        :param goal_pose: the goal pose
+        :type goal_pose: PoseStamped
         :param max_linear_velocity: m/s, default 0.1
         :type max_linear_velocity: float
         :param max_angular_velocity: rad/s, default 0.5
@@ -72,7 +72,27 @@ class GiskardWrapper(object):
         self.set_translation_goal(goal_pose, tip_link, root_link, weight=weight, max_velocity=max_linear_velocity)
         self.set_rotation_goal(goal_pose, tip_link, root_link, weight=weight, max_velocity=max_angular_velocity)
 
-    def set_translation_goal(self, goal_pose, tip_link, root_link, weight=None, max_velocity=None):
+    def set_straight_cart_goal(self, goal_pose, tip_link, root_link, max_linear_velocity=None, max_angular_velocity=None, weight=None):
+        """
+        This goal will use the kinematic chain between root and tip link to move tip link on the straightest
+        line into the goal pose
+        :param root_link: name of the root link of the kin chain
+        :type root_link: str
+        :param tip_link: name of the tip link of the kin chain
+        :type tip_link: str
+        :param goal_pose: the goal pose
+        :type goal_pose: PoseStamped
+        :param max_linear_velocity: m/s, default 0.1
+        :type max_linear_velocity: float
+        :param max_angular_velocity: rad/s, default 0.5
+        :type max_angular_velocity: float
+        :param weight: default WEIGHT_ABOVE_CA
+        :type weight: float
+        """
+        self.set_straight_translation_goal(goal_pose, tip_link, root_link, max_velocity=max_linear_velocity, weight=weight)
+        self.set_rotation_goal(goal_pose, tip_link, root_link, max_velocity=max_angular_velocity, weight=weight)
+
+    def set_translation_goal(self, goal_pose, tip_link, root_link, weight=None, max_velocity=None, **kwargs):
         """
         This goal will use the kinematic chain between root and tip link to move tip link into the goal position
         :param root_link: name of the root link of the kin chain
@@ -86,28 +106,50 @@ class GiskardWrapper(object):
         :param weight: default WEIGHT_ABOVE_CA
         :type weight: float
         """
-        if not max_velocity and not weight:
-            constraint = CartesianConstraint()
-            constraint.type = CartesianConstraint.TRANSLATION_3D
-            constraint.root_link = str(root_link)
-            constraint.tip_link = str(tip_link)
-            constraint.goal = goal_pose
-            self.cmd_seq[-1].cartesian_constraints.append(constraint)
-        else:
-            constraint = Constraint()
-            constraint.type = u'CartesianPosition'
-            params = {}
-            params[u'root_link'] = root_link
-            params[u'tip_link'] = tip_link
-            params[u'goal'] = convert_ros_message_to_dictionary(goal_pose)
-            if max_velocity:
-                params[u'max_velocity'] = max_velocity
-            if weight:
-                params[u'weight'] = weight
-            constraint.parameter_value_pair = json.dumps(params)
-            self.cmd_seq[-1].constraints.append(constraint)
+        constraint = Constraint()
+        constraint.type = u'CartesianPosition'
+        params = {}
+        params[u'root_link'] = root_link
+        params[u'tip_link'] = tip_link
+        params[u'goal'] = convert_ros_message_to_dictionary(goal_pose)
+        if max_velocity:
+            params[u'max_velocity'] = max_velocity
+        if weight:
+            params[u'weight'] = weight
+        params.update(kwargs)
+        constraint.parameter_value_pair = json.dumps(params)
+        self.cmd_seq[-1].constraints.append(constraint)
 
-    def set_rotation_goal(self, goal_pose, tip_link, root_link, weight=None, max_velocity=None):
+    def set_straight_translation_goal(self, goal_pose, tip_link, root_link, weight=None, max_velocity=None, **kwargs):
+        """
+        This goal will use the kinematic chain between root and tip link to move tip link on the straightest
+        line into the goal position
+        :param root_link: name of the root link of the kin chain
+        :type root_link: str
+        :param tip_link: name of the tip link of the kin chain
+        :type tip_link: str
+        :param goal_pose: the goal pose, orientation will be ignored
+        :type goal_pose: PoseStamped
+        :param max_velocity: m/s, default 0.1
+        :type max_velocity: float
+        :param weight: default WEIGHT_ABOVE_CA
+        :type weight: float
+        """
+        constraint = Constraint()
+        constraint.type = u'CartesianPositionStraight'
+        params = {}
+        params[u'root_link'] = root_link
+        params[u'tip_link'] = tip_link
+        params[u'goal'] = convert_ros_message_to_dictionary(goal_pose)
+        if max_velocity:
+            params[u'max_velocity'] = max_velocity
+        if weight:
+            params[u'weight'] = weight
+        params.update(kwargs)
+        constraint.parameter_value_pair = json.dumps(params)
+        self.cmd_seq[-1].constraints.append(constraint)
+
+    def set_rotation_goal(self, goal_pose, tip_link, root_link, weight=None, max_velocity=None, **kwargs):
         """
         This goal will use the kinematic chain between root and tip link to move tip link into the goal orientation
         :param root_link: name of the root link of the kin chain
@@ -121,26 +163,19 @@ class GiskardWrapper(object):
         :param weight: default WEIGHT_ABOVE_CA
         :type weight: float
         """
-        if not max_velocity and not weight:
-            constraint = CartesianConstraint()
-            constraint.type = CartesianConstraint.ROTATION_3D
-            constraint.root_link = str(root_link)
-            constraint.tip_link = str(tip_link)
-            constraint.goal = goal_pose
-            self.cmd_seq[-1].cartesian_constraints.append(constraint)
-        else:
-            constraint = Constraint()
-            constraint.type = u'CartesianOrientationSlerp'
-            params = {}
-            params[u'root_link'] = root_link
-            params[u'tip_link'] = tip_link
-            params[u'goal'] = convert_ros_message_to_dictionary(goal_pose)
-            if max_velocity:
-                params[u'max_velocity'] = max_velocity
-            if weight:
-                params[u'weight'] = weight
-            constraint.parameter_value_pair = json.dumps(params)
-            self.cmd_seq[-1].constraints.append(constraint)
+        constraint = Constraint()
+        constraint.type = u'CartesianOrientation'
+        params = {}
+        params[u'root_link'] = root_link
+        params[u'tip_link'] = tip_link
+        params[u'goal'] = convert_ros_message_to_dictionary(goal_pose)
+        if max_velocity:
+            params[u'max_velocity'] = max_velocity
+        if weight:
+            params[u'weight'] = weight
+        params.update(kwargs)
+        constraint.parameter_value_pair = json.dumps(params)
+        self.cmd_seq[-1].constraints.append(constraint)
 
     def set_joint_goal(self, goal_state, weight=None, max_velocity=None):
         """
@@ -152,35 +187,24 @@ class GiskardWrapper(object):
         :param max_velocity: default is the default of the added joint goals
         :type max_velocity: float
         """
-        if weight is None and max_velocity is None:
-            constraint = JointConstraint()
-            constraint.type = JointConstraint.JOINT
-            if isinstance(goal_state, JointState):
-                constraint.goal_state = goal_state
-            else:
-                for joint_name, joint_position in goal_state.items():
-                    constraint.goal_state.name.append(joint_name)
-                    constraint.goal_state.position.append(joint_position)
-            self.cmd_seq[-1].joint_constraints.append(constraint)
+        constraint = Constraint()
+        constraint.type = JointConstraint.JOINT
+        if isinstance(goal_state, JointState):
+            goal_state = goal_state
         else:
-            constraint = Constraint()
-            constraint.type = JointConstraint.JOINT
-            if isinstance(goal_state, JointState):
-                goal_state = goal_state
-            else:
-                goal_state2 = JointState()
-                for joint_name, joint_position in goal_state.items():
-                    goal_state2.name.append(joint_name)
-                    goal_state2.position.append(joint_position)
-                goal_state = goal_state2
-            params = {}
-            params[u'goal_state'] = convert_ros_message_to_dictionary(goal_state)
-            if weight is not None:
-                params[u'weight'] = weight
-            if max_velocity is not None:
-                params[u'max_velocity'] = max_velocity
-            constraint.parameter_value_pair = json.dumps(params)
-            self.cmd_seq[-1].constraints.append(constraint)
+            goal_state2 = JointState()
+            for joint_name, joint_position in goal_state.items():
+                goal_state2.name.append(joint_name)
+                goal_state2.position.append(joint_position)
+            goal_state = goal_state2
+        params = {}
+        params[u'goal_state'] = convert_ros_message_to_dictionary(goal_state)
+        if weight is not None:
+            params[u'weight'] = weight
+        if max_velocity is not None:
+            params[u'max_velocity'] = max_velocity
+        constraint.parameter_value_pair = json.dumps(params)
+        self.cmd_seq[-1].constraints.append(constraint)
 
     def align_planes(self, tip_link, tip_normal, root_link=None, root_normal=None, max_angular_velocity=None,
                      weight=WEIGHT_ABOVE_CA):
@@ -309,6 +333,8 @@ class GiskardWrapper(object):
                   u'goal_point': goal_point}
         if root_link is not None:
             kwargs[u'root_link'] = root_link
+        else:
+            kwargs[u'root_link'] = self.get_root()
         if pointing_axis is not None:
             kwargs[u'pointing_axis'] = pointing_axis
         if weight is not None:
@@ -321,8 +347,7 @@ class GiskardWrapper(object):
         Set a goal for any of the goals defined in Constraints.py
         :param constraint_type: Name of the Goal
         :type constraint_type: str
-        :param kwargs: maps constraint parameter names to values. Values should be float, str or ros messages.
-        :type kwargs: dict
+        :param **kwargs: maps constraint parameter names to values. Values should be float, str or ros messages.
         """
         constraint = Constraint()
         constraint.type = constraint_type

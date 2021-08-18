@@ -1,10 +1,9 @@
 import pytest
 import urdf_parser_py.urdf as up
 from geometry_msgs.msg import Pose, Point, Quaternion
-from urdf_parser_py.urdf import URDF
-
-from giskardpy.urdf_object import URDFObject, hacky_urdf_parser_fix
-from giskardpy.utils import make_world_body_box
+from utils_for_tests import pr2_urdf
+from giskardpy.model.urdf_object import URDFObject, hacky_urdf_parser_fix
+from giskardpy.model.utils import make_world_body_box
 from kineverse.model.articulation_model import ArticulationModel
 from kineverse.operations.urdf_operations import load_urdf
 from kineverse.urdf_fix import urdf_filler
@@ -252,7 +251,7 @@ class TestUrdfObject(object):
         :param urdf:
         :param cls:
         :param kwargs:
-        :rtype: (URDFObject, dict)
+        :rtype: URDFObject
         """
         km = ArticulationModel()
         urdf_obj = urdf_filler(up.URDF.from_xml_string(hacky_urdf_parser_fix(urdf)), fill_with_visual=False)  # FIXME make this to a function
@@ -309,197 +308,6 @@ class TestUrdfObject(object):
     def test_get_link_names_from_chain(self, function_setup):
         pass
 
-    # def test_get_links_from_sub_tree1(self, function_setup):
-    #     parsed_pr2 = self.make_object_without_limits(pr2_urdf())
-    #     urdf_obj = parsed_pr2.get_sub_tree_at_joint(u'torso_lift_joint')
-    #     assert set(urdf_obj.get_link_names()) == {'double_stereo_link',
-    #                                               'head_mount_kinect2_ir_optical_frame',
-    #                                               'head_mount_kinect2_rgb_optical_frame',
-    #                                               'head_mount_kinect_ir_link',
-    #                                               'head_mount_kinect_ir_optical_frame',
-    #                                               'head_mount_kinect_rgb_link',
-    #                                               'head_mount_kinect_rgb_optical_frame',
-    #                                               'head_mount_link',
-    #                                               'head_mount_prosilica_link',
-    #                                               'head_mount_prosilica_optical_frame',
-    #                                               'head_pan_link',
-    #                                               'head_plate_frame',
-    #                                               'head_tilt_link',
-    #                                               'high_def_frame',
-    #                                               'high_def_optical_frame',
-    #                                               'imu_link',
-    #                                               'l_elbow_flex_link',
-    #                                               'l_force_torque_adapter_link',
-    #                                               'l_force_torque_link',
-    #                                               'l_forearm_cam_frame',
-    #                                               'l_forearm_cam_optical_frame',
-    #                                               'l_forearm_link',
-    #                                               'l_forearm_roll_link',
-    #                                               'l_gripper_l_finger_link',
-    #                                               'l_gripper_l_finger_tip_frame',
-    #                                               'l_gripper_l_finger_tip_link',
-    #                                               'l_gripper_led_frame',
-    #                                               'l_gripper_motor_accelerometer_link',
-    #                                               'l_gripper_motor_screw_link',
-    #                                               'l_gripper_motor_slider_link',
-    #                                               'l_gripper_palm_link',
-    #                                               'l_gripper_r_finger_link',
-    #                                               'l_gripper_r_finger_tip_link',
-    #                                               'l_gripper_tool_frame',
-    #                                               'l_shoulder_lift_link',
-    #                                               'l_shoulder_pan_link',
-    #                                               'l_torso_lift_side_plate_link',
-    #                                               'l_upper_arm_link',
-    #                                               'l_upper_arm_roll_link',
-    #                                               'l_wrist_flex_link',
-    #                                               'l_wrist_roll_link',
-    #                                               'laser_tilt_link',
-    #                                               'laser_tilt_mount_link',
-    #                                               'narrow_stereo_l_stereo_camera_frame',
-    #                                               'narrow_stereo_l_stereo_camera_optical_frame',
-    #                                               'narrow_stereo_link',
-    #                                               'narrow_stereo_optical_frame',
-    #                                               'narrow_stereo_r_stereo_camera_frame',
-    #                                               'narrow_stereo_r_stereo_camera_optical_frame',
-    #                                               'projector_wg6802418_child_frame',
-    #                                               'projector_wg6802418_frame',
-    #                                               'r_elbow_flex_link',
-    #                                               'r_forearm_cam_frame',
-    #                                               'r_forearm_cam_optical_frame',
-    #                                               'r_forearm_link',
-    #                                               'r_forearm_roll_link',
-    #                                               'r_gripper_l_finger_link',
-    #                                               'r_gripper_l_finger_tip_frame',
-    #                                               'r_gripper_l_finger_tip_link',
-    #                                               'r_gripper_led_frame',
-    #                                               'r_gripper_motor_accelerometer_link',
-    #                                               'r_gripper_motor_screw_link',
-    #                                               'r_gripper_motor_slider_link',
-    #                                               'r_gripper_palm_link',
-    #                                               'r_gripper_r_finger_link',
-    #                                               'r_gripper_r_finger_tip_link',
-    #                                               'r_gripper_tool_frame',
-    #                                               'r_shoulder_lift_link',
-    #                                               'r_shoulder_pan_link',
-    #                                               'r_torso_lift_side_plate_link',
-    #                                               'r_upper_arm_link',
-    #                                               'r_upper_arm_roll_link',
-    #                                               'r_wrist_flex_link',
-    #                                               'r_wrist_roll_link',
-    #                                               'sensor_mount_link',
-    #                                               'torso_lift_link',
-    #                                               'wide_stereo_l_stereo_camera_frame',
-    #                                               'wide_stereo_l_stereo_camera_optical_frame',
-    #                                               'wide_stereo_link',
-    #                                               'wide_stereo_optical_frame',
-    #                                               'wide_stereo_r_stereo_camera_frame',
-    #                                               'wide_stereo_r_stereo_camera_optical_frame'}
-    #     assert set(urdf_obj.get_joint_names()) == {'double_stereo_frame_joint',
-    #                                                'head_mount_joint',
-    #                                                'head_mount_kinect2_ir_optical_frame_joint',
-    #                                                'head_mount_kinect2_rgb_optical_frame_joint',
-    #                                                'head_mount_kinect_ir_joint',
-    #                                                'head_mount_kinect_ir_optical_frame_joint',
-    #                                                'head_mount_kinect_rgb_joint',
-    #                                                'head_mount_kinect_rgb_optical_frame_joint',
-    #                                                'head_mount_prosilica_joint',
-    #                                                'head_mount_prosilica_optical_frame_joint',
-    #                                                'head_pan_joint',
-    #                                                'head_plate_frame_joint',
-    #                                                'head_tilt_joint',
-    #                                                'high_def_frame_joint',
-    #                                                'high_def_optical_frame_joint',
-    #                                                'imu_joint',
-    #                                                'l_elbow_flex_joint',
-    #                                                'l_force_torque_adapter_joint',
-    #                                                'l_force_torque_joint',
-    #                                                'l_forearm_cam_frame_joint',
-    #                                                'l_forearm_cam_optical_frame_joint',
-    #                                                'l_forearm_joint',
-    #                                                'l_forearm_roll_joint',
-    #                                                'l_gripper_joint',
-    #                                                'l_gripper_l_finger_joint',
-    #                                                'l_gripper_l_finger_tip_joint',
-    #                                                'l_gripper_led_joint',
-    #                                                'l_gripper_motor_accelerometer_joint',
-    #                                                'l_gripper_motor_screw_joint',
-    #                                                'l_gripper_motor_slider_joint',
-    #                                                'l_gripper_palm_joint',
-    #                                                'l_gripper_r_finger_joint',
-    #                                                'l_gripper_r_finger_tip_joint',
-    #                                                'l_gripper_tool_joint',
-    #                                                'l_shoulder_lift_joint',
-    #                                                'l_shoulder_pan_joint',
-    #                                                'l_torso_lift_side_plate_joint',
-    #                                                'l_upper_arm_joint',
-    #                                                'l_upper_arm_roll_joint',
-    #                                                'l_wrist_flex_joint',
-    #                                                'l_wrist_roll_joint',
-    #                                                'laser_tilt_joint',
-    #                                                'laser_tilt_mount_joint',
-    #                                                'narrow_stereo_frame_joint',
-    #                                                'narrow_stereo_l_stereo_camera_frame_joint',
-    #                                                'narrow_stereo_l_stereo_camera_optical_frame_joint',
-    #                                                'narrow_stereo_optical_frame_joint',
-    #                                                'narrow_stereo_r_stereo_camera_frame_joint',
-    #                                                'narrow_stereo_r_stereo_camera_optical_frame_joint',
-    #                                                'projector_wg6802418_child_frame_joint',
-    #                                                'projector_wg6802418_frame_joint',
-    #                                                'r_elbow_flex_joint',
-    #                                                'r_forearm_cam_frame_joint',
-    #                                                'r_forearm_cam_optical_frame_joint',
-    #                                                'r_forearm_joint',
-    #                                                'r_forearm_roll_joint',
-    #                                                'r_gripper_joint',
-    #                                                'r_gripper_l_finger_joint',
-    #                                                'r_gripper_l_finger_tip_joint',
-    #                                                'r_gripper_led_joint',
-    #                                                'r_gripper_motor_accelerometer_joint',
-    #                                                'r_gripper_motor_screw_joint',
-    #                                                'r_gripper_motor_slider_joint',
-    #                                                'r_gripper_palm_joint',
-    #                                                'r_gripper_r_finger_joint',
-    #                                                'r_gripper_r_finger_tip_joint',
-    #                                                'r_gripper_tool_joint',
-    #                                                'r_shoulder_lift_joint',
-    #                                                'r_shoulder_pan_joint',
-    #                                                'r_torso_lift_side_plate_joint',
-    #                                                'r_upper_arm_joint',
-    #                                                'r_upper_arm_roll_joint',
-    #                                                'r_wrist_flex_joint',
-    #                                                'r_wrist_roll_joint',
-    #                                                'sensor_mount_frame_joint',
-    #                                                'wide_stereo_frame_joint',
-    #                                                'wide_stereo_l_stereo_camera_frame_joint',
-    #                                                'wide_stereo_l_stereo_camera_optical_frame_joint',
-    #                                                'wide_stereo_optical_frame_joint',
-    #                                                'wide_stereo_r_stereo_camera_frame_joint',
-    #                                                'wide_stereo_r_stereo_camera_optical_frame_joint'}
-
-    # def test_reset1(self, function_setup):
-    #     parsed_pr2 = self.make_object_without_limits(pr2_urdf())
-    #     links_before = set(parsed_pr2.get_link_names())
-    #     joints_before = set(parsed_pr2.get_joint_names())
-    #     parsed_pr2.detach_sub_tree(u'l_shoulder_pan_joint')
-    #     parsed_pr2.reset()
-    #     assert set(parsed_pr2.get_link_names()) == links_before
-    #     assert set(parsed_pr2.get_joint_names()) == joints_before
-
-    # def test_reset2(self, function_setup):
-    #     parsed_pr2 = self.make_object_without_limits(pr2_urdf())
-    #     links_before = set(parsed_pr2.get_link_names())
-    #     joints_before = set(parsed_pr2.get_joint_names())
-    #
-    #     box = self.make_object_without_limits.from_world_body(make_world_body_box())
-    #     p = Pose()
-    #     p.position = Point(0, 0, 0)
-    #     p.orientation = Quaternion(0, 0, 0, 1)
-    #     parsed_pr2.attach_urdf_object(box, u'l_gripper_tool_frame', p)
-    #
-    #     parsed_pr2.reset()
-    #     assert set(parsed_pr2.get_link_names()) == links_before
-    #     assert set(parsed_pr2.get_joint_names()) == joints_before
-
     def test_get_all_joint_limits(self, function_setup):
         parsed_pr2 = self.make_object(pr2_urdf())
         assert parsed_pr2.get_all_joint_limits() == {'bl_caster_l_wheel_joint': (None, None),
@@ -553,19 +361,19 @@ class TestUrdfObject(object):
 
     def test_get_joint_limits2(self, function_setup):
         parsed_pr2 = self.make_object(pr2_urdf())
-        lower_limit, upper_limit = parsed_pr2.get_joint_limits(u'l_shoulder_pan_joint')
+        lower_limit, upper_limit = parsed_pr2.get_joint_position_limits(u'l_shoulder_pan_joint')
         assert lower_limit == -0.564601836603
         assert upper_limit == 2.1353981634
 
     def test_get_joint_limits3(self, function_setup):
         parsed_pr2 = self.make_object(pr2_urdf())
-        lower_limit, upper_limit = parsed_pr2.get_joint_limits(u'l_wrist_roll_joint')
+        lower_limit, upper_limit = parsed_pr2.get_joint_position_limits(u'l_wrist_roll_joint')
         assert lower_limit == None
         assert upper_limit == None
 
     def test_get_joint_limits4(self, function_setup):
         parsed_base_bot = self.make_object(base_bot_urdf())
-        lower_limit, upper_limit = parsed_base_bot.get_joint_limits(u'joint_x')
+        lower_limit, upper_limit = parsed_base_bot.get_joint_position_limits(u'joint_x')
         assert lower_limit == -3
         assert upper_limit == 3
 
@@ -686,7 +494,7 @@ class TestUrdfObject(object):
         tip = u'l_gripper_tool_frame'
         root = u'l_gripper_tool_frame'
         chain = parsed_pr2.get_joint_names_from_chain(root, tip)
-        assert chain == [u'l_gripper_tool_frame']
+        assert chain == []
 
     def test_get_chain5(self, function_setup):
         parsed_pr2 = self.make_object_without_limits(pr2_urdf())

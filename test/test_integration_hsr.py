@@ -3,13 +3,13 @@ from copy import deepcopy
 import numpy as np
 import pytest
 import rospy
-from giskard_msgs.msg import MoveGoal, MoveResult
-from geometry_msgs.msg import PoseStamped, Point, Quaternion, Vector3Stamped, PointStamped
+from geometry_msgs.msg import PoseStamped, Point, Quaternion
+from giskard_msgs.msg import MoveResult
 from numpy import pi
 from tf.transformations import quaternion_from_matrix, quaternion_about_axis
-import giskardpy.tfwrapper as tf
-from giskardpy import logging
-from giskardpy.tfwrapper import init as tf_init
+import giskardpy.utils.tfwrapper as tf
+from giskardpy.utils import logging
+from giskardpy.utils.tfwrapper import init as tf_init
 from utils_for_tests import PR2, HSR
 
 default_pose = {

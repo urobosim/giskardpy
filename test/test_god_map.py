@@ -6,15 +6,15 @@ giskardpy.WORLD_IMPLEMENTATION = None
 import unittest
 from collections import namedtuple
 
-from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import PoseStamped, Pose
 from hypothesis import given, assume
 import hypothesis.strategies as st
 from giskardpy import identifier
-from giskardpy import cas_wrapper as w
+from giskardpy import casadi_wrapper as w
 from giskardpy.god_map import GodMap
 from utils_for_tests import variable_name, keys_values, lists_of_same_length, pr2_urdf
-from giskardpy.world import World
-from giskardpy.world_object import WorldObject
+from giskardpy.model.world import World
+from giskardpy.model.world_object import WorldObject
 
 PKG = u'giskardpy'
 
@@ -105,13 +105,13 @@ class TestGodMap(unittest.TestCase):
         class C(object):
             asdf = 1
         db.unsafe_set_data(['c'], C())
-        with self.assertRaises(AttributeError):
+        with self.assertRaises(KeyError):
             db.get_data(['c', 'a'])
 
     def test_index_error(self):
         db = GodMap()
         db.unsafe_set_data(['l'], [1, 2, 3])
-        with self.assertRaises(AttributeError):
+        with self.assertRaises(KeyError):
             db.get_data(['l', '5'])
 
     @given(variable_name(),
@@ -298,6 +298,14 @@ class TestGodMap(unittest.TestCase):
         self.assertTrue(w.is_symbol(gm.identivier_to_symbol([key])))
         self.assertTrue(key in str(gm.identivier_to_symbol([key])))
 
+    def test_to_symbol_pose_stamped(self):
+        gm = GodMap()
+        pose = PoseStamped()
+        gm.set_data(['muh'], pose)
+        result = gm.to_expr(['muh'])
+        self.assertEqual(result.shape[0], 4)
+        self.assertEqual(result.shape[1], 4)
+
     @given(lists_of_same_length([variable_name(), st.floats()], unique=True))
     def test_get_symbol_map(self, keys_values):
         keys, values = keys_values
@@ -313,13 +321,29 @@ class TestGodMap(unittest.TestCase):
         w = World(gm)
         r = pr2_urdf()
         w.add_robot(robot_urdf=r,
-                    base_pose=PoseStamped(),
+                    base_pose=Pose(),
                     controlled_joints=[],
                     ignored_pairs=set(),
                     added_pairs=set())
         gm.set_data([u'world'], w)
         gm_robot = gm.get_data(identifier.robot)
         assert 'robot' == gm_robot.get_name()
+
+    def test_to_expr_ndarray(self):
+        gm = GodMap()
+        data = np.zeros((5,5))
+        gm.set_data(['muh'], data)
+        expr = gm.to_expr(['muh'])
+        assert expr.shape == data.shape
+
+    def test_to_expr_list(self):
+        gm = GodMap()
+        data = [1,2,3]
+        gm.set_data(['muh'], data)
+        expr = gm.to_expr(['muh'])
+        data[0]
+        data[1]
+        data[2]
 
 
 if __name__ == '__main__':
