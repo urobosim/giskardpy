@@ -228,7 +228,7 @@ class GodMap(object):
         # TODO should be possible without clear cache
         self.shortcuts = {}
 
-    def identivier_to_symbol(self, identifier):
+    def identifier_to_symbol(self, identifier):
         """
         All registered identifiers will be included in self.get_symbol_map().
         :type identifier: list
@@ -251,7 +251,7 @@ class GodMap(object):
         if isinstance(data, np.ndarray):
             data = data.tolist()
         if isinstance(data, numbers.Number):
-            return self.identivier_to_symbol(identifier)
+            return self.identifier_to_symbol(identifier)
         if isinstance(data, Pose):
             return self.pose_msg_to_frame(identifier)
         elif isinstance(data, PoseStamped):
@@ -287,45 +287,45 @@ class GodMap(object):
 
     def list_to_point3(self, identifier):
         return w.point3(
-            x=self.identivier_to_symbol(identifier + [0]),
-            y=self.identivier_to_symbol(identifier + [1]),
-            z=self.identivier_to_symbol(identifier + [2]),
+            x=self.identifier_to_symbol(identifier + [0]),
+            y=self.identifier_to_symbol(identifier + [1]),
+            z=self.identifier_to_symbol(identifier + [2]),
         )
 
     def list_to_vector3(self, identifier):
         return w.vector3(
-            x=self.identivier_to_symbol(identifier + [0]),
-            y=self.identivier_to_symbol(identifier + [1]),
-            z=self.identivier_to_symbol(identifier + [2]),
+            x=self.identifier_to_symbol(identifier + [0]),
+            y=self.identifier_to_symbol(identifier + [1]),
+            z=self.identifier_to_symbol(identifier + [2]),
         )
 
     def list_to_translation3(self, identifier):
         return w.translation3(
-            x=self.identivier_to_symbol(identifier + [0]),
-            y=self.identivier_to_symbol(identifier + [1]),
-            z=self.identivier_to_symbol(identifier + [2]),
+            x=self.identifier_to_symbol(identifier + [0]),
+            y=self.identifier_to_symbol(identifier + [1]),
+            z=self.identifier_to_symbol(identifier + [2]),
         )
 
     def list_to_frame(self, identifier):
         return w.Matrix(
             [
                 [
-                    self.identivier_to_symbol(identifier + [0, 0]),
-                    self.identivier_to_symbol(identifier + [0, 1]),
-                    self.identivier_to_symbol(identifier + [0, 2]),
-                    self.identivier_to_symbol(identifier + [0, 3])
+                    self.identifier_to_symbol(identifier + [0, 0]),
+                    self.identifier_to_symbol(identifier + [0, 1]),
+                    self.identifier_to_symbol(identifier + [0, 2]),
+                    self.identifier_to_symbol(identifier + [0, 3])
                 ],
                 [
-                    self.identivier_to_symbol(identifier + [1, 0]),
-                    self.identivier_to_symbol(identifier + [1, 1]),
-                    self.identivier_to_symbol(identifier + [1, 2]),
-                    self.identivier_to_symbol(identifier + [1, 3])
+                    self.identifier_to_symbol(identifier + [1, 0]),
+                    self.identifier_to_symbol(identifier + [1, 1]),
+                    self.identifier_to_symbol(identifier + [1, 2]),
+                    self.identifier_to_symbol(identifier + [1, 3])
                 ],
                 [
-                    self.identivier_to_symbol(identifier + [2, 0]),
-                    self.identivier_to_symbol(identifier + [2, 1]),
-                    self.identivier_to_symbol(identifier + [2, 2]),
-                    self.identivier_to_symbol(identifier + [2, 3])
+                    self.identifier_to_symbol(identifier + [2, 0]),
+                    self.identifier_to_symbol(identifier + [2, 1]),
+                    self.identifier_to_symbol(identifier + [2, 2]),
+                    self.identifier_to_symbol(identifier + [2, 3])
                 ],
                 [
                     0, 0, 0, 1
@@ -335,27 +335,27 @@ class GodMap(object):
 
     def pose_msg_to_frame(self, identifier):
         return w.frame_quaternion(
-            x=self.identivier_to_symbol(identifier + ['position', 'x']),
-            y=self.identivier_to_symbol(identifier + ['position', 'y']),
-            z=self.identivier_to_symbol(identifier + ['position', 'z']),
-            qx=self.identivier_to_symbol(identifier + ['orientation', 'x']),
-            qy=self.identivier_to_symbol(identifier + ['orientation', 'y']),
-            qz=self.identivier_to_symbol(identifier + ['orientation', 'z']),
-            qw=self.identivier_to_symbol(identifier + ['orientation', 'w']),
+            x=self.identifier_to_symbol(identifier + ['position', 'x']),
+            y=self.identifier_to_symbol(identifier + ['position', 'y']),
+            z=self.identifier_to_symbol(identifier + ['position', 'z']),
+            qx=self.identifier_to_symbol(identifier + ['orientation', 'x']),
+            qy=self.identifier_to_symbol(identifier + ['orientation', 'y']),
+            qz=self.identifier_to_symbol(identifier + ['orientation', 'z']),
+            qw=self.identifier_to_symbol(identifier + ['orientation', 'w']),
         )
 
     def point_msg_to_point3(self, identifier):
         return w.point3(
-            x=self.identivier_to_symbol(identifier + ['x']),
-            y=self.identivier_to_symbol(identifier + ['y']),
-            z=self.identivier_to_symbol(identifier + ['z']),
+            x=self.identifier_to_symbol(identifier + ['x']),
+            y=self.identifier_to_symbol(identifier + ['y']),
+            z=self.identifier_to_symbol(identifier + ['z']),
         )
 
     def vector_msg_to_vector3(self, identifier):
         return w.vector3(
-            x=self.identivier_to_symbol(identifier + ['x']),
-            y=self.identivier_to_symbol(identifier + ['y']),
-            z=self.identivier_to_symbol(identifier + ['z']),
+            x=self.identifier_to_symbol(identifier + ['x']),
+            y=self.identifier_to_symbol(identifier + ['y']),
+            z=self.identifier_to_symbol(identifier + ['z']),
         )
 
     def symbol_to_identifier(self, symbol):
@@ -363,7 +363,10 @@ class GodMap(object):
 
     def register_symbol(self, symbol):
         identifier_ = str(symbol).split(self.expr_separator)
-        self.identivier_to_symbol(identifier_)
+        for i, s in enumerate(identifier_):
+            if s.isdigit():
+                identifier_[i] = int(s)
+        self.identifier_to_symbol(identifier_)
 
     def register_symbols(self, symbols):
         for symbol in symbols:

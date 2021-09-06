@@ -84,10 +84,10 @@ class TwoJointSetup(object):
 
         self.jc = FreeVariable(
             symbols={
-                0: self.god_map.identivier_to_symbol(['j']),
-                1: self.god_map.identivier_to_symbol(['j_v']),
-                2: self.god_map.identivier_to_symbol(['j_a']),
-                3: self.god_map.identivier_to_symbol(['j_j']),
+                0: self.god_map.identifier_to_symbol(['j']),
+                1: self.god_map.identifier_to_symbol(['j_v']),
+                2: self.god_map.identifier_to_symbol(['j_a']),
+                3: self.god_map.identifier_to_symbol(['j_j']),
             },
             lower_limits={
                 0: self.j_lpos_limit,
@@ -107,10 +107,10 @@ class TwoJointSetup(object):
 
         self.jc2 = FreeVariable(
             symbols={
-                0: self.god_map.identivier_to_symbol(['j2']),
-                1: self.god_map.identivier_to_symbol(['j2_v']),
-                2: self.god_map.identivier_to_symbol(['j2_a']),
-                3: self.god_map.identivier_to_symbol(['j2_j']),
+                0: self.god_map.identifier_to_symbol(['j2']),
+                1: self.god_map.identifier_to_symbol(['j2_v']),
+                2: self.god_map.identifier_to_symbol(['j2_a']),
+                3: self.god_map.identifier_to_symbol(['j2_j']),
             },
             lower_limits={
                 0: self.j2_lpos_limit,
@@ -128,7 +128,7 @@ class TwoJointSetup(object):
             horizon_functions=self.hf,
         )
 
-        self.qp = QPController(self.god_map.identivier_to_symbol(['sample_period']), self.prediction_horizon, 'gurobi',
+        self.qp = QPController(self.god_map.identifier_to_symbol(['sample_period']), self.prediction_horizon, 'gurobi',
                                [self.jc, self.jc2])
 
     def simulate(self, things_to_plot=None, time_limit=6., min_time=1., file_name='', save=False,
@@ -213,8 +213,8 @@ def test_collision_avoidance(j_start, j_goal, above):
     ca_vel_limit = 0.2
 
     tjs.god_map.set_data(['goal'], j_goal)
-    goal_s = tjs.god_map.identivier_to_symbol(['goal'])
-    j = tjs.god_map.identivier_to_symbol(['j'])
+    goal_s = tjs.god_map.identifier_to_symbol(['goal'])
+    j = tjs.god_map.identifier_to_symbol(['j'])
 
     hard_threshold = 0.1
     soft_threshold = hard_threshold + 0.1
@@ -290,10 +290,10 @@ def test_collision_avoidance2():
     ca_vel_limit = 0.2
 
     tjs.god_map.set_data(['goal'], j_goal)
-    goal_s = tjs.god_map.identivier_to_symbol(['goal'])
-    t = tjs.god_map.identivier_to_symbol(['time']) * 0.05
-    j = tjs.god_map.identivier_to_symbol(['j'])
-    j_v = tjs.god_map.identivier_to_symbol(['j_v'])
+    goal_s = tjs.god_map.identifier_to_symbol(['goal'])
+    t = tjs.god_map.identifier_to_symbol(['time']) * 0.05
+    j = tjs.god_map.identifier_to_symbol(['j'])
+    j_v = tjs.god_map.identifier_to_symbol(['j_v'])
 
     hard_threshold1 = 0.
     hard_threshold2 = 0.5
@@ -367,8 +367,8 @@ def test_joint_goal_vel_limit():
     constraint_vel_limit = 0.5
 
     tjs.god_map.set_data(['goal'], 1)
-    goal_s = tjs.god_map.identivier_to_symbol(['goal'])
-    j = tjs.god_map.identivier_to_symbol(['j'])
+    goal_s = tjs.god_map.identifier_to_symbol(['goal'])
+    j = tjs.god_map.identifier_to_symbol(['j'])
 
     error = goal_s - j
 
@@ -419,8 +419,8 @@ def test_joint_goal(j_upos_limit, j_lpos_limit, goal):
                         j_lpos_limit=j_lpos_limit)
 
     tjs.god_map.set_data(['goal'], goal)
-    goal_s = tjs.god_map.identivier_to_symbol(['goal'])
-    j = tjs.god_map.identivier_to_symbol(['j'])
+    goal_s = tjs.god_map.identifier_to_symbol(['goal'])
+    j = tjs.god_map.identifier_to_symbol(['j'])
 
     error = goal_s - j
 
@@ -451,8 +451,8 @@ def test_joint_goal_continuous():
                         j_lpos_limit=None)
 
     tjs.god_map.set_data(['goal'], 4)
-    goal_s = tjs.god_map.identivier_to_symbol(['goal'])
-    j = tjs.god_map.identivier_to_symbol(['j'])
+    goal_s = tjs.god_map.identifier_to_symbol(['goal'])
+    j = tjs.god_map.identifier_to_symbol(['j'])
 
     error = goal_s - j
 
@@ -483,8 +483,8 @@ def test_joint_goal_control_horizon(prediction_horizon):
                         j_jerk_limit=999)
 
     tjs.god_map.set_data(['goal'], 1)
-    goal_s = tjs.god_map.identivier_to_symbol(['goal'])
-    j = tjs.god_map.identivier_to_symbol(['j'])
+    goal_s = tjs.god_map.identifier_to_symbol(['goal'])
+    j = tjs.god_map.identifier_to_symbol(['j'])
 
     error = goal_s - j
 
@@ -513,10 +513,10 @@ def test_joint_goal_opposing():
                         j_jerk_limit=999)
 
     tjs.god_map.set_data(['goal'], 1)
-    goal_s = tjs.god_map.identivier_to_symbol(['goal'])
+    goal_s = tjs.god_map.identifier_to_symbol(['goal'])
     tjs.god_map.set_data(['goal2'], -1)
-    goal2_s = tjs.god_map.identivier_to_symbol(['goal2'])
-    j = tjs.god_map.identivier_to_symbol(['j'])
+    goal2_s = tjs.god_map.identifier_to_symbol(['goal2'])
+    j = tjs.god_map.identifier_to_symbol(['j'])
 
     error = goal_s - j
     error2 = goal2_s - j
@@ -556,15 +556,15 @@ def test_fk():
                         j2_lpos_limit=None)
 
     tjs.god_map.set_data(['gx'], 1)
-    gx = tjs.god_map.identivier_to_symbol(['gx'])
+    gx = tjs.god_map.identifier_to_symbol(['gx'])
 
     tjs.god_map.set_data(['gy'], -1)
-    gy = tjs.god_map.identivier_to_symbol(['gy'])
+    gy = tjs.god_map.identifier_to_symbol(['gy'])
 
-    j = tjs.god_map.identivier_to_symbol(['j'])
-    j2 = tjs.god_map.identivier_to_symbol(['j2'])
-    j_v = tjs.god_map.identivier_to_symbol(['j_v'])
-    j2_v = tjs.god_map.identivier_to_symbol(['j2_v'])
+    j = tjs.god_map.identifier_to_symbol(['j'])
+    j2 = tjs.god_map.identifier_to_symbol(['j2'])
+    j_v = tjs.god_map.identifier_to_symbol(['j_v'])
+    j2_v = tjs.god_map.identifier_to_symbol(['j2_v'])
 
     fk = w.Matrix([
         w.sin(j) + w.sin(j + j2),

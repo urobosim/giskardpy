@@ -15,7 +15,7 @@ from rospy import ROSException
 
 import giskardpy.identifier as identifier
 import giskardpy.model.pybullet_wrapper as pbw
-from giskardpy.data_types import BiDict, KeyDefaultDict
+from giskardpy.data_types import BiDict, KeyDefaultDict, order_map
 from giskardpy.god_map import GodMap
 from giskardpy.tree.plugin import PluginBehavior
 from giskardpy.tree.plugin_action_server import GoalReceived, SendResult, GoalCanceled
@@ -51,17 +51,6 @@ from giskardpy.utils.math import max_velocity_from_horizon_and_jerk
 from giskardpy.utils.utils import create_path, render_dot_tree
 from giskardpy.model.world import World
 from giskardpy.model.world_object import WorldObject
-
-# TODO hardcode this somewhere else
-order_map = BiDict({
-    0: u'position',
-    1: u'velocity',
-    2: u'acceleration',
-    3: u'jerk',
-    4: u'snap',
-    5: u'crackle',
-    6: u'pop'
-})
 
 from kineverse.model.geometry_model import GeometryModel
 from kineverse.model.paths import Path
@@ -101,11 +90,7 @@ def initialize_god_map():
     world = World(god_map, identifier.world, blackboard.god_map.get_data(identifier.data_folder))
     god_map.set_data(identifier.world, world)
 
-
     robot_urdf = god_map.get_data(identifier.robot_description)
-    # robot = WorldObject(robot_urdf,
-    #                     None,
-    #                     controlled_joints)
     world.add_robot(robot_urdf=robot_urdf,
                     base_pose=None,
                     controlled_joints=controlled_joints,
@@ -117,33 +102,36 @@ def initialize_god_map():
     # weights
     for i, key in enumerate(god_map.get_data(identifier.joint_weights), start=1):
         d = set_default_in_override_block(identifier.joint_weights + [order_map[i], u'override'], god_map)
-        world.robot.set_joint_weight_symbols(d, i)
+        # world.robot.set_joint_weight_symbols(d, i)
 
 
     # limits
+    linear_map = {}
+    angular_map = {}
     for i, key in enumerate(god_map.get_data(identifier.joint_limits), start=1):
         d_linear = set_default_in_override_block(identifier.joint_limits + [order_map[i], u'linear', u'override'],
                                                  god_map)
         d_angular = set_default_in_override_block(identifier.joint_limits + [order_map[i], u'angular', u'override'],
                                                   god_map)
-        world.robot.set_joint_limit_symbols(d_linear, d_angular, i)
+        linear_map[i] = god_map.get_data(identifier.joint_limits + [order_map[i], u'linear', u'override'])
+        angular_map[i] = god_map.get_data(identifier.joint_limits + [order_map[i], u'angular', u'override'])
+        pass
 
     order = len(god_map.get_data(identifier.joint_weights))+1
     god_map.set_data(identifier.order, order)
 
     # joint symbols
-    for o in range(order):
-        key = order_map[o]
-        joint_position_symbols = {}
-        for joint_name in world.robot.get_movable_joints():
-            joint_position_symbols[joint_name] = god_map.to_symbol(identifier.joint_states + [joint_name, key])
-        world.robot.set_joint_symbols(joint_position_symbols, o)
+    # for o in range(order):
+    #     key = order_map[o]
+    #     joint_position_symbols = {}
+    #     for joint_name in world.robot.get_controllable_joints():
+    #         joint_position_symbols[joint_name] = god_map.identivier_to_symbol(identifier.joint_states + [joint_name, key])
+    #     world.robot.set_joint_symbols(joint_position_symbols, o)
 
-    world.robot.reinitialize()
+    # world.robot.reinitialize()
 
     world.robot.init_self_collision_matrix()
-    world.robot.update_joint_velocity_limits(god_map.get_data(identifier.joint_velocity_linear_limit),
-                                             god_map.get_data(identifier.joint_velocity_angular_limit))
+    world.robot.update_joint_limits(linear_map, angular_map)
     god_map.register_symbols(world.robot.get_joint_position_symbols())
     return god_map
 
@@ -205,7 +193,7 @@ def process_joint_specific_params(identifier_, default, override, god_map):
     if isinstance(override, dict):
         d.update(override)
     god_map.set_data(identifier_, d)
-    return KeyDefaultDict(lambda key: god_map.identivier_to_symbol(identifier_ + [key]))
+    return KeyDefaultDict(lambda key: god_map.identifier_to_symbol(identifier_ + [key]))
 
 
 def set_default_in_override_block(block_identifier, god_map):
@@ -220,7 +208,7 @@ def set_default_in_override_block(block_identifier, god_map):
                 override[key] = o
         d.update(override)
     god_map.set_data(block_identifier, d)
-    return KeyDefaultDict(lambda key: god_map.to_symbol(block_identifier + [key]))
+    return KeyDefaultDict(lambda key: god_map.identifier_to_symbol(block_identifier + [key]))
 
 
 def grow_tree():
@@ -260,8 +248,8 @@ def grow_tree():
     planning_3.add_child(running_is_success(LogTrajPlugin)(u'log zero velocity'))
     if god_map.get_data(identifier.enable_VisualizationBehavior):
         planning_3.add_child(VisualizationBehavior(u'visualization', ensure_publish=True))
-    if god_map.get_data(identifier.enable_WorldVisualizationBehavior):
-        planning_3.add_child(WorldVisualizationBehavior(u'world_visualization', ensure_publish=True))
+    # if god_map.get_data(identifier.enable_WorldVisualizationBehavior):
+    #     planning_3.add_child(WorldVisualizationBehavior(u'world_visualization', ensure_publish=True))
     if god_map.get_data(identifier.enable_CPIMarker):
         planning_3.add_child(CollisionMarker(u'cpi marker'))
     # ----------------------------------------------
@@ -275,8 +263,8 @@ def grow_tree():
     planning_2.add_child(GoalCanceled(u'goal canceled', action_server_name))
     if god_map.get_data(identifier.enable_VisualizationBehavior):
         planning_2.add_child(success_is_failure(VisualizationBehavior)(u'visualization'))
-    if god_map.get_data(identifier.enable_WorldVisualizationBehavior):
-        planning_2.add_child(success_is_failure(WorldVisualizationBehavior)(u'world_visualization'))
+    # if god_map.get_data(identifier.enable_WorldVisualizationBehavior):
+    #     planning_2.add_child(success_is_failure(WorldVisualizationBehavior)(u'world_visualization'))
     if god_map.get_data(identifier.enable_CPIMarker):
         planning_2.add_child(success_is_failure(CollisionMarker)(u'cpi marker'))
     planning_2.add_child(planning_3)

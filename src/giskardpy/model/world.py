@@ -187,7 +187,8 @@ class World(object):
         if self.km_model.has_data(name):
             raise DuplicateNameException(u'Something with name \'{}\' already exists'.format(name))
 
-        root_pose = self.god_map.to_expr([self.__prefix, u'km_model', u'data_tree', u'data_tree', name, u'base_pose'])
+        root_pose = self.god_map.pose_msg_to_frame([self.__prefix, u'km_model', u'data_tree', u'data_tree',
+                                                    name, u'base_pose'])
 
         limit_map = load_urdf(ks=self.km_model,
                               prefix=Path(str(name)),
@@ -338,8 +339,6 @@ class World(object):
         """
         if self.has_robot():
             raise RobotExistsException(u'A robot is already loaded')
-        if base_pose is None:
-            base_pose = robot_urdf.base_pose
         self.add_thing(robot_urdf,
                        name=self._robot_name,
                        base_pose=base_pose,
@@ -384,8 +383,7 @@ class World(object):
     def reset_pb_subworld(self):
         self.pb_subworld = self.km_model.get_active_geometry(self.km_model._symbol_co_map.keys())
         symbols = self.pb_subworld.free_symbols
-        for symbol in symbols:
-            self.god_map.register_symbol(symbol)
+        self.god_map.register_symbols(symbols)
 
     @memoize
     def get_split_chain(self, root_path, tip_path, joints=True, links=True, fixed=True):

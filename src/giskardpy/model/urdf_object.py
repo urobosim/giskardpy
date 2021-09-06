@@ -1,22 +1,24 @@
 from __future__ import division
 
 from copy import deepcopy
-from geometry_msgs.msg import Pose, Vector3, Quaternion, Point
+
+from geometry_msgs.msg import Pose, Quaternion, Point
 from std_msgs.msg import ColorRGBA
 from tf.transformations import quaternion_from_euler
 from visualization_msgs.msg import Marker
 
 import kineverse.gradients.gradient_math as gm
+from giskardpy.model.utils import cube_volume, cube_surface, sphere_volume, cylinder_volume
+from giskardpy.utils.tfwrapper import normalize
+from giskardpy.utils.utils import memoize
 from kineverse.model.geometry_model import ArticulatedObject, GEOM_TYPE_MESH, GEOM_TYPE_BOX, GEOM_TYPE_CYLINDER, \
     GEOM_TYPE_SPHERE
 from kineverse.model.paths import Path
-from giskardpy.model.utils import cube_volume, cube_surface, sphere_volume, cylinder_volume
-from giskardpy.utils.utils import memoize
-from giskardpy.utils.tfwrapper import normalize
 
 
 def robot_name_from_urdf_string(urdf_string):
     return urdf_string.split('robot name="')[1].split('"')[0]
+
 
 def hacky_urdf_parser_fix(urdf_str):
     # TODO this function is inefficient but the tested urdfs's aren't big enough for it to be a problem
@@ -57,7 +59,8 @@ class URDFObject(ArticulatedObject):
     def init2(self, world=None, limit_map=None, *args, **kwargs):
         """
         :type world: giskardpy.world.World
-        :type limit_map:  dict
+        :param limit_map: maps joint name to dict, which maps derivative to dict, which maps lower/upper to number
+        :type limit_map: dict
         :type args: list
         :type kwargs: dict
         :return:
@@ -69,14 +72,14 @@ class URDFObject(ArticulatedObject):
         else:
             self._limits = {}
 
-    def update_joint_velocity_limits(self, new_linear_limits, new_angular_limits):
+    def update_joint_limits(self, new_linear_limits, new_angular_limits):
+        # TODO do minimum with old values?
         for joint_name in self.joint_limits:
-            if self.is_joint_prismatic(joint_name):
-                self._limits[joint_name][u'velocity'] = min(new_linear_limits[joint_name],
-                                                            self._limits[joint_name][u'velocity'])
-            elif self.is_joint_rotational(joint_name):
-                self._limits[joint_name][u'velocity'] = min(new_angular_limits[joint_name],
-                                                            self._limits[joint_name][u'velocity'])
+            for order in range(1, len(new_linear_limits)+1):
+                if self.is_joint_prismatic(joint_name):
+                    self._limits[joint_name][order] = new_linear_limits[order][joint_name]
+                elif self.is_joint_rotational(joint_name):
+                    self._limits[joint_name][order] = new_angular_limits[order][joint_name]
 
     @property
     def joint_limits(self):
@@ -222,13 +225,13 @@ class URDFObject(ArticulatedObject):
         """
         # joint = self.get_joint(joint_name)
         try:
-            return (self._limits[joint_name][u'position'][u'lower'], self._limits[joint_name][u'position'][u'upper'])
+            return (self._limits[joint_name][0][u'lower'], self._limits[joint_name][0][u'upper'])
         except KeyError:
             return (None, None)
 
     @memoize
     def get_joint_velocity_limit(self, joint_name):
-        return self._limits[joint_name][u'velocity']
+        return self._limits[joint_name][1]
 
     @memoize
     def get_joint_axis(self, joint_name):
@@ -474,7 +477,6 @@ class URDFObject(ArticulatedObject):
                 link_name = children[0]
         return link_name
 
-
     @memoize
     def get_non_base_movement_root(self):
         l = self.get_root()
@@ -671,12 +673,10 @@ class URDFObject(ArticulatedObject):
         return link_a == self.get_parent_link_of_link(link_b) or \
                (link_b == self.get_parent_link_of_link(link_a))
 
-
     @memoize
     def get_controllable_joints(self):
         # TODO test me pls
         return [joint_name for joint_name in self.get_joint_names() if self.is_joint_controllable(joint_name)]
-
 
     @memoize
     def has_link_visuals(self, link_name):

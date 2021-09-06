@@ -25,7 +25,10 @@ class AppendZeroVelocity(GiskardBehavior):
 
     def update(self):
         # FIXME we do we need this plugin?
-        motor_commands = self.get_god_map().get_data(identifier.qp_solver_solution)
+        try:
+            motor_commands = self.get_god_map().get_data(identifier.qp_solver_solution)
+        except KeyError:
+            return Status.SUCCESS
         current_js = self.get_god_map().get_data(identifier.joint_states)
         next_js = None
         if motor_commands:

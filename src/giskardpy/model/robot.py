@@ -216,14 +216,14 @@ class Robot(Backend):
             return self.get_joint_position_limits(joint_name)
 
         if self.is_joint_prismatic(joint_name):
-            limit = self._joint_linear_limit[order][joint_name]
+            limit = self._limits[joint_name][order]
         else:
-            limit = self._joint_angular_limit[order][joint_name]
+            limit = self._limits[joint_name][order]
 
         if order == 1:
             urdf_limit = self.get_joint_velocity_limit(joint_name)
             if urdf_limit is not None:
-                assert urdf_limit > 0
+                # assert urdf_limit > 0
                 limit = w.min(urdf_limit, limit)
         return -limit, limit
 
@@ -243,8 +243,10 @@ class Robot(Backend):
         lower_limit, upper_limit = self.get_joint_limit_expr(joint_name, order)
         if order == 0:
             return lower_limit, upper_limit
-        f = w.speed_up(upper_limit, w.free_symbols(upper_limit))
-        return f.call2(god_map.get_values(f.str_params))[0][0]
+        else:
+            return upper_limit
+        # f = w.speed_up(upper_limit, w.free_symbols(upper_limit))
+        # return f.call2(god_map.get_values(f.str_params))[0][0]
 
     def get_fk_expression(self, root_link, tip_link):
         """
@@ -348,7 +350,7 @@ class Robot(Backend):
         :return:
         """
         js = JointStates()
-        for joint_name in sorted(self.controlled_joints):
+        for joint_name in sorted(self.get_controllable_joints()):
             js[joint_name].position = f(joint_name)
         return js
 

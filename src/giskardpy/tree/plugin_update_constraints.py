@@ -2,29 +2,28 @@ import difflib
 import inspect
 import itertools
 import json
+import pkgutil
 import traceback
 from collections import OrderedDict
 from collections import defaultdict
 from time import time
+
 from giskard_msgs.msg import MoveCmd, CollisionEntry
 from py_trees import Status
 
 import giskardpy.goals
 import giskardpy.identifier as identifier
-from giskardpy.goals.collision_avoidance import SelfCollisionAvoidance, ExternalCollisionAvoidance
-import kineverse.gradients.common_math as cm
 from giskardpy import casadi_wrapper as w
-from giskardpy.exceptions import ImplementationException, UnknownConstraintException, InvalidGoalException, \
+from giskardpy.data_types import order_map
+from giskardpy.exceptions import UnknownConstraintException, InvalidGoalException, \
     ConstraintInitalizationException, GiskardException
-from giskardpy.qp.constraint import Constraint
-from giskardpy.qp.free_variable import FreeVariable
-from kineverse.gradients.diff_logic import DiffSymbol, erase_type, Position
-from kineverse.model.paths import Path
+from giskardpy.goals.collision_avoidance import SelfCollisionAvoidance, ExternalCollisionAvoidance
 from giskardpy.goals.goal import Goal
-from giskardpy.utils.logging import loginfo
+from giskardpy.qp.free_variable import FreeVariable
 from giskardpy.tree.plugin_action_server import GetGoal
+from giskardpy.utils.logging import loginfo
 from giskardpy.utils.utils import convert_dictionary_to_ros_message
-import pkgutil
+from kineverse.gradients.diff_logic import DiffSymbol, erase_type, Position
 
 
 def get_all_classes_in_package(package):
@@ -173,104 +172,126 @@ class GoalToConstraints(GetGoal):
     def position_identifier_from_velocity_symbol(self, s):
         return self.get_god_map().symbol_to_identifier(Position(erase_type(s)))
 
-    def add_object_constraints(self):
-        world = self.get_god_map().get_data(identifier.world)
-        # FIXME you also still have to check the soft constraints for e.g. kitchen joints
+    def free_symbols_from_kineverse(self):
+        free_variables = []
         joint_position_symbols = set()
-        for object_name in self.get_world().get_object_names():
+        for object_name in self.get_world().get_object_names():  # get all object joint symbols
             joint_position_symbols |= set(self.get_world().get_object(object_name).get_joint_position_symbols())
 
-        constraint_symbols = set()
+        constraint_symbols = set()  # get all symbols used in constraints
         for constraint_name, constraint in self.soft_constraints.items():
             constraint_symbols |= set(w.free_symbols(constraint.expression))
 
-
         joint_position_symbols = joint_position_symbols.intersection(constraint_symbols)
-        joint_position_symbols |= self.get_robot().get_controlled_joint_position_symbols()
+        joint_position_symbols |= self.get_robot().get_controlled_joint_position_symbols()  # add all joints from robot
         self.get_god_map().set_data(identifier.controlled_joint_symbols, joint_position_symbols)
 
-        joint_velocity_symbols = {DiffSymbol(s) for s in joint_position_symbols}
+        # joint_velocity_symbols = {DiffSymbol(s) for s in joint_position_symbols}
 
-        constraints = world.km_model.get_constraints_by_symbols(joint_velocity_symbols.union(joint_position_symbols))
+        # constraints = self.get_world().km_model.get_constraints_by_symbols(joint_position_symbols)
 
         joint_constraints = OrderedDict()
-        to_remove = set()
-        symbols = set()
+        # to_remove = set()
+        symbols_to_register = set()
 
-        sample_period = self.get_god_map().identivier_to_symbol(identifier.sample_period)
-        #FIXME
-        for k, c in sorted(constraints.items()):
-            if cm.is_symbol(c.expr) and c.expr in joint_velocity_symbols and str(c.expr) not in joint_constraints:
-                joint_name = str(Path(erase_type(c.expr))[-1])
-                to_remove.add(k)
-                lower_limit = c.lower
-                upper_limit = c.upper
+        # sample_period = self.get_god_map().identivier_to_symbol(identifier.sample_period)
+        # FIXME
+        for joint_position_symbol in joint_position_symbols:
+            symbols = {}
+            lower_limits = {}
+            upper_limits = {}
+            weights = {}
+            s = joint_position_symbol
+            joint_name = str(joint_position_symbol).split('__')[-2]
+            for order in range(4):
+                symbols[order] = s
+                for key, c in self.get_world().km_model.get_constraints_by_symbols([s]).items():
+                    lower_limits[order] = c.lower
+                    upper_limits[order] = c.upper
+                    symbols_to_register.update(w.free_symbols(c.expr))
+                    symbols_to_register.update(w.free_symbols(c.lower))
+                    symbols_to_register.update(w.free_symbols(c.upper))
+                    if order > 0:
+                        try:
+                            weight_symbol = self.get_god_map().identifier_to_symbol(identifier.joint_weights + [order_map[order], u'override', joint_name])
+                            weights[order] = weight_symbol
+                            symbols_to_register.add(weight_symbol)
+                        except KeyError:
+                            weights[order] = 0
+                s = DiffSymbol(s)
+            v = FreeVariable(symbols=symbols,
+                             lower_limits=lower_limits,
+                             upper_limits=upper_limits,
+                             quadratic_weights=weights,
+                             horizon_functions={1: 0.1})
+            free_variables.append(v)
 
-                symbols.update(w.free_symbols(lower_limit))
-                symbols.update(w.free_symbols(upper_limit))
+        # self.get_robot().create_constraints(self.get_god_map())
+        # joint_constraints = OrderedDict(((self.robot.get_name(), k), self.robot._joint_constraints[k]) for k in
+        #                                 self.get_robot().controlled_joints)
+        # for k, c in sorted(constraints.items()):
+        #     if cm.is_symbol(c.expr) and c.expr in joint_velocity_symbols and str(c.expr) not in joint_constraints:
+        #         joint_name = str(Path(erase_type(c.expr))[-1])
+        #         to_remove.add(k)
+        #         lower_limit = c.lower
+        #         upper_limit = c.upper
+        #
+        #         symbols.update(w.free_symbols(lower_limit))
+        #         symbols.update(w.free_symbols(upper_limit))
+        #
+        #         # FIXME support vel limit from param server again
+        #         lower_limit = lower_limit * sample_period
+        #         upper_limit = upper_limit * sample_period
+        #
+        #         weight = self.get_god_map().get_data(identifier.joint_weight)[joint_name]
+        #         weight = weight * (1. / (upper_limit)) ** 2
+        #
+        #         key = self.position_identifier_from_velocity_symbol(c.expr)
+        #         symbols = {}
+        #
+        #         joint_constraints[key] = FreeVariable(symbols=0,
+        #                                               lower_limits=lower_limit,
+        #                                               upper_limits=upper_limit,
+        #                                               quadratic_weights=weight)
 
-                # FIXME support vel limit from param server again
-                lower_limit = lower_limit * sample_period
-                upper_limit = upper_limit * sample_period
+        # hard_constraints = OrderedDict()
+        # for k, c in sorted(constraints.items()):
+        #     if k not in to_remove:
+        #         symbols.update(w.free_symbols(c.lower))
+        #         symbols.update(w.free_symbols(c.upper))
+        #         symbols.update(w.free_symbols(c.expr))
+        #         hard_constraints[k] = Constraint(lbA=c.lower,
+        #                                              ubA=c.upper,
+        #                                              weight=1,
+        #                                              expression=c.expr,
+        #                                              goal_constraint=False,
+        #                                              lower_slack_limit=0,
+        #                                              upper_slack_limit=0,
+        #                                              linear_weight=0)
 
-                weight = self.get_god_map().get_data(identifier.joint_weight)[joint_name]
-                weight = weight * (1. / (upper_limit)) ** 2
+        # hard_constraints = OrderedDict([((self.robot.get_name(), k), c) for k, c in hard_constraints.items()])
 
-                key = self.position_identifier_from_velocity_symbol(c.expr)
-                symbols = {}
+        # for s in joint_velocity_symbols:
+        #     joint_name = str(Path(erase_type(s))[-1])
+        #     key = self.position_identifier_from_velocity_symbol(s)
+        #     if key not in joint_constraints:
+        #         if self.get_robot().is_joint_prismatic(joint_name):
+        #             limit = self.get_god_map().get_data(identifier.joint_velocity_linear_limit_default)
+        #         else:
+        #             limit = self.get_god_map().get_data(identifier.joint_velocity_angular_limit_default)
+        #         lower, upper = -limit, limit
+        #         lower *= sample_period
+        #         upper *= sample_period
+        #         weight = self.get_god_map().get_data(identifier.joint_weight)[joint_name]
+        #         weight = weight * (1. / (upper)) ** 2
+        #         joint_constraints[key] = JointConstraint(lower, upper, weight, 0)
 
-                joint_constraints[key] = FreeVariable(symbols=0,
-                                                      lower_limits=lower_limit,
-                                                      upper_limits=upper_limit,
-                                                      quadratic_weights=weight)
+        self.get_god_map().register_symbols(symbols_to_register)
+        self.get_god_map().set_data(identifier.free_variables, free_variables)
 
-        hard_constraints = OrderedDict()
-        for k, c in sorted(constraints.items()):
-            if k not in to_remove:
-                symbols.update(w.free_symbols(c.lower))
-                symbols.update(w.free_symbols(c.upper))
-                symbols.update(w.free_symbols(c.expr))
-                hard_constraints[k] = Constraint(lbA=c.lower,
-                                                     ubA=c.upper,
-                                                     weight=1,
-                                                     expression=c.expr,
-                                                     goal_constraint=False,
-                                                     lower_slack_limit=0,
-                                                     upper_slack_limit=0,
-                                                     linear_weight=0)
-
-        hard_constraints = OrderedDict([((self.robot.get_name(), k), c) for k, c in hard_constraints.items()])
-
-        for s in joint_velocity_symbols:
-            joint_name = str(Path(erase_type(s))[-1])
-            key = self.position_identifier_from_velocity_symbol(s)
-            if key not in joint_constraints:
-                if self.get_robot().is_joint_prismatic(joint_name):
-                    limit = self.get_god_map().get_data(identifier.joint_velocity_linear_limit_default)
-                else:
-                    limit = self.get_god_map().get_data(identifier.joint_velocity_angular_limit_default)
-                lower, upper = -limit, limit
-                lower *= sample_period
-                upper *= sample_period
-                weight = self.get_god_map().get_data(identifier.joint_weight)[joint_name]
-                weight = weight * (1. / (upper)) ** 2
-                joint_constraints[key] = JointConstraint(lower, upper, weight, 0)
-
-        joint_constraints = OrderedDict((key, value) for key, value in sorted(joint_constraints.items()))
-
-        self.get_god_map().register_symbols(symbols)
-        if (self.get_god_map().get_data(identifier.check_reachability)):
-            # FIXME reachability check is broken
-            pass
-        else:
-            joint_constraints = OrderedDict(((self.robot.get_name(), k), self.robot._joint_constraints[k]) for k in
-                                            controlled_joints)
-
-        self.get_god_map().set_data(identifier.joint_constraint_identifier, joint_constraints)
-        self.soft_constraints.update(hard_constraints)
-        # self.get_god_map().set_data(identifier.hard_constraint_identifier, hard_constraints)
-        self.get_god_map().set_data(identifier.free_variables, joint_constraints)
-
+    def add_object_constraints(self):
+        # FIXME you also still have to check the soft constraints for e.g. kitchen joints
+        self.free_symbols_from_kineverse()
         return Status.SUCCESS
 
     def parse_constraints(self, cmd):
@@ -304,7 +325,8 @@ class GoalToConstraints(GetGoal):
                     parsed_json = json.loads(constraint.parameter_value_pair)
                     params = self.replace_jsons_with_ros_messages(parsed_json)
                 else:
-                    raise ConstraintInitalizationException(u'Only the json interface is supported at the moment. Create an issue if you want it.')
+                    raise ConstraintInitalizationException(
+                        u'Only the json interface is supported at the moment. Create an issue if you want it.')
                     # params = convert_ros_message_to_dictionary(constraint)
                     # del params[u'type']
 
@@ -336,7 +358,6 @@ class GoalToConstraints(GetGoal):
             if isinstance(value, dict) and 'message_type' in value:
                 d[key] = convert_dictionary_to_ros_message(value)
         return d
-
 
     def add_collision_avoidance_soft_constraints(self, collision_cmds):
         """

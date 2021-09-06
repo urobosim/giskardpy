@@ -81,14 +81,14 @@ class Goal(object):
         if not self.get_robot().has_joint(joint_name):
             raise KeyError('Robot doesn\'t have joint named: {}'.format(joint_name))
         key = identifier.joint_states + [joint_name, u'position']
-        return self._god_map.to_symbol(key)
+        return self.get_god_map().identifier_to_symbol(key)
 
     def get_joint_velocity_symbols(self, joint_name):
         """
         returns a symbol that referes to the given joint
         """
         key = identifier.joint_states + [joint_name, u'velocity']
-        return self._god_map.to_symbol(key)
+        return self.get_god_map().identifier_to_symbol(key)
 
     def get_object_joint_position_symbol(self, object_name, joint_name):
         """
@@ -96,10 +96,10 @@ class Goal(object):
         """
         # TODO test me
         key = identifier.world + [u'get_object', (object_name,), u'joint_state', joint_name, u'position']
-        return self._god_map.to_symbol(key)
+        return self.get_god_map().identifier_to_symbol(key)
 
     def get_sampling_period_symbol(self):
-        return self._god_map.to_symbol(identifier.sample_period)
+        return self.get_god_map().identifier_to_symbol(identifier.sample_period)
 
     def __str__(self):
         return self.__class__.__name__

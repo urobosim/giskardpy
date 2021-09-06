@@ -4,8 +4,6 @@ import numpy as np
 from sensor_msgs.msg import JointState
 from sortedcontainers import SortedKeyList
 
-from giskardpy.utils.tfwrapper import kdl_to_np, np_vector, np_point
-
 
 class KeyDefaultDict(defaultdict):
     """
@@ -449,3 +447,14 @@ class BiDict(dict):
         if self[key] in self.inverse and not self.inverse[self[key]]:
             del self.inverse[self[key]]
         super(BiDict, self).__delitem__(key)
+
+# TODO hardcode this somewhere else
+order_map = BiDict({
+    0: u'position',
+    1: u'velocity',
+    2: u'acceleration',
+    3: u'jerk',
+    4: u'snap',
+    5: u'crackle',
+    6: u'pop'
+})
