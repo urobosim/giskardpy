@@ -1,3 +1,4 @@
+import numbers
 from collections import defaultdict
 
 
@@ -48,8 +49,11 @@ class FreeVariable(object):
         try:
             lower_limit = self.get_lower_limit(0)
             upper_limit = self.get_upper_limit(0)
-            return lower_limit is not None and abs(lower_limit) < 100 \
-                   and upper_limit is not None and abs(upper_limit) < 100
+            if isinstance(lower_limit, numbers.Number):
+                return lower_limit is not None and abs(lower_limit) < 100 \
+                       and upper_limit is not None and abs(upper_limit) < 100
+            else:
+                return True
         except Exception:
             return False
 

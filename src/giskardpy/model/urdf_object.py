@@ -77,9 +77,18 @@ class URDFObject(ArticulatedObject):
         for joint_name in self.joint_limits:
             for order in range(1, len(new_linear_limits)+1):
                 if self.is_joint_prismatic(joint_name):
-                    self._limits[joint_name][order] = new_linear_limits[order][joint_name]
+                    try:
+                        self._limits[joint_name][order] = min(new_linear_limits[order][joint_name],
+                                                              self._limits[joint_name][order])
+                    except KeyError:
+                        self._limits[joint_name][order] = new_linear_limits[order][joint_name]
+
                 elif self.is_joint_rotational(joint_name):
-                    self._limits[joint_name][order] = new_angular_limits[order][joint_name]
+                    try:
+                        self._limits[joint_name][order] = min(new_angular_limits[order][joint_name],
+                                                              self._limits[joint_name][order])
+                    except KeyError:
+                        self._limits[joint_name][order] = new_angular_limits[order][joint_name]
 
     @property
     def joint_limits(self):

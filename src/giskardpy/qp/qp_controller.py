@@ -249,9 +249,9 @@ class BA(Parent):
         for t in range(self.prediction_horizon):
             for v in self.free_variables:  # type: FreeVariable
                 if v.has_position_limits():
-                    lb['t{:03d}/{}/p_limit'.format(t, v.name)] = w.round_up(v.get_lower_limit(0) - v.get_symbol(0),
+                    lb['t{:03d}/{}/p_limit'.format(t, v.name)] = w.round_up(v.get_lower_limit(0),
                                                                             self.round_to2)
-                    ub['t{:03d}/{}/p_limit'.format(t, v.name)] = w.round_down(v.get_upper_limit(0) - v.get_symbol(0),
+                    ub['t{:03d}/{}/p_limit'.format(t, v.name)] = w.round_down(v.get_upper_limit(0),
                                                                               self.round_to2)
 
         l_last_stuff = defaultdict(dict)
