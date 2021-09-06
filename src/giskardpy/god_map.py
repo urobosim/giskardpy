@@ -383,6 +383,8 @@ class GodMap(object):
             return [self.unsafe_get_data(self.expr_to_key[expr]) for expr in symbols]
 
     def evaluate_expr(self, expr):
+        if isinstance(expr, numbers.Number):
+            return expr
         fs = w.free_symbols(expr)
         fss = [str(s) for s in fs]
         f = w.speed_up(expr, fs)
