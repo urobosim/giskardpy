@@ -15,6 +15,7 @@ from giskardpy.utils.tfwrapper import homo_matrix_to_pose
 from giskardpy.utils.utils import memoize
 from giskardpy.model.world_object import WorldObject
 import kineverse.gradients.gradient_math as gm
+from kineverse.gradients.diff_logic import DiffSymbol
 from kineverse.model.paths import Path
 
 if WORLD_IMPLEMENTATION == u'pybullet':
@@ -248,46 +249,46 @@ class Robot(Backend):
         # f = w.speed_up(upper_limit, w.free_symbols(upper_limit))
         # return f.call2(god_map.get_values(f.str_params))[0][0]
 
-    def get_fk_expression(self, root_link, tip_link):
-        """
-        :type root_link: str
-        :type tip_link: str
-        :return: 4d matrix describing the transformation from root_link to tip_link
-        :rtype: spw.Matrix
-        """
-        fk = w.eye(4)
-        root_chain, _, tip_chain = self.get_split_chain(root_link, tip_link, links=False)
-        for joint_name in root_chain:
-            fk = w.dot(fk, w.inverse_frame(self.get_joint_frame(joint_name)))
-        for joint_name in tip_chain:
-            fk = w.dot(fk, self.get_joint_frame(joint_name))
-        # FIXME there is some reference fuckup going on, but i don't know where; deepcopy is just a quick fix
-        return deepcopy(fk)
+    # def get_fk_expression(self, root_link, tip_link):
+    #     """
+    #     :type root_link: str
+    #     :type tip_link: str
+    #     :return: 4d matrix describing the transformation from root_link to tip_link
+    #     :rtype: spw.Matrix
+    #     """
+    #     fk = w.eye(4)
+    #     root_chain, _, tip_chain = self.get_split_chain(root_link, tip_link, links=False)
+    #     for joint_name in root_chain:
+    #         fk = w.dot(fk, w.inverse_frame(self.get_joint_frame(joint_name)))
+    #     for joint_name in tip_chain:
+    #         fk = w.dot(fk, self.get_joint_frame(joint_name))
+    #     # FIXME there is some reference fuckup going on, but i don't know where; deepcopy is just a quick fix
+    #     return deepcopy(fk)
 
-    def get_fk_pose(self, root, tip):
-        try:
-            homo_m = self.get_fk_np(root, tip)
-            p = PoseStamped()
-            p.header.frame_id = root
-            p.pose = homo_matrix_to_pose(homo_m)
-        except Exception as e:
-            print(e)
-            traceback.print_exc()
-            pass
-        return p
-
-    @memoize
-    def get_fk_np(self, root, tip):
-        return self._fks[root, tip](**self.get_joint_state_positions())
-
-    def init_fast_fks(self):
-        def f(key):
-            root, tip = key
-            fk = self.get_fk_expression(root, tip)
-            m = w.speed_up(fk, w.free_symbols(fk))
-            return m
-
-        self._fks = KeyDefaultDict(f)
+    # def get_fk_pose(self, root, tip):
+    #     try:
+    #         homo_m = self.get_fk_np(root, tip)
+    #         p = PoseStamped()
+    #         p.header.frame_id = root
+    #         p.pose = homo_matrix_to_pose(homo_m)
+    #     except Exception as e:
+    #         print(e)
+    #         traceback.print_exc()
+    #         pass
+    #     return p
+    #
+    # @memoize
+    # def get_fk_np(self, root, tip):
+    #     return self._fks[root, tip](**self.get_joint_state_positions())
+    #
+    # def init_fast_fks(self):
+    #     def f(key):
+    #         root, tip = key
+    #         fk = self.get_fk_expression(root, tip)
+    #         m = w.speed_up(fk, w.free_symbols(fk))
+    #         return m
+    #
+    #     self._fks = KeyDefaultDict(f)
 
     # JOINT FUNCTIONS
 
@@ -339,10 +340,17 @@ class Robot(Backend):
         return self.get_joint_symbol(joint_name, 1)
 
     def get_joint_symbol(self, joint_name, order):
-        return self._joint_symbols[order][joint_name]
+        s = self.joints[joint_name].position
+        for _ in range(order):
+            s = DiffSymbol(s)
+        return s
+        # return self._joint_symbols[order][joint_name]
 
     def get_joint_velocity_symbols(self):
         return [self.get_joint_velocity_symbol(joint_name) for joint_name in self.controlled_joints]
+
+    def get_joint_position_symbols(self):
+        return [self.get_joint_position_symbol(joint_name) for joint_name in self.controlled_joints]
 
     def generate_joint_state(self, f):
         """

@@ -127,9 +127,7 @@ class WorldObject(URDFObject):
         return self._self_collision_matrix
 
     def get_joint_position_symbol(self, joint_name):
-        return self.get_god_map().identifier_to_symbol(identifier.km_world + [u'data_tree', u'data_tree',
-                                                                              self.get_name(), u'joint_state', joint_name,
-                                                                       u'position'])
+        return self.joints[joint_name].position
 
     # @memoize
     def get_controlled_joint_position_symbols(self):
