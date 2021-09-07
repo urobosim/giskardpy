@@ -339,13 +339,6 @@ class Robot(Backend):
         """
         return self.get_joint_symbol(joint_name, 1)
 
-    def get_joint_symbol(self, joint_name, order):
-        s = self.joints[joint_name].position
-        for _ in range(order):
-            s = DiffSymbol(s)
-        return s
-        # return self._joint_symbols[order][joint_name]
-
     def get_joint_velocity_symbols(self):
         return [self.get_joint_velocity_symbol(joint_name) for joint_name in self.controlled_joints]
 

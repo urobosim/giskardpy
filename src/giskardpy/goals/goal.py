@@ -74,14 +74,17 @@ class Goal(object):
         """
         return self.get_god_map().unsafe_get_data(identifier.robot)
 
-    def get_joint_position_symbol(self, joint_name):
+    def get_joint_position_symbol(self, joint_name, object_name=None):
         """
-        returns a symbol that referes to the given joint
+        returns a symbol that refers to the given joint
         """
-        if not self.get_robot().has_joint(joint_name):
-            raise KeyError('Robot doesn\'t have joint named: {}'.format(joint_name))
-        key = identifier.joint_states + [joint_name, u'position']
-        return self.get_god_map().identifier_to_symbol(key)
+        if object_name is None:
+            object_name = self.get_robot().get_name()
+        return self.get_world().get_object(object_name).get_joint_position_symbol(joint_name)
+        # if not self.get_robot().has_joint(joint_name):
+        #     raise KeyError('Robot doesn\'t have joint named: {}'.format(joint_name))
+        # key = identifier.joint_states + [joint_name, u'position']
+        # return self.get_god_map().identifier_to_symbol(key)
 
     def get_joint_velocity_symbols(self, joint_name):
         """
@@ -113,6 +116,9 @@ class Goal(object):
         """
         return self.get_robot().get_fk_expression(root, tip)
 
+    def get_world_fk(self, root_path, tip_path):
+        return self.get_world().get_fk_expression(root_path, tip_path)
+
     def get_fk_evaluated(self, root, tip):
         """
         Return the homogeneous transformation matrix root_T_tip. This Matrix refers to the evaluated current transform.
@@ -122,6 +128,16 @@ class Goal(object):
         :return: root_T_tip
         """
         return self.get_god_map().list_to_frame(identifier.fk_np + [(root, tip)])
+
+    def get_world_fk_evaluated(self, root_path, tip_path):
+        """
+        Return the homogeneous transformation matrix root_T_tip. This Matrix refers to the evaluated current transform.
+        It is not dependent on the joint state.
+        :type root: str
+        :type tip: str
+        :return: root_T_tip
+        """
+        return self.get_god_map().list_to_frame(identifier.world + [u'get_fk_np', (root_path, tip_path)])
 
     def get_parameter_as_symbolic_expression(self, name):
         """

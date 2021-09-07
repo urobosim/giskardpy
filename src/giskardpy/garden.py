@@ -87,6 +87,15 @@ def initialize_god_map():
     set_default_in_override_block(identifier.external_collision_avoidance, god_map)
     set_default_in_override_block(identifier.self_collision_avoidance, god_map)
 
+    # weights
+    for i, key in enumerate(god_map.get_data(identifier.joint_weights), start=1):
+        d = set_default_in_override_block(identifier.joint_weights + [order_map[i], u'override'], god_map)
+
+    # limits
+    for i, key in enumerate(god_map.get_data(identifier.joint_limits), start=1):
+        set_default_in_override_block(identifier.joint_limits + [order_map[i], u'linear', u'override'], god_map)
+        set_default_in_override_block(identifier.joint_limits + [order_map[i], u'angular', u'override'], god_map)
+
     world = World(god_map, identifier.world, blackboard.god_map.get_data(identifier.data_folder))
     god_map.set_data(identifier.world, world)
 
@@ -99,39 +108,13 @@ def initialize_god_map():
 
     sanity_check_derivatives(god_map)
 
-    # weights
-    for i, key in enumerate(god_map.get_data(identifier.joint_weights), start=1):
-        d = set_default_in_override_block(identifier.joint_weights + [order_map[i], u'override'], god_map)
-        # world.robot.set_joint_weight_symbols(d, i)
 
-
-    # limits
-    linear_map = {}
-    angular_map = {}
-    for i, key in enumerate(god_map.get_data(identifier.joint_limits), start=1):
-        d_linear = set_default_in_override_block(identifier.joint_limits + [order_map[i], u'linear', u'override'],
-                                                 god_map)
-        d_angular = set_default_in_override_block(identifier.joint_limits + [order_map[i], u'angular', u'override'],
-                                                  god_map)
-        linear_map[i] = god_map.get_data(identifier.joint_limits + [order_map[i], u'linear', u'override'])
-        angular_map[i] = god_map.get_data(identifier.joint_limits + [order_map[i], u'angular', u'override'])
-        pass
 
     order = len(god_map.get_data(identifier.joint_weights))+1
     god_map.set_data(identifier.order, order)
 
-    # joint symbols
-    # for o in range(order):
-    #     key = order_map[o]
-    #     joint_position_symbols = {}
-    #     for joint_name in world.robot.get_controllable_joints():
-    #         joint_position_symbols[joint_name] = god_map.identivier_to_symbol(identifier.joint_states + [joint_name, key])
-    #     world.robot.set_joint_symbols(joint_position_symbols, o)
-
-    # world.robot.reinitialize()
 
     world.robot.init_self_collision_matrix()
-    world.robot.update_joint_limits(linear_map, angular_map)
     god_map.register_symbols(world.robot.get_joint_position_symbols())
     return god_map
 

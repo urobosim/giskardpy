@@ -13,7 +13,7 @@ from giskard_msgs.msg import CollisionEntry, WorldBody
 
 from giskardpy import casadi_wrapper as w
 from giskardpy import identifier
-from giskardpy.data_types import Collision, Collisions, KeyDefaultDict
+from giskardpy.data_types import Collision, Collisions, KeyDefaultDict, order_map
 from giskardpy.utils import logging
 from giskardpy.exceptions import RobotExistsException, DuplicateNameException, PhysicsWorldException, \
     UnknownBodyException, UnsupportedOptionException, CorruptShapeException
@@ -205,6 +205,14 @@ class World(object):
         obj = self.km_model.get_data(name)  # type: Robot
         obj.init2(world=self, limit_map=limit_map,
                   path_to_data_folder=self.god_map.get_data(identifier.data_folder), **kwargs)
+
+        linear_map = {}
+        angular_map = {}
+        for i, key in enumerate(self.god_map.get_data(identifier.joint_limits), start=1):
+            linear_map[i] = self.god_map.get_data(identifier.joint_limits + [order_map[i], u'linear', u'override'])
+            angular_map[i] = self.god_map.get_data(identifier.joint_limits + [order_map[i], u'angular', u'override'])
+            pass
+        obj.update_joint_limits(linear_map, angular_map)
 
         self.km_model.register_on_model_changed(Path(name), obj.reset_cache)
         self.km_model.register_on_model_changed(Path(name), self.init_fast_fks)

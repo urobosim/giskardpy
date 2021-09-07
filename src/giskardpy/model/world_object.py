@@ -14,6 +14,7 @@ from giskardpy import identifier
 from giskardpy.model.urdf_object import URDFObject
 from giskardpy.utils.utils import memoize
 from giskardpy.utils.tfwrapper import msg_to_kdl
+from kineverse.gradients.diff_logic import DiffSymbol
 from kineverse.model.paths import Path
 
 
@@ -126,8 +127,14 @@ class WorldObject(URDFObject):
         """
         return self._self_collision_matrix
 
+    def get_joint_symbol(self, joint_name, order):
+        s = self.joints[joint_name].position
+        for _ in range(order):
+            s = DiffSymbol(s)
+        return s
+
     def get_joint_position_symbol(self, joint_name):
-        return self.joints[joint_name].position
+        return self.get_joint_symbol(joint_name, 0)
 
     # @memoize
     def get_controlled_joint_position_symbols(self):

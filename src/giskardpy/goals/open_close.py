@@ -264,3 +264,133 @@ class Close(Goal):
         else:
             logwarn(u'Opening containers with joint of type "{}" not supported'.format(
                 environment_object.get_joint_type(joint_name)))
+
+
+# Fixme: The name of this constraint is not informative. Should maybe be something like "Move1DofFixed"
+class Open1Dof(Goal):
+    def __init__(self, tip_link, object_name, handle_link, goal_joint_state, root_link=None,
+                 weight=WEIGHT_ABOVE_CA, **kwargs):
+        super(Open1Dof, self).__init__(**kwargs)
+        self.weight = weight
+        self.constraints = []
+
+        self.root = self.get_robot().get_root() if root_link is None else root_link
+        self.tip = tip_link
+
+        self.handle_link = handle_link
+
+        self.object_name = object_name
+        env_object = self.get_world().get_object(object_name)
+        self.handle_link_path = env_object.get_link_path(self.handle_link)
+        self.joint_name = env_object.get_movable_parent_joint(handle_link)
+
+        self.handle_T_tip = self.get_world().get_fk_pose(env_object.get_link_path(self.handle_link),
+                                                    self.get_robot().get_link_path(self.tip))
+
+        self.goal_joint_state = goal_joint_state
+
+        # min_limit, max_limit = env_object.get_joint_limits(self.joint_name)
+        # if goal_joint_state is not None:
+        #     self.goal_joint_state = max(min_limit, min(max_limit, goal_joint_state))
+        # else:
+        #     self.goal_joint_state = max_limit
+
+    def make_constraints(self):
+        handle_T_tip_evaluated = self.get_parameter_as_symbolic_expression(u'handle_T_tip')
+        goal_joint_symbol = self.get_joint_position_symbol(self.joint_name, self.object_name)
+
+        map_T_handle = self.get_world_fk(self.get_world().world_frame_path, self.handle_link_path)
+        map_T_tip = self.get_world_fk(self.get_world().world_frame_path, self.get_robot().get_link_path(self.tip))
+        handle_T_tip = w.dot(w.inverse_frame(map_T_handle), map_T_tip)
+
+        r_P_c = w.position_of(handle_T_tip)
+        r_P_g = w.position_of(handle_T_tip_evaluated)
+
+        # r_P_error = r_P_g - r_P_c
+        self.add_point_goal_constraints(r_P_c, r_P_g, 0.1, self.weight)
+
+        # self.add_constraint(u'/x',
+        #                     lower=r_P_error[0],
+        #                     upper=r_P_error[0],
+        #                     weight=self.weight,
+        #                     expression=r_P_c[0],
+        #                     goal_constraint=False)
+        # self.add_constraint(u'/y',
+        #                     lower=r_P_error[1],
+        #                     upper=r_P_error[1],
+        #                     weight=self.weight,
+        #                     expression=r_P_c[1],
+        #                     goal_constraint=False)
+        # self.add_constraint(u'/z',
+        #                     lower=r_P_error[2],
+        #                     upper=r_P_error[2],
+        #                     weight=self.weight,
+        #                     expression=r_P_c[2],
+        #                     goal_constraint=False)
+
+        # rotation goal
+        r_R_g = w.rotation_of(handle_T_tip_evaluated)
+        # max_angular_velocity = 0.4
+
+        r_R_c = w.rotation_of(handle_T_tip)
+        r_R_c_evaluated = w.rotation_of(self.get_world_fk_evaluated(self.handle_link_path,
+                                                                    self.get_robot().get_link_path(self.tip)))
+
+        # identity = w.rotation_matrix_from_axis_angle([0, 0, 1], 0.0001)
+        # c_R_c = w.dot(w.dot(r_R_c_evaluated.T, identity), r_R_c)
+        # current_axis, current_angle = w.axis_angle_from_matrix(c_R_c)
+        # current_angle_axis = (current_axis * current_angle)
+
+        # error_angle = w.rotation_distance(r_R_c, r_R_g)
+        # error_angle = w.abs(error_angle)
+
+        # _, angle = w.axis_angle_from_matrix(r_R_c)
+        # capped_angle = self.limit_velocity(error_angle, max_angular_velocity) / error_angle
+        #
+        # r_R_c_q = w.quaternion_from_matrix(r_R_c)
+        # r_R_g_q = w.quaternion_from_matrix(r_R_g)
+        # r_R_g_intermediate_q = w.quaternion_slerp(r_R_c_q, r_R_g_q, capped_angle)
+        # c_R_g_intermediate_q = w.quaternion_diff(r_R_c_q, r_R_g_intermediate_q)
+        # intermediate_error_axis, intermediate_error_angle = w.axis_angle_from_quaternion(c_R_g_intermediate_q[0],
+        #                                                                                  c_R_g_intermediate_q[1],
+        #                                                                                  c_R_g_intermediate_q[2],
+        #                                                                                  c_R_g_intermediate_q[3])
+
+        # c_R_g_intermediate_aa = intermediate_error_axis * intermediate_error_angle
+
+        self.add_rotation_goal_constraints(r_R_c, r_R_g, r_R_c_evaluated, 0.4, self.weight)
+        # self.add_constraint(u'/0',
+        #                     lower=c_R_g_intermediate_aa[0],
+        #                     upper=c_R_g_intermediate_aa[0],
+        #                     weight=self.weight,
+        #                     expression=current_angle_axis[0],
+        #                     goal_constraint=False)
+        # self.add_constraint(u'/1',
+        #                     lower=c_R_g_intermediate_aa[1],
+        #                     upper=c_R_g_intermediate_aa[1],
+        #                     weight=self.weight,
+        #                     expression=current_angle_axis[1],
+        #                     goal_constraint=False)
+        # self.add_constraint(u'/2',
+        #                     lower=c_R_g_intermediate_aa[2],
+        #                     upper=c_R_g_intermediate_aa[2],
+        #                     weight=self.weight,
+        #                     expression=current_angle_axis[2],
+        #                     goal_constraint=False)
+
+        # joint goal for kitchen
+
+        # max_vel = 0.5
+        err = self.goal_joint_state - goal_joint_symbol
+        # weight = self.normalize_weight(max_vel, base_weight)
+
+        # Fixme: This is a very short version of this
+        self.add_constraint(name_suffix=u'object_joint_goal',
+                            reference_velocity=0.5,
+                            lower_error=err,
+                            upper_error=err,
+                            weight=self.weight,
+                            expression=goal_joint_symbol)
+
+    def __str__(self):
+        return u'{}/{}/{}'.format(super(Open1Dof, self).__str__(), self.tip, self.object_name, self.handle_link)
