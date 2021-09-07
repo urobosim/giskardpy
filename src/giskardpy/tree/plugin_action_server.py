@@ -137,7 +137,7 @@ class SendResult(ActionServerBehavior):
         Blackboard().set('exception', None) # FIXME move this to reset?
         result = self.get_god_map().get_data(identifier.result_message)
 
-        trajectory = self.get_god_map().get_data(identifier.trajectory)
+        trajectory = self.get_god_map().get_data(identifier.trajectory)[self.get_robot().get_name()]
         sample_period = self.get_god_map().get_data(identifier.sample_period)
         controlled_joints = self.get_robot().controlled_joints
         result.trajectory = traj_to_msg(sample_period, trajectory, controlled_joints, True)

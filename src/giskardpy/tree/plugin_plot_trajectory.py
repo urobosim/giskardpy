@@ -18,14 +18,15 @@ class PlotTrajectory(GiskardBehavior):
         self.path_to_data_folder = self.get_god_map().get_data(identifier.data_folder)
 
     def update(self):
-        trajectory = self.get_god_map().get_data(identifier.trajectory)
-        if trajectory:
-            sample_period = self.get_god_map().get_data(identifier.sample_period)
-            controlled_joints = self.get_robot().controlled_joints
-            try:
-                plot_trajectory(trajectory, controlled_joints, self.path_to_data_folder, sample_period, self.order,
-                                self.velocity_threshold, self.scaling, self.normalize_position, self.tick_stride,
-                                history=self.history)
-            except Exception:
-                logwarn(u'failed to save trajectory pdf')
+        trajectories = self.get_god_map().get_data(identifier.trajectory)
+        for object_name, trajectory in trajectories.items():
+            if trajectory:
+                sample_period = self.get_god_map().get_data(identifier.sample_period)
+                controlled_joints = self.get_world().get_object(object_name).controlled_joints
+                try:
+                    plot_trajectory(trajectory, controlled_joints, self.path_to_data_folder, sample_period, self.order,
+                                    self.velocity_threshold, self.scaling, self.normalize_position, self.tick_stride,
+                                    history=self.history, file_name='{}_trajectory.pdf'.format(object_name))
+                except Exception:
+                    logwarn(u'failed to save trajectory pdf')
         return Status.SUCCESS

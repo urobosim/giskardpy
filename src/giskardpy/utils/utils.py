@@ -221,7 +221,7 @@ def plot_trajectory(tj, controlled_joints, path_to_data_folder, sample_period, o
     fmts = [u''.join(i) for i in product(line_styles, colors)]
     data = [[] for i in range(order)]
     times = []
-    names = list(sorted([i for i in tj._points[0.0].keys() if i in controlled_joints]))
+    names = list(sorted([i for i in list(tj._points.values())[0] if i in controlled_joints]))
     for time, point in tj.items():
         for i in range(order):
             if i == 0:

@@ -308,62 +308,14 @@ class Open1Dof(Goal):
 
         self.add_point_goal_constraints(r_P_c, r_P_g, 0.1, self.weight)
 
-
-        # rotation goal
         r_R_g = w.rotation_of(handle_T_tip_evaluated)
-        # max_angular_velocity = 0.4
-
         r_R_c = w.rotation_of(handle_T_tip)
         c_R_r_evaluated = w.rotation_of(self.get_world_fk_evaluated(self.get_robot().get_link_path(self.tip),
                                                                     self.handle_link_path))
 
-        # identity = w.rotation_matrix_from_axis_angle([0, 0, 1], 0.0001)
-        # c_R_c = w.dot(w.dot(r_R_c_evaluated.T, identity), r_R_c)
-        # current_axis, current_angle = w.axis_angle_from_matrix(c_R_c)
-        # current_angle_axis = (current_axis * current_angle)
-
-        # error_angle = w.rotation_distance(r_R_c, r_R_g)
-        # error_angle = w.abs(error_angle)
-
-        # _, angle = w.axis_angle_from_matrix(r_R_c)
-        # capped_angle = self.limit_velocity(error_angle, max_angular_velocity) / error_angle
-        #
-        # r_R_c_q = w.quaternion_from_matrix(r_R_c)
-        # r_R_g_q = w.quaternion_from_matrix(r_R_g)
-        # r_R_g_intermediate_q = w.quaternion_slerp(r_R_c_q, r_R_g_q, capped_angle)
-        # c_R_g_intermediate_q = w.quaternion_diff(r_R_c_q, r_R_g_intermediate_q)
-        # intermediate_error_axis, intermediate_error_angle = w.axis_angle_from_quaternion(c_R_g_intermediate_q[0],
-        #                                                                                  c_R_g_intermediate_q[1],
-        #                                                                                  c_R_g_intermediate_q[2],
-        #                                                                                  c_R_g_intermediate_q[3])
-
-        # c_R_g_intermediate_aa = intermediate_error_axis * intermediate_error_angle
-
         self.add_rotation_goal_constraints(r_R_c, r_R_g, c_R_r_evaluated, 0.4, self.weight)
-        # self.add_constraint(u'/0',
-        #                     lower=c_R_g_intermediate_aa[0],
-        #                     upper=c_R_g_intermediate_aa[0],
-        #                     weight=self.weight,
-        #                     expression=current_angle_axis[0],
-        #                     goal_constraint=False)
-        # self.add_constraint(u'/1',
-        #                     lower=c_R_g_intermediate_aa[1],
-        #                     upper=c_R_g_intermediate_aa[1],
-        #                     weight=self.weight,
-        #                     expression=current_angle_axis[1],
-        #                     goal_constraint=False)
-        # self.add_constraint(u'/2',
-        #                     lower=c_R_g_intermediate_aa[2],
-        #                     upper=c_R_g_intermediate_aa[2],
-        #                     weight=self.weight,
-        #                     expression=current_angle_axis[2],
-        #                     goal_constraint=False)
 
-        # joint goal for kitchen
-
-        # max_vel = 0.5
         err = self.goal_joint_state - goal_joint_symbol
-        # weight = self.normalize_weight(max_vel, base_weight)
 
         # Fixme: This is a very short version of this
         self.add_constraint(name_suffix=u'object_joint_goal',

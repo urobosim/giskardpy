@@ -67,7 +67,7 @@ class WiggleCancel(GiskardBehavior):
                                 self.amplitude_threshold, self.thresholds, self.velocity_limits, plot)
         except ShakingException as e:
             if self.get_god_map().get_data(identifier.cut_off_shaking):
-                trajectory = self.get_god_map().get_data(identifier.trajectory)
+                trajectory = self.get_god_map().get_data(identifier.trajectory)[self.get_robot().get_name()]
                 for i in range(self.num_samples_in_fft):
                     trajectory.delete_last()
                 # time = self.get_god_map().get_data(identifier.time)

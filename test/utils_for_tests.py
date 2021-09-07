@@ -595,14 +595,14 @@ class GiskardTestWrapper(GiskardWrapper):
         return r.trajectory
 
     def get_result_trajectory_position(self):
-        trajectory = self.get_god_map().unsafe_get_data(identifier.trajectory)
+        trajectory = self.get_god_map().unsafe_get_data(identifier.trajectory)[self.get_robot().get_name()]
         trajectory2 = {}
         for joint_name in trajectory.get_exact(0).keys():
             trajectory2[joint_name] = np.array([p[joint_name].position for t, p in trajectory.items()])
         return trajectory2
 
     def get_result_trajectory_velocity(self):
-        trajectory = self.get_god_map().get_data(identifier.trajectory)
+        trajectory = self.get_god_map().get_data(identifier.trajectory)[self.get_robot().get_name()]
         trajectory2 = {}
         for joint_name in trajectory.get_exact(0).keys():
             trajectory2[joint_name] = np.array([p[joint_name].velocity for t, p in trajectory.items()])

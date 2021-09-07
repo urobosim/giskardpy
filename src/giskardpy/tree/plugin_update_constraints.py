@@ -71,8 +71,6 @@ class GoalToConstraints(GetGoal):
 
         self.get_god_map().set_data(identifier.goals, {})
 
-        # self.get_robot().create_constraints(self.get_god_map())
-
         self.soft_constraints = {}
         self.vel_constraints = {}
         self.debug_expr = {}
@@ -96,75 +94,6 @@ class GoalToConstraints(GetGoal):
         self.get_god_map().set_data(identifier.debug_expressions, self.debug_expr)
         self.get_blackboard().runtime = time()
 
-        # relevant_symbols = set(sum([list(cm.free_symbols(c.expression)) for c in self.soft_constraints.values()], []))
-
-        # This is not a principled way of determining relevant symbols
-        # There is the inherent assumption that the constraints are only defined on positions
-        # and also that the robot's positions are always controllable
-        # relevant_joints   = controlled_joints.intersection(relevant_symbols)
-
-        # if self.get_god_map().get_data(identifier.check_reachability):
-        #     #FIXME support reachability check again
-        #     from giskardpy import cas_wrapper as w
-        #     joint_constraints = OrderedDict()
-        #     # for k in controlled_joints:
-        #     #     weight = self.robot._joint_constraints[k].weight
-        #     #     if self.get_robot().is_joint_prismatic(k):
-        #     #         joint_constraints[(self.robot.get_name(), k)] = JointConstraint(-self.rc_prismatic_velocity,
-        #     #                                                                         self.rc_prismatic_velocity, weight)
-        #     #     elif self.get_robot().is_joint_continuous(k):
-        #     #         joint_constraints[(self.robot.get_name(), k)] = JointConstraint(-self.rc_continuous_velocity,
-        #     #                                                                         self.rc_continuous_velocity, weight)
-        #     #     elif self.get_robot().is_joint_revolute(k):
-        #     #         joint_constraints[(self.robot.get_name(), k)] = JointConstraint(-self.rc_revolute_velocity,
-        #     #                                                                         self.rc_revolute_velocity, weight)
-        #     #     else:
-        #     #         joint_constraints[(self.robot.get_name(), k)] = JointConstraint(-self.rc_other_velocity,
-        #     #                                                                         self.rc_other_velocity, weight)
-        #     for i, joint_name in enumerate(controlled_joints):
-        #         lower_limit, upper_limit = self.get_robot().get_joint_limits(joint_name)
-        #         joint_symbol = self.get_robot().get_joint_position_symbol(joint_name)
-        #         sample_period = w.Symbol(u'rosparam_general_options_sample_period')  # TODO this should be a parameter
-        #         # velocity_limit = self.get_robot().get_joint_velocity_limit_expr(joint_name) * sample_period
-        #         if self.get_robot().is_joint_prismatic(joint_name):
-        #             velocity_limit = self.rc_prismatic_velocity * sample_period
-        #         elif self.get_robot().is_joint_continuous(joint_name):
-        #             velocity_limit = self.rc_continuous_velocity * sample_period
-        #         elif self.get_robot().is_joint_revolute(joint_name):
-        #             velocity_limit = self.rc_revolute_velocity * sample_period
-        #         else:
-        #             velocity_limit = self.rc_other_velocity * sample_period
-        #
-        #         weight = self.get_robot()._joint_weights[joint_name]
-        #         weight = weight * (1. / (self.rc_prismatic_velocity)) ** 2
-        #
-        #         if not self.get_robot().is_joint_continuous(joint_name):
-        #             joint_constraints[(self.get_robot().get_name(), joint_name)] = JointConstraint(
-        #                 lower=w.Max(-velocity_limit, lower_limit - joint_symbol),
-        #                 upper=w.Min(velocity_limit, upper_limit - joint_symbol),
-        #                 weight=weight)
-        #         else:
-        #             joint_constraints[(self.get_robot().get_name(), joint_name)] = JointConstraint(
-        #                 lower=-velocity_limit,
-        #                 upper=velocity_limit,
-        #                 weight=weight)
-        # else:
-        # joint_constraints = OrderedDict(((self.robot.get_name(), k), self.robot._joint_constraints[k]) for k in controlled_joints)
-        # km = self.get_god_map().get_data(identifier.km_world)
-        # joint_control_space = {DiffSymbol(s) for s in controlled_joints}
-        # constraints = km.get_constraints_by_symbols(set(controlled_joints).union(joint_control_space))
-        # joint_constraints, hard_constraints = generate_controlled_values(constraints,
-        #                                                                  joint_control_space)
-        # self.get_god_map().get_data(identifier.joint_cost))
-        # pass
-
-        # hard_constraints = OrderedDict(((self.robot.get_name(), k), self.robot._hard_constraints[k]) for k in
-        #                                controlled_joints if k in self.robot._hard_constraints)
-
-        # hard_constraints = OrderedDict([((self.robot.get_name(), k), c) for k, c in hard_constraints.items()])
-
-        # self.get_god_map().safe_set_data(identifier.joint_constraint_identifier, joint_constraints)
-        # self.get_god_map().safe_set_data(identifier.hard_constraint_identifier, hard_constraints)
         self.add_object_constraints()
 
         return Status.SUCCESS
@@ -186,15 +115,8 @@ class GoalToConstraints(GetGoal):
         joint_position_symbols |= self.get_robot().get_controlled_joint_position_symbols()  # add all joints from robot
         self.get_god_map().set_data(identifier.controlled_joint_symbols, joint_position_symbols)
 
-        # joint_velocity_symbols = {DiffSymbol(s) for s in joint_position_symbols}
-
-        # constraints = self.get_world().km_model.get_constraints_by_symbols(joint_position_symbols)
-
-        joint_constraints = OrderedDict()
-        # to_remove = set()
         symbols_to_register = set()
 
-        # sample_period = self.get_god_map().identivier_to_symbol(identifier.sample_period)
         # FIXME
         for joint_position_symbol in joint_position_symbols:
             symbols = {}
@@ -213,7 +135,10 @@ class GoalToConstraints(GetGoal):
                     symbols_to_register.update(w.free_symbols(c.upper))
                     if order > 0:
                         try:
-                            weight_symbol = self.get_god_map().identifier_to_symbol(identifier.joint_weights + [order_map[order], u'override', joint_name])
+                            weight_symbol = self.get_god_map().identifier_to_symbol(identifier.joint_weights +
+                                                                                    [order_map[order],
+                                                                                     u'override',
+                                                                                     joint_name])
                             weights[order] = weight_symbol
                             symbols_to_register.add(weight_symbol)
                         except KeyError:

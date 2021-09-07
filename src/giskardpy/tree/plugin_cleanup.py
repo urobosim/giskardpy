@@ -1,3 +1,4 @@
+from collections import defaultdict
 from copy import deepcopy
 
 from py_trees import Status
@@ -17,11 +18,10 @@ class CleanUp(GiskardBehavior):
     def initialise(self):
         self.get_god_map().clear_cache()
         self.get_god_map().set_data(identifier.closest_point, {})
-        # self.get_god_map().safe_set_data(identifier.closest_point, None)
         self.get_god_map().set_data(identifier.time, 1)
         current_js = self.get_god_map().get_data(identifier.joint_states)
-        trajectory = Trajectory()
-        trajectory.set(0, deepcopy(current_js))
+        trajectory = defaultdict(Trajectory)
+        trajectory[self.get_robot().get_name()].set(0, deepcopy(current_js))
         self.get_god_map().set_data(identifier.trajectory, trajectory)
         trajectory = Trajectory()
         self.get_god_map().set_data(identifier.debug_trajectory, trajectory)

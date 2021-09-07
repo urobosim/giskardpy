@@ -46,7 +46,7 @@ class GiskardBehavior(Behaviour):
 
     def get_robot(self):
         """
-        :rtype: giskardpy.robot.Robot
+        :rtype: giskardpy.model.robot.Robot
         """
         # if not self.robot:
         #     self.robot = self.get_god_map().get_data(robot)
@@ -55,7 +55,7 @@ class GiskardBehavior(Behaviour):
 
     def unsafe_get_robot(self):
         """
-        :rtype: giskardpy.robot.Robot
+        :rtype: giskardpy.model.robot.Robot
         """
         # if not self.robot:
         #     self.robot = self.get_god_map().unsafe_get_data(robot)
