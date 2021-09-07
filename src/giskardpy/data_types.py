@@ -62,6 +62,7 @@ def to_joint_state_dict(msg):
         mjs[joint_name] = sjs
     return mjs
 
+
 class JointStates(defaultdict):
     class _JointState(object):
         derivative_to_name = {
@@ -87,9 +88,8 @@ class JointStates(defaultdict):
             setattr(self, self.derivative_to_name[d], item)
 
         # @classmethod
+
     # def from_urdf_file(cls, urdf_file, *args, **kwargs):
-
-
 
     def __str__(self):
         return '{}'.format(self.position)
@@ -251,6 +251,7 @@ class Collision(object):
                          contact_normal=-self.get_map_V_n(),
                          contact_distance=self.get_contact_distance())
 
+
 class Collisions(object):
 
     @profile
@@ -267,7 +268,6 @@ class Collisions(object):
         # @profile
         def sort(x):
             return x.get_contact_distance()
-
 
         # @profile
         def default_f():
@@ -371,11 +371,11 @@ class Collisions(object):
     @profile
     def _default_collision(self, link_a, body_b, link_b):
         c = Collision(link_a, body_b, link_b, [0, 0, 0, 1], [0, 0, 0, 1], [0, 0, 1, 0], 100)
-        c.set_new_a_P_a([0,0,0, 1])
-        c.set_new_b_P_b([0,0,0, 1])
-        c.set_root_P_b([0,0,0,1])
-        c.set_new_b_V_n([0,0,1,0])
-        c.set_root_V_n([0,0,1,0])
+        c.set_new_a_P_a([0, 0, 0, 1])
+        c.set_new_b_P_b([0, 0, 0, 1])
+        c.set_root_P_b([0, 0, 0, 1])
+        c.set_new_b_V_n([0, 0, 1, 0])
+        c.set_root_V_n([0, 0, 1, 0])
         return c
 
     # @profile
@@ -397,8 +397,6 @@ class Collisions(object):
         """
         return self.external_collision_long_key[link_a, body_b, link_b]
 
-
-
     def get_number_of_external_collisions(self, joint_name):
         return self.number_of_external_collisions[joint_name]
 
@@ -415,8 +413,6 @@ class Collisions(object):
         if (link_a, link_b) in self.self_collisions:
             return self.self_collisions[link_a, link_b]
         return self.default_result
-
-
 
     def get_number_of_self_collisions(self, link_a, link_b):
         return self.number_of_self_collisions[link_a, link_b]
@@ -447,6 +443,7 @@ class BiDict(dict):
         if self[key] in self.inverse and not self.inverse[self[key]]:
             del self.inverse[self[key]]
         super(BiDict, self).__delitem__(key)
+
 
 # TODO hardcode this somewhere else
 order_map = BiDict({
