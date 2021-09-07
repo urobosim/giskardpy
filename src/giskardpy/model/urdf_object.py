@@ -73,7 +73,6 @@ class URDFObject(ArticulatedObject):
             self._limits = {}
 
     def update_joint_limits(self, new_linear_limits, new_angular_limits):
-        # TODO do minimum with old values?
         for joint_name in self.joint_limits:
             for order in range(1, len(new_linear_limits)+1):
                 if self.is_joint_prismatic(joint_name):

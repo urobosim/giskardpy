@@ -18,26 +18,29 @@ class KinSimPlugin(GiskardBehavior):
     @profile
     def update(self):
         next_cmds = self.get_god_map().get_data(identifier.qp_solver_solution)
-        current_js = self.get_god_map().get_data(identifier.joint_states)
-        next_js = None
+        # TODO this is ugly :)
+        active_objects = set([self.get_god_map().expr_to_key[j][4] for j in next_cmds[0]])
         if next_cmds:
-            next_js = JointStates()
-            for key, sjs in current_js.items():
-                if self.get_robot().is_joint_mimic(key):
-                    continue
-                joint_name = str(self.get_robot().get_joint_position_symbol(key))
-                vel_cmds = next_cmds[0]
-                if joint_name in vel_cmds:
-                    cmd = vel_cmds[joint_name]
-                    derivative_cmds = [x[joint_name] for x in next_cmds]
+            for object_name in active_objects:
+                if self.get_world().has_object(object_name):
+                    obj = self.get_world().get_object(object_name)
                 else:
-                    cmd = 0.0
-                    derivative_cmds = []
-                next_js[key].position = sjs.position + cmd * self.sample_period
-                for i, derivative_cmd in enumerate(derivative_cmds):
-                    next_js[key].set_derivative(i+1, derivative_cmd)
-        if next_js is not None:
-            self.get_god_map().set_data(identifier.joint_states, next_js)
-        else:
-            self.get_god_map().set_data(identifier.joint_states, current_js)
+                    obj = self.get_robot()
+                current_js = obj.joint_state
+                next_js = JointStates()
+                for key, sjs in current_js.items():
+                    if obj.is_joint_mimic(key):
+                        continue
+                    joint_name = str(obj.get_joint_position_symbol(key))
+                    vel_cmds = next_cmds[0]
+                    if joint_name in vel_cmds:
+                        cmd = vel_cmds[joint_name]
+                        derivative_cmds = [x[joint_name] for x in next_cmds]
+                    else:
+                        cmd = 0.0
+                        derivative_cmds = []
+                    next_js[key].position = sjs.position + cmd * self.sample_period
+                    for i, derivative_cmd in enumerate(derivative_cmds):
+                        next_js[key].set_derivative(i+1, derivative_cmd)
+                obj.joint_state = next_js
         return Status.RUNNING

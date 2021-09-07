@@ -25,7 +25,7 @@ class GiskardBehavior(Behaviour):
 
     def get_world(self):
         """
-        :rtype: giskardpy.world.World
+        :rtype: giskardpy.model.world.World
         """
         if not self.world:
             self.world = self.get_god_map().get_data(world)
@@ -33,7 +33,7 @@ class GiskardBehavior(Behaviour):
 
     def unsafe_get_world(self):
         """
-        :rtype: giskardpy.world.World
+        :rtype: giskardpy.model.world.World
         """
         if not self.world:
             self.world = self.get_god_map().unsafe_get_data(world)

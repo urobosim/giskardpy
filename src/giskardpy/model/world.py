@@ -208,6 +208,7 @@ class World(object):
 
         linear_map = {}
         angular_map = {}
+        # todo merge this with limit map
         for i, key in enumerate(self.god_map.get_data(identifier.joint_limits), start=1):
             linear_map[i] = self.god_map.get_data(identifier.joint_limits + [order_map[i], u'linear', u'override'])
             angular_map[i] = self.god_map.get_data(identifier.joint_limits + [order_map[i], u'angular', u'override'])

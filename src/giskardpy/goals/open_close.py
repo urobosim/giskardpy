@@ -306,35 +306,16 @@ class Open1Dof(Goal):
         r_P_c = w.position_of(handle_T_tip)
         r_P_g = w.position_of(handle_T_tip_evaluated)
 
-        # r_P_error = r_P_g - r_P_c
         self.add_point_goal_constraints(r_P_c, r_P_g, 0.1, self.weight)
 
-        # self.add_constraint(u'/x',
-        #                     lower=r_P_error[0],
-        #                     upper=r_P_error[0],
-        #                     weight=self.weight,
-        #                     expression=r_P_c[0],
-        #                     goal_constraint=False)
-        # self.add_constraint(u'/y',
-        #                     lower=r_P_error[1],
-        #                     upper=r_P_error[1],
-        #                     weight=self.weight,
-        #                     expression=r_P_c[1],
-        #                     goal_constraint=False)
-        # self.add_constraint(u'/z',
-        #                     lower=r_P_error[2],
-        #                     upper=r_P_error[2],
-        #                     weight=self.weight,
-        #                     expression=r_P_c[2],
-        #                     goal_constraint=False)
 
         # rotation goal
         r_R_g = w.rotation_of(handle_T_tip_evaluated)
         # max_angular_velocity = 0.4
 
         r_R_c = w.rotation_of(handle_T_tip)
-        r_R_c_evaluated = w.rotation_of(self.get_world_fk_evaluated(self.handle_link_path,
-                                                                    self.get_robot().get_link_path(self.tip)))
+        c_R_r_evaluated = w.rotation_of(self.get_world_fk_evaluated(self.get_robot().get_link_path(self.tip),
+                                                                    self.handle_link_path))
 
         # identity = w.rotation_matrix_from_axis_angle([0, 0, 1], 0.0001)
         # c_R_c = w.dot(w.dot(r_R_c_evaluated.T, identity), r_R_c)
@@ -358,7 +339,7 @@ class Open1Dof(Goal):
 
         # c_R_g_intermediate_aa = intermediate_error_axis * intermediate_error_angle
 
-        self.add_rotation_goal_constraints(r_R_c, r_R_g, r_R_c_evaluated, 0.4, self.weight)
+        self.add_rotation_goal_constraints(r_R_c, r_R_g, c_R_r_evaluated, 0.4, self.weight)
         # self.add_constraint(u'/0',
         #                     lower=c_R_g_intermediate_aa[0],
         #                     upper=c_R_g_intermediate_aa[0],
