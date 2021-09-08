@@ -268,7 +268,7 @@ class Close(Goal):
 
 # Fixme: The name of this constraint is not informative. Should maybe be something like "Move1DofFixed"
 class Open1Dof(Goal):
-    def __init__(self, tip_link, object_name, handle_link, goal_joint_state, root_link=None,
+    def __init__(self, tip_link, object_name, handle_link, goal_joint_state=None, root_link=None,
                  weight=WEIGHT_ABOVE_CA, **kwargs):
         super(Open1Dof, self).__init__(**kwargs)
         self.weight = weight
@@ -287,13 +287,13 @@ class Open1Dof(Goal):
         self.handle_T_tip = self.get_world().get_fk_pose(env_object.get_link_path(self.handle_link),
                                                     self.get_robot().get_link_path(self.tip))
 
-        self.goal_joint_state = goal_joint_state
-
-        # min_limit, max_limit = env_object.get_joint_limits(self.joint_name)
-        # if goal_joint_state is not None:
-        #     self.goal_joint_state = max(min_limit, min(max_limit, goal_joint_state))
-        # else:
-        #     self.goal_joint_state = max_limit
+        position_limits = env_object.joint_limits[self.joint_name][0]
+        min_limit = position_limits['lower']
+        max_limit = position_limits['upper']
+        if goal_joint_state is not None:
+            self.goal_joint_state = max(min_limit, min(max_limit, goal_joint_state))
+        else:
+            self.goal_joint_state = max_limit
 
     def make_constraints(self):
         handle_T_tip_evaluated = self.get_parameter_as_symbolic_expression(u'handle_T_tip')
@@ -308,8 +308,8 @@ class Open1Dof(Goal):
 
         self.add_point_goal_constraints(r_P_c, r_P_g, 0.1, self.weight)
 
-        r_R_g = w.rotation_of(handle_T_tip_evaluated)
         r_R_c = w.rotation_of(handle_T_tip)
+        r_R_g = w.rotation_of(handle_T_tip_evaluated)
         c_R_r_evaluated = w.rotation_of(self.get_world_fk_evaluated(self.get_robot().get_link_path(self.tip),
                                                                     self.handle_link_path))
 
